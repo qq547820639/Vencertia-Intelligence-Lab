@@ -1,54 +1,181 @@
-# Vencertia Intelligence Lab v0.1
+# Vencertia Intelligence Lab
 
-A calibration-first decision runtime for high-uncertainty venture building.
+> 一个"校准优先"的决策引擎，帮你在高度不确定的创业语境中，把"该不该做"变成有据可依的判断——并在证据不足时，诚实地告诉你"现在还下不了结论"。
 
-This repository is the first executable replacement for the AgentV9 prompt-centric architecture. The core thesis is:
+---
 
-> State → Belief → Evidence → Decision → Experiment → Outcome → Calibration → Updated policy.
+## 这是什么
 
-## What is already executable
+创业最大的风险，不是做了错的决定，而是**在证据还没到位时就过早下注**，或在噪音里反复横跳。
 
-- Bayesian-style belief state using Beta pseudo-counts.
-- Evidence provenance weighting with an explicit rule that model inference is weak evidence.
-- Correlated-evidence discounting.
-- Risk-adjusted option scoring and abstention when the decision has not converged.
-- Decision-critical uncertainty detection.
-- Experiment ranking by information gain × decision impact × uncertainty / cost-time.
-- Prediction ledger primitives and Brier/ECE calibration metrics.
-- SQLite persistence primitive.
-- FastAPI endpoints and CLI.
-- Synthetic policy-regression benchmark and pytest suite.
+Vencertia Intelligence Lab 是一套面向高风险决策的软件工具。它不替你拍板，而是把你的判断过程结构化：
 
-## Run
+- 你先写下心里真正想优化的目标（例如"在保住现金流的前提下，最大化这家公司的预期价值"）；
+- 你列出几个可选方案，以及支撑每个方案成立与否的"关键假设"；
+- 你不断把看到的信息（用户访谈、付费行为、公开数据、专家意见……）录入系统；
+- 系统用一套**可解释、可追溯、会自我纠错**的方法，帮你算清楚：现在最该信什么、还差什么、下一步最该验证哪件事。
+
+一句话：**它让"凭直觉决策"变成"凭证据决策"，并把每一次判断都留下可以复盘的记录。**
+
+### 它和"AI 顾问"有什么不同
+
+很多工具会把模型的生成结果当成答案直接给你。Vencertia 的根本立场恰好相反：
+
+- **模型的话只是"弱证据"**。系统内置规则明确给 AI 推断很低的权重，真正有分量的是真实付款、合同、可观测行为这类一手信号。
+- **可以"拒答"**。当证据不足以支撑一个有把握的结论时，系统会主动建议你"先别急，去验证那件最关键的事"，而不是强行给一个看似确定的答案。
+- **一切可追溯**。每一个结论都附带当时的证据与判断快照，方便日后复盘：当时为什么这么想，现实后来打了多少分。
+
+---
+
+## 核心功能与亮点
+
+### 1. 把"信念"量化，而不是空谈感觉
+系统把每一个关键假设（我们称之为"信念"）表示成一个带概率和不确定度的判断。随着证据进来，概率会更新——但**不确定性不会凭空消失**，证据越多才越稳。
+
+### 2. 证据分级，看重一手信号
+每条证据都标注来源类型、可靠度、直接程度，以及它和别的证据是否"其实是一回事"。例如：
+
+| 证据来源 | 在系统中的分量 |
+| --- | --- |
+| 真实付款、合同 | 高 |
+| 可观测行为（如试用转化） | 高 |
+| 一手调研、官方数据 | 中高 |
+| 专家意见、创始人自述 | 中 |
+| 模型推断（AI 生成内容） | 低 |
+
+### 3. 自动识别"最致命的那点不确定"
+当几个方案难分高下，系统会指出**当前最影响决策、又最没把握的那个假设**，并据此推荐下一步最值得做的验证动作——而不是让你平均用力。
+
+### 4. 风险调整后的方案排序
+每个选项都被评估为"预期价值减去不确定性惩罚，再扣掉不可逆成本与机会成本"。系统据此给出推荐，并标注置信度和"决策余量"。
+
+### 5. 能做，也能收手
+决策结果不只是"做 / 不做"。系统还能给出 `有条件推进`、`暂缓`、`转向`、`放弃`、`证据不足` 等更克制的结论，避免非黑即白的误判。
+
+### 6. 预测记录与校准
+你可以把"我预言 X 会发生"写进系统，等现实揭晓后回填结果。系统会用 **Brier 分数**与**校准误差（ECE）**等指标，告诉你"你的信心水平究竟准不准"——这是持续变聪明的核心机制。
+
+### 7. 决策快照，可复盘
+每一次重要判断都会记录当时的证据与信念状态。日后无论是团队复盘还是个人迭代，都有据可查。
+
+---
+
+## 快速上手
+
+> 下面以"本地命令行"方式为例。你需要先安装 [Python](https://www.python.org/)（要求 **3.11 或以上**）。
+
+### 第一步：安装
+
+在项目根目录执行：
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
+```
+
+安装完成后，你会拥有一个名为 `vencertia` 的命令行工具。
+
+### 第二步：跑一个示例，感受它怎么工作
+
+不想从零写输入？直接运行内置示例：
+
+```bash
 vencertia demo
+```
+
+它会读取 `examples/demo_saas_solve.json`（一个"创始人是否该花六周做 MVP"的真实风格案例），并输出系统给出的决策与下一步验证建议。
+
+### 第三步：体验基准测试
+
+```bash
 vencertia benchmark --path data/benchmarks/v0.2.jsonl
+```
+
+这会跑一套**合成的策略回归测试集**——它的作用不是证明"创业决策更牛"，而是确保每次改动算法后，行为不会悄悄变差。
+
+### 第四步：启动服务（可选）
+
+如果你希望用接口方式接入，可以启动一个本地服务：
+
+```bash
 uvicorn vencertia.api:app --reload
 ```
 
-API endpoints:
-- `GET /health`
-- `POST /v1/decide`
-- `POST /v1/next-experiment`
-- `POST /v1/solve` (decision + experiment selection in one iteration)
+启动后，你可以通过这些接口使用它：
 
-## Important boundary
+| 方法 | 路径 | 作用 |
+| --- | --- | --- |
+| `GET` | `/health` | 检查服务是否存活 |
+| `POST` | `/v1/decide` | 提交一次决策请求，得到推荐方案 |
+| `POST` | `/v1/next-experiment` | 询问"下一步最该验证什么" |
+| `POST` | `/v1/solve` | 一步完成"决策 + 下一步实验推荐" |
 
-The benchmark in this repo is a **synthetic policy regression suite**, not proof of superior startup decisions. Its job is to detect unintended changes while the real benchmark is assembled from time-stamped historical decisions and later outcomes.
+---
 
-See `docs/IMPLEMENTATION_PLAN.md`, `docs/ARCHITECTURE.md`, and `docs/OSS_INTEGRATION_DECISIONS.md`.
+## 用真实数据练手
 
-## Real benchmark / calibration operations
+系统不仅能跑示例，也能帮你管理**真实历史案例**与**预测校准**。
+
+### 校验一个历史案例
 
 ```bash
 vencertia validate-case data/templates/historical_case_template.json
+```
+
+> 注意：历史案例模板默认 `leakage_audit_passed=false`（即"防数据泄漏审计未通过"）。这是故意设计的——任何案例都必须经过人工审计，确认没有"用结果反推原因"的作弊，才能进入正式的基准集。
+
+### 记录并校准你的预测
+
+```bash
+# 新增一条预测（写入本地数据库 vencertia.db）
 vencertia prediction-add prediction.json --db vencertia.db
+
+# 等现实揭晓后，回填结果（outcome 用 0 或 1 表示未发生 / 发生）
 vencertia prediction-resolve p1 1 --db vencertia.db
+
+# 查看你的校准报告（信心到底准不准）
 vencertia calibration --db vencertia.db
 ```
 
-The historical case template has `leakage_audit_passed=false` by default on purpose. A case must be manually audited before it enters a frozen real benchmark.
+---
+
+## 常见问题（FAQ）
+
+**Q：Vencertia 会直接替我做决定吗？**
+不会。它是一面"结构化的镜子"——帮你把目标、假设、证据和不确定性摆清楚，给出带置信度的推荐，并在证据不足时建议你先别急着定。最终拍板权始终在你。
+
+**Q：它说是"AI"，但为什么又不太信任 AI？**
+因为决策质量取决于证据质量。模型生成的内容可能流畅却偏离事实，所以系统在规则上明确把"模型推断"列为最低权重的证据，把真实付款、合同、可观测行为放在最高位置。这是对你的判断负责。
+
+**Q：为什么有时候它不给结论，只让我去验证？**
+这正是它的价值所在。当"最致命的那点不确定"还没被解决时，强行给结论反而是缺陷。系统会优先告诉你：**先花最小成本验证哪一件事，最能改变当前的判断。**
+
+**Q：这套基准测试能证明我的创业决策一定更准吗？**
+不能，也不该这么理解。当前基准是**合成的策略回归套件**，作用是"防止改动把已有行为搞坏"。真正能证明价值的，是后续用带时间戳的历史决策与真实结果逐步积累、校准出来的数据集。
+
+**Q：我的数据存在哪里？**
+预测等持久化数据默认写入本地 SQLite 文件（如 `vencertia.db`），就在你自己的机器/环境里，不强制上传。
+
+**Q：需要联网才能用吗？**
+核心决策与校准逻辑在本地运行，无需联网。是否接入外部研究/数据，取决于你自己的部署方式。
+
+---
+
+## 项目信息
+
+- **项目名称**：Vencertia Intelligence Lab（v0.1）
+- **技术栈**：Python 3.11+，基于 Pydantic、Typer、FastAPI 等构建
+- **包名**：`vencertia`
+- **许可证**：见仓库内 `LICENSE` 文件（如未单独提供，请以仓库根目录为准）
+- **文档**：更偏实现视角的说明见 `docs/` 目录（架构、基准规范、实现计划等）
+
+---
+
+## 联系与社区
+
+- **代码仓库**：https://github.com/qq547820639/Vencertia-Intelligence-Lab
+- **问题反馈**：欢迎在仓库的 Issues 中提交建议、Bug 或案例
+- **协作共建**：欢迎通过 Pull Request 贡献代码、基准案例或文档改进
+
+> Vencertia 的核心理念：**让判断有迹可循，让不确定性被正视，让每一次决策都成为下一次更聪明的起点。**
