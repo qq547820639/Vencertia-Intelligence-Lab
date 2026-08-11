@@ -1,0 +1,95 @@
+{
+  "source_bundle": "AgentV9 System Prompt(2).zip",
+  "documents": [
+    {
+      "source": "Memory Write",
+      "lines": 2767,
+      "bytes": 65675,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Pydantic  JSON Schema",
+      "lines": 3833,
+      "bytes": 80823,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Routing",
+      "lines": 2886,
+      "bytes": 67136,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "State Transition",
+      "lines": 3047,
+      "bytes": 72799,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Business Plan Architect",
+      "lines": 3042,
+      "bytes": 63042,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Execution Strategy",
+      "lines": 2004,
+      "bytes": 44521,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Financial & Business Model",
+      "lines": 2358,
+      "bytes": 52380,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Founder Diagnosis",
+      "lines": 1225,
+      "bytes": 33202,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Founder Matchmaking",
+      "lines": 2272,
+      "bytes": 56690,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Market Opportunity",
+      "lines": 1506,
+      "bytes": 39082,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Next Action Planner",
+      "lines": 2598,
+      "bytes": 56249,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Orchestrator ",
+      "lines": 1983,
+      "bytes": 51417,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Project Prosecutor",
+      "lines": 1770,
+      "bytes": 42222,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Startup Case Intelligence ",
+      "lines": 2623,
+      "bytes": 58100,
+      "migration_status": "mapped"
+    },
+    {
+      "source": "Vencertia Venture Design",
+      "lines": 1933,
+      "bytes": 47495,
+      "migration_status": "mapped"
+    }
+  ]
+}

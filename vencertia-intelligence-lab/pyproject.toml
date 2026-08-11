@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vencertia-intelligence-lab"
+version = "0.1.0"
+description = "Calibration-first decision runtime for high-uncertainty venture decisions"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.10",
+  "typer>=0.12",
+  "rich>=13",
+  "fastapi>=0.115",
+  "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+vencertia = "vencertia.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]

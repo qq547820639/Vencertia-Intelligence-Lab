@@ -1,0 +1,132 @@
+{
+  "decision": {
+    "id": "demo-b2b-saas-commit",
+    "question": "Should the founder commit six weeks to building the MVP now?",
+    "objective": "Maximize expected venture value while preserving runway and option value.",
+    "options": [
+      {
+        "id": "commit_mvp",
+        "label": "Commit six weeks to build MVP",
+        "base_utility": 0.05,
+        "belief_coefficients": {
+          "problem": 0.45,
+          "wtp": 0.85,
+          "access": 0.3
+        },
+        "irreversible_cost": 0.35,
+        "opportunity_cost": 0.1
+      },
+      {
+        "id": "stop_project",
+        "label": "Stop and redeploy resources",
+        "base_utility": 0.65,
+        "belief_coefficients": {
+          "problem": -0.2,
+          "wtp": -0.3,
+          "access": -0.1
+        },
+        "irreversible_cost": 0.02,
+        "opportunity_cost": 0.0
+      }
+    ],
+    "beliefs": [
+      {
+        "id": "problem",
+        "statement": "ICP has a severe recurring problem",
+        "alpha": 4.279999999999999,
+        "beta": 1.7200000000000002,
+        "decision_weight": 0.8
+      },
+      {
+        "id": "wtp",
+        "statement": "ICP will pay at least EUR 500/month",
+        "alpha": 2.8,
+        "beta": 3.2,
+        "decision_weight": 1.0
+      },
+      {
+        "id": "access",
+        "statement": "Founder can reach 20 ICPs in two weeks",
+        "alpha": 4.279999999999999,
+        "beta": 1.7200000000000002,
+        "decision_weight": 0.7
+      }
+    ],
+    "evidence": [
+      {
+        "id": "e1",
+        "belief_id": "problem",
+        "claim": "16 of 20 interviews described the pain as severe",
+        "source_type": "primary_research",
+        "verification": "verified",
+        "direction": "supports",
+        "strength": 0.75,
+        "source_reliability": 0.8,
+        "directness": 0.8,
+        "independence_key": "interview_batch_1"
+      },
+      {
+        "id": "e2",
+        "belief_id": "wtp",
+        "claim": "0 of 4 qualified prospects accepted a EUR 500 paid pilot",
+        "source_type": "observed_behavior",
+        "verification": "verified",
+        "direction": "contradicts",
+        "strength": 0.55,
+        "source_reliability": 0.95,
+        "directness": 0.95,
+        "independence_key": "sales_batch_1"
+      }
+    ],
+    "risk_aversion": 0.28,
+    "minimum_decision_margin": 0.08,
+    "max_unresolved_critical_uncertainty": 0.45
+  },
+  "experiments": [
+    {
+      "id": "paid_pilot",
+      "name": "Sell a paid concierge pilot",
+      "target_belief_ids": [
+        "wtp"
+      ],
+      "expected_information_gain": 0.95,
+      "decision_impact": 1.0,
+      "cost": 1.0,
+      "days": 3,
+      "reversibility": 1.0,
+      "description": "Offer the promised outcome manually before building product.",
+      "success_signal": "At least one ICP pays >= EUR 500.",
+      "failure_signal": "No qualified ICP accepts payment after a predefined sales sample."
+    },
+    {
+      "id": "problem_interviews",
+      "name": "Run problem interviews",
+      "target_belief_ids": [
+        "problem"
+      ],
+      "expected_information_gain": 0.6,
+      "decision_impact": 0.7,
+      "cost": 0.8,
+      "days": 2,
+      "reversibility": 1.0,
+      "description": "Interview qualified ICPs about current workflow and pain.",
+      "success_signal": "Repeated severe pain with concrete current workaround.",
+      "failure_signal": "Pain is infrequent or low priority."
+    },
+    {
+      "id": "access_test",
+      "name": "Run ICP outreach test",
+      "target_belief_ids": [
+        "access"
+      ],
+      "expected_information_gain": 0.7,
+      "decision_impact": 0.65,
+      "cost": 0.8,
+      "days": 3,
+      "reversibility": 1.0,
+      "description": "Attempt to reach a fixed sample of qualified ICPs.",
+      "success_signal": "Reach target response/demo threshold.",
+      "failure_signal": "Access rate remains below threshold."
+    }
+  ]
+}

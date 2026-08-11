@@ -1,0 +1,16 @@
+{
+  "version": "0.1.0",
+  "core_policy": "provider-agnostic",
+  "integrations": [
+    {"name":"Pydantic","status":"integrated","role":"domain contracts and JSON Schema"},
+    {"name":"FastAPI","status":"integrated","role":"HTTP runtime surface"},
+    {"name":"SQLite","status":"integrated","role":"local prediction/event persistence"},
+    {"name":"LiteLLM","status":"admission_candidate","role":"model gateway/routing/fallbacks","gate":"L1 model-route benchmark"},
+    {"name":"LangGraph","status":"admission_candidate","role":"durable long-running workflow runtime","gate":"recovery/observability benchmark vs simple runtime"},
+    {"name":"Ragas","status":"admission_candidate","role":"retrieval/agent component evaluation","gate":"metric fit confirmed on L2 components"},
+    {"name":"DSPy","status":"deferred","role":"metric-driven optimization of inference modules","gate":"sufficient train/dev benchmark data"},
+    {"name":"GPT Researcher","status":"deferred","role":"research planner/retriever candidate","gate":"Research-to-Evidence precision/recall benchmark"},
+    {"name":"Qdrant","status":"deferred","role":"hybrid retrieval/reranking","gate":"measured retrieval gap in simpler store"},
+    {"name":"PyMC","status":"deferred","role":"hierarchical calibration","gate":"sufficient resolved predictions for out-of-sample comparison"}
+  ]
+}

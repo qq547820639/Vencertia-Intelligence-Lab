@@ -1,0 +1,456 @@
+{
+  "$defs": {
+    "Belief": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "statement": {
+          "title": "Statement",
+          "type": "string"
+        },
+        "alpha": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Alpha",
+          "type": "number"
+        },
+        "beta": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Beta",
+          "type": "number"
+        },
+        "decision_weight": {
+          "default": 1.0,
+          "minimum": 0,
+          "title": "Decision Weight",
+          "type": "number"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "statement"
+      ],
+      "title": "Belief",
+      "type": "object"
+    },
+    "DecisionOption": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "base_utility": {
+          "default": 0.0,
+          "title": "Base Utility",
+          "type": "number"
+        },
+        "belief_coefficients": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Belief Coefficients",
+          "type": "object"
+        },
+        "irreversible_cost": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Irreversible Cost",
+          "type": "number"
+        },
+        "opportunity_cost": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Opportunity Cost",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "DecisionOption",
+      "type": "object"
+    },
+    "DecisionRequest": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "objective": {
+          "title": "Objective",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/DecisionOption"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "beliefs": {
+          "items": {
+            "$ref": "#/$defs/Belief"
+          },
+          "title": "Beliefs",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "risk_aversion": {
+          "default": 0.25,
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Risk Aversion",
+          "type": "number"
+        },
+        "minimum_decision_margin": {
+          "default": 0.08,
+          "minimum": 0,
+          "title": "Minimum Decision Margin",
+          "type": "number"
+        },
+        "max_unresolved_critical_uncertainty": {
+          "default": 0.45,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Max Unresolved Critical Uncertainty",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "question",
+        "objective",
+        "options",
+        "beliefs"
+      ],
+      "title": "DecisionRequest",
+      "type": "object"
+    },
+    "Direction": {
+      "enum": [
+        "supports",
+        "contradicts",
+        "neutral"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "Evidence": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "belief_id": {
+          "title": "Belief Id",
+          "type": "string"
+        },
+        "claim": {
+          "title": "Claim",
+          "type": "string"
+        },
+        "source_type": {
+          "$ref": "#/$defs/SourceType"
+        },
+        "verification": {
+          "$ref": "#/$defs/Verification",
+          "default": "unknown"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "strength": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Strength",
+          "type": "number"
+        },
+        "source_reliability": {
+          "default": 0.7,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Source Reliability",
+          "type": "number"
+        },
+        "directness": {
+          "default": 0.7,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Directness",
+          "type": "number"
+        },
+        "independence_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Independence Key"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "source_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Ref"
+        }
+      },
+      "required": [
+        "id",
+        "belief_id",
+        "claim",
+        "source_type",
+        "direction",
+        "strength"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Experiment": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "target_belief_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Target Belief Ids",
+          "type": "array"
+        },
+        "expected_information_gain": {
+          "minimum": 0,
+          "title": "Expected Information Gain",
+          "type": "number"
+        },
+        "decision_impact": {
+          "minimum": 0,
+          "title": "Decision Impact",
+          "type": "number"
+        },
+        "cost": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Cost",
+          "type": "number"
+        },
+        "days": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Days",
+          "type": "number"
+        },
+        "reversibility": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Reversibility",
+          "type": "number"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "success_signal": {
+          "title": "Success Signal",
+          "type": "string"
+        },
+        "failure_signal": {
+          "title": "Failure Signal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "target_belief_ids",
+        "expected_information_gain",
+        "decision_impact",
+        "description",
+        "success_signal",
+        "failure_signal"
+      ],
+      "title": "Experiment",
+      "type": "object"
+    },
+    "SourceType": {
+      "enum": [
+        "real_payment",
+        "contract",
+        "observed_behavior",
+        "experiment",
+        "official_data",
+        "primary_research",
+        "reliable_secondary",
+        "expert_input",
+        "founder_report",
+        "model_inference"
+      ],
+      "title": "SourceType",
+      "type": "string"
+    },
+    "Verification": {
+      "enum": [
+        "verified",
+        "estimated",
+        "assumed",
+        "unknown"
+      ],
+      "title": "Verification",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "t0_timestamp": {
+      "format": "date-time",
+      "title": "T0 Timestamp",
+      "type": "string"
+    },
+    "domain": {
+      "default": "venture",
+      "title": "Domain",
+      "type": "string"
+    },
+    "decision": {
+      "$ref": "#/$defs/DecisionRequest"
+    },
+    "experiments": {
+      "items": {
+        "$ref": "#/$defs/Experiment"
+      },
+      "title": "Experiments",
+      "type": "array"
+    },
+    "t0_context": {
+      "title": "T0 Context",
+      "type": "string"
+    },
+    "future_outcome": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Future Outcome"
+    },
+    "resolved_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resolved At"
+    },
+    "reference_option_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reference Option Id"
+    },
+    "reference_experiment_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reference Experiment Id"
+    },
+    "leakage_audit_passed": {
+      "default": false,
+      "title": "Leakage Audit Passed",
+      "type": "boolean"
+    },
+    "reviewer_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reviewer Ids",
+      "type": "array"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "id",
+    "t0_timestamp",
+    "decision",
+    "t0_context"
+  ],
+  "title": "HistoricalDecisionCase",
+  "type": "object"
+}
