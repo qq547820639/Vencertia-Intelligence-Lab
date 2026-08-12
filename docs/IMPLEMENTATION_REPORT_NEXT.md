@@ -50,3 +50,55 @@
    `binding_auto_retry=False` 未启用自动重试。
 4. **openai_compatible 无真实密钥**：仅构造测试；调用失败走结构化错误，
    未接入真实 API（符合"不真调外部 API"约束）。
+
+---
+
+## 5. 最终交付报告（主理人汇编，10 节）
+
+### 5.1 Baseline（开发起点）
+- tests：174 passed / 1 warning（v1.0）
+- L0：26/26（pass_rate 1.0）；L1：6/6 + rejected l1-07-leak
+- 已知断链：`runtime.py:587` 等 3 处 `claim_ids=[]` → Research Evidence 不绑 Claim → Belief 不变 → Decision 不变（P0-1 实证）；API/CLI 双装配 MockProvider（P0-2）；Makefile 硬编码开发机 PYTHON 路径
+
+### 5.2 Iteration 1（Wiring）— 实际发现与修改
+- 实现：providers/factory.py + container.py（Composition Root）、ClaimBindingEngine 四段流水线、DecisionRelevantContextBuilder 入 solve、ResearchPlanner、ResearchStopRule、solve 闭环重构
+- 发现的问题：providers 循环导入（→ errors.py 拆分）；绑定初始全 UNBOUND（→ token recall + _WORD_FAMILY 词形归一化）；linker scope 传参错误（→ claim_id→scope 映射闭包）；多轮重复应用（→ 跨轮 fingerprint 过滤）
+- 指标：v1.0 174 零回归；L0 26/26 保持
+
+### 5.3 Iteration 2（Reliability）— 新问题与修复
+- 实现：EvidenceDedupEngine、ConflictEngine、freshness 折扣、BeliefUpdateRecord + posterior_version、DecisionTrace + SensitivityEngine、ConfidenceCalibrator、8 个新 API 端点、CLI 增强
+- 发现的问题：v1.0 propose 测试与"缺 criteria 被拒"冲突（→ propose 保持 v1.0 语义，validate_experiment 承担强制）；prediction correct 覆盖原记录（→ 新 id PRD_#vN）；CLI sensitivity 传错 convergence_status（→ NOT_CONVERGED）
+- 指标：L0 36/36（+10 能力用例）；API/CLI smoke 通过
+
+### 5.4 Iteration 3（Learning）+ QA 对抗轮
+- 实现：L2 prospective registry（register/settle/due）、L1 新 5 指标（N/A 诚实）、OSSAdmissionExperiment、ProviderCallRecord 可观测性、CI（ruff+pytest+benchmark+smoke）、文档 7 份 + ADR-008~012、Makefile 清理、.gitignore 追加、release 目标
+- QA Round 1 抓到 2 个 MAJOR（dedup 同族折减断裂 / 空 source 哈希碰撞静默丢证）→ 根因修复 → QA 38/38 转绿 → Round 2 PASS
+- 主理人收尾修复：L2_SCHEMA_PATH parents[2]→parents[3]（src/data 垃圾路径）
+
+### 5.5 最终架构（目录树见仓库，85 src 文件）
+REALITY 不变（+EvidenceClaimBinding/BeliefUpdateRecord/ResearchPlan/ResearchTrace/DecisionSensitivity/EvidenceConflict 持久化）→ DECISION INTELLIGENCE（+ClaimBindingEngine/ResearchPlanner/ResearchStopRule/EvidenceDedupEngine/ConflictEngine/SensitivityEngine/ConfidenceCalibrator）→ CAPABILITY（Provider Factory + ApplicationContainer 统一装配）
+
+### 5.6 真实 /v1/solve 数据流
+Context→Compiler→CriticalUnknown→ResearchPlanner→Search/Retrieval→ClaimBinding（UNBOUND 显式）→EvidencePolicy→BeliefUpdate（trace+version）→StopCheck→Uncertainty→Convergence→DecisionEngine→Sensitivity→CONVERGED?Recommendation : SEARCH_CAN_HELP?Continue : ExperimentOptimizer→PredictionLedger→Persist→14 段标准输出
+
+### 5.7 Benchmark 状态
+- L0：36/36（synthetic regression，软件行为回归门）
+- L1：6/6 + 1 泄漏拒绝（time-sliced；新 5 指标缺标签 → N/A）
+- L2：schema + registry 已建（prospective，未来真实结算为校准最终 Truth）
+
+### 5.8 Limitations（真实未完成）
+- 真实 Web Search/LLM 未调用（mock 默认；openai_compatible 仅构造测试——"Adapter implemented, live provider unavailable without credentials"）
+- L1 新指标需标注数据积累；CandidateClaim 人工评审 UI 未做（API 标记 VALIDATED 已有）；UNBOUND 自动重试默认关
+- PG 未实跑（DSN 门控安全）；L2 无真实预测样本
+
+### 5.9 Next Three Highest-ROI（按 Benchmark potential）
+1. 真实 Research/LLM 适配器接入（ProviderCallRecord 已就绪，接真实 provider 后 L1/L2 数据开始积累）
+2. L1 标注案例集扩充（Claim Binding Accuracy 等 5 指标从 N/A 变可计算）
+3. L2 真实预测登记 → 校准重标定启用（Calibration 闭环的最终证据）
+
+### 5.10 Final Deliverables
+- repo：github.com/qq547820639/Vencertia-Intelligence-Lab（main=600a6d9）
+- release：Vencertia_Decision_Runtime_v1.1.zip（378 files，独立可运行）
+- test report：283 passed / 1 skipped（含 QA 对抗 38）
+- benchmark report：L0 36/36 + L1 6/6 + legacy 20/24 参考
+- implementation report：本文档 + docs/ITERATION_LOG.md v1.1 节
