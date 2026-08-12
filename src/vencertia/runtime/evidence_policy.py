@@ -7,12 +7,12 @@ and computes effective weights. Versioned per policy_version (docs/evidence-poli
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from datetime import UTC
+from typing import Any
 
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     AuthorityLevel,
-    Direction,
     Evidence,
     EvidenceType,
     RuleSet,
@@ -21,7 +21,7 @@ from vencertia.domain import (
 )
 
 # Authority hierarchy (v1.0) — 9 levels, versioned.
-AUTHORITY_TABLE: Dict[str, float] = {
+AUTHORITY_TABLE: dict[str, float] = {
     AuthorityLevel.PROJECT_REALITY.value: 1.00,
     AuthorityLevel.PROJECT_DIRECT_BEHAVIOR.value: 0.95,
     AuthorityLevel.PROJECT_EXPERIMENT_RESULT.value: 0.90,
@@ -33,7 +33,7 @@ AUTHORITY_TABLE: Dict[str, float] = {
     AuthorityLevel.MODEL_PRIOR.value: 0.10,
 }
 
-VERIFICATION_MULTIPLIER: Dict[str, float] = {
+VERIFICATION_MULTIPLIER: dict[str, float] = {
     Verification.VERIFIED.value: 1.0,
     Verification.ESTIMATED.value: 0.75,
     Verification.ASSUMED.value: 0.35,
@@ -41,7 +41,7 @@ VERIFICATION_MULTIPLIER: Dict[str, float] = {
 }
 
 # EvidenceType -> default AuthorityLevel (docs §3 mapping table)
-EVIDENCE_TYPE_TO_AUTHORITY: Dict[str, AuthorityLevel] = {
+EVIDENCE_TYPE_TO_AUTHORITY: dict[str, AuthorityLevel] = {
     EvidenceType.REAL_PAYMENT.value: AuthorityLevel.PROJECT_REALITY,
     EvidenceType.CONTRACT.value: AuthorityLevel.PROJECT_REALITY,
     EvidenceType.OBSERVED_BEHAVIOR.value: AuthorityLevel.PROJECT_DIRECT_BEHAVIOR,
@@ -72,6 +72,7 @@ class EvidenceGrade:
     effective_weight: float
     scope_gate: str  # OK | COMPANY_CASE_PRIOR_ONLY | REJECTED
     reason: str
+    freshness_discount: float = 1.0  # v1.1
 
 
 class EvidencePolicy:
@@ -91,13 +92,35 @@ class EvidencePolicy:
         key = verification.value if hasattr(verification, "value") else str(verification)
         return VERIFICATION_MULTIPLIER.get(key, 0.20)
 
+    def freshness_factor(self, evidence: Evidence, now=None) -> float:
+        """v1.1 freshness discount:
+        - 0 if now > valid_until
+        - 1 if now within [valid_from, valid_until]
+        - exp(-age_days / freshness_half_life_days) otherwise
+        - 1.0 when no validity window is set
+        """
+        from datetime import datetime
+
+        now = now or datetime.now(UTC)
+        if evidence.valid_until is not None and now > evidence.valid_until:
+            return 0.0
+        if evidence.valid_from is not None and now < evidence.valid_from:
+            return 0.0
+        reference = evidence.observed_at or evidence.published_at or evidence.created_at
+        if reference is None or evidence.valid_until is None:
+            return 1.0
+        age_days = max(0.0, (now - reference).total_seconds() / 86400.0)
+        half_life = max(1.0, float(self.settings.freshness_half_life_days))
+        return round(max(0.0, min(1.0, __import__("math").exp(-age_days / half_life))), 6)
+
     # -- grading -------------------------------------------------------------
 
     def grade(
         self,
         evidence: Evidence,
         policy: RuleSet | None = None,
-        project_context: Dict[str, Any] | None = None,
+        project_context: dict[str, Any] | None = None,
+        now=None,
     ) -> EvidenceGrade:
         """Assign authority + weight and run scope gates.
 
@@ -120,6 +143,7 @@ class EvidencePolicy:
         if evidence.scope == Scope.COMPANY_CASE.value or evidence.is_company_case:
             return self.check_company_case_transferability(evidence, project_context or {})
 
+        freshness = self.freshness_factor(evidence, now=now)
         weight = (
             self.weight_of(authority)
             * self.verification_multiplier(verification)
@@ -127,6 +151,7 @@ class EvidencePolicy:
             * evidence.reliability
             * evidence.relevance
             * evidence.strength
+            * freshness
         )
         return EvidenceGrade(
             evidence=evidence,
@@ -134,6 +159,7 @@ class EvidencePolicy:
             effective_weight=weight,
             scope_gate="OK",
             reason=f"authority={authority.value}, verification={verification.value}",
+            freshness_discount=freshness,
         )
 
     def apply_authority(self, evidence: Evidence, policy_version: str) -> Evidence:
@@ -158,7 +184,7 @@ class EvidencePolicy:
     def check_company_case_transferability(
         self,
         evidence: Evidence,
-        project_context: Dict[str, Any],
+        project_context: dict[str, Any],
     ) -> EvidenceGrade:
         """Gate company-case evidence on transferability (docs §4.1, ADR-004)."""
         threshold = float(

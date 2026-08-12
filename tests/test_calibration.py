@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from vencertia.domain import CalibrationScope, PredictionEntry, utcnow
+from vencertia.domain import PredictionEntry, utcnow
 from vencertia.runtime.calibration_engine import CalibrationEngine, CalibrationInput
 
 

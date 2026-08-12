@@ -7,7 +7,7 @@ and strips whitespace — the canonical contract per docs/domain-model.md.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict
 
 def utcnow() -> datetime:
     """Current time as a timezone-aware UTC datetime."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class VencertiaBaseModel(BaseModel):

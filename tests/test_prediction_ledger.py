@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from vencertia.domain import Belief, Decision, DecisionOption
-from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime.prediction_ledger import PredictionLedger
 
 

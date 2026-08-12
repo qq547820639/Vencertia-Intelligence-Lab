@@ -1,0 +1,171 @@
+classDiagram
+    class EvidenceClaimBinding {
+        +str id
+        +str evidence_id
+        +str claim_id
+        +float binding_confidence
+        +BindingMethod binding_method
+        +BindingStatus status
+        +str model
+        +str provider
+        +datetime matched_at
+        +int retry_count
+    }
+    class CandidateClaim {
+        +str id
+        +str statement
+        +Scope scope
+        +str validation_status
+        +float extraction_confidence
+    }
+    class ResearchQuestion {
+        +str id
+        +list target_claim_ids
+        +str question
+        +str reason
+        +float expected_decision_impact
+        +list search_queries
+        +str stop_condition
+    }
+    class ResearchPlan {
+        +str id
+        +str decision_id
+        +list questions
+    }
+    class ResearchTrace {
+        +str id
+        +str decision_id
+        +str question_id
+        +int results_retrieved
+        +list new_evidence_ids
+        +str stop_status
+        +str stop_reason
+    }
+    class ResearchStopReport {
+        +str status
+        +dict signals
+    }
+    class BeliefUpdateRecord {
+        +str id
+        +str belief_id
+        +float old_probability
+        +float old_uncertainty
+        +list evidence_used
+        +float correlation_discount
+        +float scope_discount
+        +float freshness_discount
+        +float effective_weight
+        +float new_probability
+        +float new_uncertainty
+        +int posterior_version
+    }
+    class EvidenceConflict {
+        +str id
+        +str claim_id
+        +list evidence_ids
+        +ConflictType conflict_type
+        +float severity
+        +str resolution_status
+    }
+    class DecisionTrace {
+        +str id
+        +str decision_id
+        +list option_utilities
+        +list belief_contributions
+        +dict penalties
+        +float margin
+    }
+    class DecisionSensitivity {
+        +str id
+        +str decision_id
+        +list flips
+        +str robustness
+        +list what_could_change_my_mind
+    }
+    class FlipThreshold {
+        +str belief_id
+        +float current_value
+        +float threshold_value
+        +str would_become
+        +str direction
+    }
+    class CalibratedConfidence {
+        +float raw
+        +float calibrated
+        +str status
+        +int n
+    }
+    class ProviderCallRecord {
+        +str id
+        +str kind
+        +str provider
+        +str model
+        +float latency_ms
+        +bool success
+    }
+    class ClaimBindingEngine
+    class ClaimExtractor
+    class DeterministicClaimMatcher
+    class EvidenceClaimLinker
+    class ResearchPlanner
+    class ResearchStopRule
+    class DecisionSensitivityEngine
+    class ConflictEngine
+    class EvidenceDedupEngine
+    class DecisionRelevantContextBuilder
+    class ContextRanker
+    class ApplicationContainer
+    class ConfidenceCalibrator
+    class Evidence {
+        +str id
+        +list claim_ids
+        +str content_fingerprint
+        +str canonical_source_id
+        +str source_family
+        +str similarity_group
+        +datetime published_at
+        +datetime valid_from
+        +datetime valid_until
+        +float freshness_score
+    }
+    class Belief {
+        +int posterior_version
+        +dict previous_snapshot
+        +str last_evidence_batch_id
+        +str policy_version
+    }
+    class Experiment {
+        +float executability
+        +dict founder_constraints
+        +float sample_quality
+        +float ambiguity_clarity
+        +float measurement_reliability
+    }
+    class PredictionEntry {
+        +str resolution_source
+    }
+
+    EvidenceClaimBinding --> Evidence : evidence_id
+    EvidenceClaimBinding --> Claim : claim_id
+    CandidateClaim --> Claim : 校验后 canonical（VALIDATED）
+    ResearchPlan --> ResearchQuestion : 包含
+    ResearchQuestion --> Claim : target_claim_ids
+    ResearchTrace --> ResearchQuestion : question_id
+    ResearchStopReport --> ResearchTrace : 依据
+    BeliefUpdateRecord --> Belief : belief_id
+    EvidenceConflict --> Claim : claim_id
+    DecisionSensitivity --> FlipThreshold : flips
+    DecisionTrace --> Decision : decision_id
+    ClaimBindingEngine --> ClaimExtractor : 编排
+    ClaimBindingEngine --> DeterministicClaimMatcher
+    ClaimBindingEngine --> EvidenceClaimLinker
+    ResearchPlanner --> ResearchPlan : 产出
+    ResearchStopRule --> ResearchStopReport : 产出
+    DecisionRelevantContextBuilder --> ContextRanker
+    DecisionRelevantContextBuilder --> ContextBundleV11
+    ApplicationContainer --> ProviderBundle
+    ApplicationContainer --> SolveOrchestrator
+    ConfidenceCalibrator --> CalibratedConfidence
+    DecisionSensitivityEngine --> DecisionSensitivity : 产出
+    ConflictEngine --> EvidenceConflict : 产出
+    EvidenceDedupEngine --> DedupResult : 产出

@@ -56,12 +56,17 @@ class Belief(VencertiaBaseModel):
     update_method: UpdateMethod = UpdateMethod.BETA_BERNOULLI
     calibration_group: str = "default"
     decision_relevant: bool = False
+    # v1.1 versioning fields (all optional, backward compatible)
+    posterior_version: int = 1  # incremented on every belief update
+    previous_snapshot: dict | None = None  # {probability, uncertainty, alpha, beta}
+    last_evidence_batch_id: str | None = None
+    policy_version: str = "1.0"
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
     version: int = 1
 
     @model_validator(mode="after")
-    def _sync_probability(self) -> "Belief":
+    def _sync_probability(self) -> Belief:
         # object.__setattr__ bypasses validate_assignment to avoid recursion.
         object.__setattr__(self, "probability", self.posterior)
         object.__setattr__(self, "confidence", max(0.0, min(1.0, 1.0 - self.uncertainty)))

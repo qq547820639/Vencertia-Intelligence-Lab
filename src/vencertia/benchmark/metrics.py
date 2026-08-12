@@ -6,7 +6,7 @@ unit-tested without any runtime wiring.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def compute_decision_accuracy(predicted: list[str], gold: list[str]) -> float:
@@ -107,10 +107,82 @@ def compute_decision_regret(chosen: list[float], best: list[float]) -> float:
     return round(sum(regrets) / len(regrets), 6)
 
 
+# -- v1.1 metrics ------------------------------------------------------------
+# N/A semantics: functions return None when the required data is missing so
+# reports can display "N/A" instead of fabricating a number.
+
+
+def compute_claim_binding_accuracy(hits: int, predicted: int, relevant: int) -> dict | None:
+    """Precision/recall/F1 of evidence→claim binding (L1: Claim Binding Accuracy)."""
+    if predicted <= 0 or relevant <= 0:
+        return None
+    precision = hits / predicted
+    recall = hits / relevant
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    return {
+        "hits": hits,
+        "predicted": predicted,
+        "relevant": relevant,
+        "precision": round(precision, 6),
+        "recall": round(recall, 6),
+        "f1": round(f1, 6),
+    }
+
+
+def compute_research_efficiency(
+    queries: list[int], evidence: list[int], time: list[float]
+) -> dict | None:
+    """Evidence-per-query and evidence-per-day across research rounds."""
+    if not queries or sum(queries) <= 0 or not time:
+        return None
+    return {
+        "rounds": len(queries),
+        "total_queries": sum(queries),
+        "total_evidence": sum(evidence),
+        "evidence_per_query": round(sum(evidence) / max(1, sum(queries)), 6),
+        "evidence_per_day": round(sum(evidence) / max(1e-6, sum(time)), 6),
+    }
+
+
+def compute_evidence_yield(new_evidence: int, retrieved: int) -> float | None:
+    """Fraction of retrieved items that became new (non-duplicate) evidence."""
+    if retrieved <= 0:
+        return None
+    return round(new_evidence / retrieved, 6)
+
+
+def compute_belief_delta_quality(deltas: list[float], gold_deltas: list[float]) -> dict | None:
+    """Correlation-style agreement between predicted and gold belief deltas."""
+    if not deltas or len(deltas) != len(gold_deltas):
+        return None
+    n = len(deltas)
+    if n == 0:
+        return None
+    mae = sum(abs(a - b) for a, b in zip(deltas, gold_deltas)) / n
+    return {
+        "n": n,
+        "mae": round(mae, 6),
+        "direction_agreement": round(
+            sum(1 for a, b in zip(deltas, gold_deltas) if (a >= 0) == (b >= 0)) / n, 6
+        ),
+    }
+
+
+def compute_decision_change_precision(flips_predicted: list[bool], flips_actual: list[bool]) -> float | None:
+    """Precision of predicted recommendation flips vs actual flips."""
+    if not flips_predicted:
+        return None
+    hits = sum(1 for p, a in zip(flips_predicted, flips_actual) if p and a)
+    predicted_positives = sum(1 for p in flips_predicted if p)
+    if predicted_positives <= 0:
+        return None
+    return round(hits / predicted_positives, 6)
+
+
 def compute_all(
     cases: list[dict],
-    predictions: Optional[list[dict]] = None,
-) -> Dict[str, Any]:
+    predictions: list[dict] | None = None,
+) -> dict[str, Any]:
     """Compute the full metric set from a list of case result dicts.
 
     Each case dict may include: predicted_option, gold_option, decided,
@@ -128,7 +200,7 @@ def compute_all(
     crit_pred = [c.get("predicted_critical", "") for c in cases if c.get("gold_critical")]
     crit_gold = [c.get("gold_critical") for c in cases if c.get("gold_critical")]
 
-    evidence_metric: Dict[str, Any] = {}
+    evidence_metric: dict[str, Any] = {}
     if cases and "evidence_predicted" in cases[0]:
         evidence_metric = compute_evidence_precision_recall(
             hits=sum(c.get("evidence_hits", 0) for c in cases),

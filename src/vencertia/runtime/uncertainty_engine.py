@@ -6,8 +6,6 @@ The best/second options are the top two by adjusted utility (docs/decision-engin
 
 from __future__ import annotations
 
-from typing import Optional
-
 from vencertia.domain import Belief, CriticalUncertainty, Decision, DecisionOption, OptionScore
 
 
@@ -50,7 +48,7 @@ class UncertaintyEngine:
         self,
         decision: Decision,
         beliefs: list[Belief],
-        option_scores: Optional[list[OptionScore]] = None,
+        option_scores: list[OptionScore] | None = None,
     ) -> list[CriticalUncertainty]:
         if option_scores is None:
             option_scores = compute_option_scores(decision, beliefs)
@@ -63,7 +61,6 @@ class UncertaintyEngine:
         if best_option is None or second_option is None:
             return []
 
-        bm = {b.id: b for b in beliefs}
         impacts: list[CriticalUncertainty] = []
         for belief in beliefs:
             delta = abs(

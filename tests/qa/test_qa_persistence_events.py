@@ -9,17 +9,15 @@ import sqlite3
 import pytest
 
 from vencertia.domain import (
-    Action,
     Belief,
     Decision,
     DecisionOption,
-    OutcomeType,
     Project,
     Scope,
 )
 from vencertia.events.bus import EventBus
 from vencertia.events.types import EventType
-from vencertia.providers.mock import MockProvider, MockSearchProvider, MockRetrievalProvider
+from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.base import StaleWriteError
 from vencertia.repositories.sqlite import SQLiteRepository
 from vencertia.runtime import SolveOrchestrator, SolveRequest

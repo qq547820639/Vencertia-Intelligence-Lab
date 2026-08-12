@@ -27,6 +27,12 @@ class Experiment(VencertiaBaseModel):
     reversibility: float = Field(default=1.0, ge=0, le=1)
     status: ExperimentStatus = ExperimentStatus.PROPOSED
     outcome_evidence_id: str | None = None
+    # v1.1 experiment-quality fields (all optional, backward compatible)
+    executability: float = Field(default=1.0, ge=0, le=1)
+    founder_constraints: dict = Field(default_factory=dict)
+    sample_quality: float = Field(default=0.5, ge=0, le=1)
+    ambiguity_clarity: float = Field(default=0.5, ge=0, le=1)
+    measurement_reliability: float = Field(default=0.5, ge=0, le=1)
     created_at: datetime = Field(default_factory=utcnow)
     resolved_at: datetime | None = None
     version: int = 1

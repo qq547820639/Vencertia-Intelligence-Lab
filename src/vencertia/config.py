@@ -7,9 +7,24 @@ deterministic defaults, so the system runs fully offline out of the box.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Optional
+
+# Default context-ranking weights (ADR-010). The 10 dimensions are all
+# deterministic in the baseline; ``semantic`` is only active when a
+# SemanticRanker adapter is registered (vector store per ADR-006).
+DEFAULT_CONTEXT_RANK_WEIGHTS: dict[str, float] = {
+    "scope_match": 0.15,
+    "decision_relevance": 0.20,
+    "belief_dependency": 0.10,
+    "authority": 0.15,
+    "evidence_strength": 0.10,
+    "temporal_validity": 0.05,
+    "recency": 0.10,
+    "conflict": 0.05,
+    "semantic": 0.05,
+    "information_value": 0.05,
+}
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -45,15 +60,20 @@ class Settings:
 
     # Persistence
     db_dsn: str = "sqlite:///data/vencertia.db"
-    postgres_dsn: Optional[str] = None
+    postgres_dsn: str | None = None
 
     # Model gateway
     model_provider: str = "mock"  # mock | openai_compatible
-    openai_base_url: Optional[str] = None
-    openai_api_key: Optional[str] = None
+    openai_base_url: str | None = None
+    openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
 
     # Policy
+    # NOTE: the default stays "1.0" for backward compatibility with the v1.0
+    # prediction ledger contract (test_register_creates_snapshot asserts
+    # policy_version == "1.0"). v1.1 policy identity is carried by the new
+    # record types (BeliefUpdateRecord.policy_version="1.1") and can be
+    # switched globally with VENCERTIA_POLICY_VERSION=1.1.
     policy_version: str = "1.0"
     log_level: str = "INFO"
 
@@ -67,9 +87,51 @@ class Settings:
     experiment_max_results: int = 5
     ece_bins: int = 10
 
+    # -- v1.1 research pipeline ----------------------------------------------
+    research_max_questions: int = 3
+    research_max_rounds: int = 3
+    research_queries_per_round: int = 3
+    research_stop_marginal_value: float = 0.02
+    research_stop_duplicate_rate: float = 0.5
+
+    # -- v1.1 claim binding ---------------------------------------------------
+    binding_confidence_threshold: float = 0.6
+    binding_auto_retry: bool = False
+
+    # -- v1.1 context / ranking ------------------------------------------------
+    semantic_rank_provider: str = "deterministic"
+    context_rank_weights: dict[str, float] = field(
+        default_factory=lambda: dict(DEFAULT_CONTEXT_RANK_WEIGHTS)
+    )
+
+    # -- v1.1 evidence pipeline ------------------------------------------------
+    dedup_similarity_threshold: float = 0.8
+    freshness_half_life_days: float = 90.0
+
+    # -- v1.1 decision sensitivity ---------------------------------------------
+    sensitivity_step: float = 0.01
+    robustness_margin_threshold: float = 0.05
+
+    # -- v1.1 provider resilience / observability ------------------------------
+    provider_max_retries: int = 2
+    provider_timeout_seconds: float = 30.0
+    provider_retry_backoff_base: float = 0.5
+    call_log_enabled: bool = True
+
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         """Build Settings from the process environment (VENCERTIA_* variables)."""
+        weights = dict(DEFAULT_CONTEXT_RANK_WEIGHTS)
+        raw_weights = os.environ.get("VENCERTIA_CONTEXT_RANK_WEIGHTS")
+        if raw_weights:
+            try:
+                parsed = dict(
+                    (k.strip(), float(v))
+                    for k, v in (part.split("=", 1) for part in raw_weights.split(",") if "=" in part)
+                )
+                weights.update(parsed)
+            except ValueError:  # pragma: no cover - malformed env must not crash
+                weights = dict(DEFAULT_CONTEXT_RANK_WEIGHTS)
         return cls(
             db_dsn=os.environ.get("VENCERTIA_DB_DSN", "sqlite:///data/vencertia.db"),
             postgres_dsn=os.environ.get("VENCERTIA_PG_DSN") or None,
@@ -87,6 +149,35 @@ class Settings:
             transferability_threshold=_env_float("VENCERTIA_TRANSFERABILITY_THRESHOLD", 0.6),
             experiment_max_results=_env_int("VENCERTIA_EXPERIMENT_MAX_RESULTS", 5),
             ece_bins=_env_int("VENCERTIA_ECE_BINS", 10),
+            research_max_questions=_env_int("VENCERTIA_RESEARCH_MAX_QUESTIONS", 3),
+            research_max_rounds=_env_int("VENCERTIA_RESEARCH_MAX_ROUNDS", 3),
+            research_queries_per_round=_env_int("VENCERTIA_RESEARCH_QUERIES_PER_ROUND", 3),
+            research_stop_marginal_value=_env_float(
+                "VENCERTIA_RESEARCH_STOP_MARGINAL_VALUE", 0.02
+            ),
+            research_stop_duplicate_rate=_env_float(
+                "VENCERTIA_RESEARCH_STOP_DUPLICATE_RATE", 0.5
+            ),
+            binding_confidence_threshold=_env_float(
+                "VENCERTIA_BINDING_CONFIDENCE_THRESHOLD", 0.6
+            ),
+            binding_auto_retry=_env_bool("VENCERTIA_BINDING_AUTO_RETRY", False),
+            semantic_rank_provider=os.environ.get(
+                "VENCERTIA_SEMANTIC_RANK_PROVIDER", "deterministic"
+            ),
+            context_rank_weights=weights,
+            dedup_similarity_threshold=_env_float("VENCERTIA_DEDUP_SIMILARITY_THRESHOLD", 0.8),
+            freshness_half_life_days=_env_float("VENCERTIA_FRESHNESS_HALF_LIFE_DAYS", 90.0),
+            sensitivity_step=_env_float("VENCERTIA_SENSITIVITY_STEP", 0.01),
+            robustness_margin_threshold=_env_float(
+                "VENCERTIA_ROBUSTNESS_MARGIN_THRESHOLD", 0.05
+            ),
+            provider_max_retries=_env_int("VENCERTIA_PROVIDER_MAX_RETRIES", 2),
+            provider_timeout_seconds=_env_float("VENCERTIA_PROVIDER_TIMEOUT_SECONDS", 30.0),
+            provider_retry_backoff_base=_env_float(
+                "VENCERTIA_PROVIDER_RETRY_BACKOFF_BASE", 0.5
+            ),
+            call_log_enabled=_env_bool("VENCERTIA_CALL_LOG_ENABLED", True),
         )
 
 

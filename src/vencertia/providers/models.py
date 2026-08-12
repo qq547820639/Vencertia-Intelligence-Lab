@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import Field
 
@@ -21,7 +21,7 @@ class SearchResult(VencertiaBaseModel):
 class Document(VencertiaBaseModel):
     id: str
     content: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 @runtime_checkable
@@ -34,9 +34,9 @@ class ModelProvider(Protocol):
 
 @runtime_checkable
 class SearchProvider(Protocol):
-    def search(self, query: str, k: int = 5) -> List[SearchResult]: ...
+    def search(self, query: str, k: int = 5) -> list[SearchResult]: ...
 
 
 @runtime_checkable
 class RetrievalProvider(Protocol):
-    def retrieve(self, query: str, k: int = 5) -> List[Document]: ...
+    def retrieve(self, query: str, k: int = 5) -> list[Document]: ...

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from vencertia.config import Settings, get_settings
+from vencertia.config import Settings
 from vencertia.domain import Belief
 from vencertia.events.bus import EventBus
 from vencertia.repositories.memory import InMemoryRepository

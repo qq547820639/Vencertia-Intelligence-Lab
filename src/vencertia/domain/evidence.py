@@ -46,6 +46,15 @@ class Evidence(VencertiaBaseModel):
     authority_level: AuthorityLevel = AuthorityLevel.MODEL_PRIOR
     verification: Verification = Verification.UNKNOWN
     transferability: float | None = Field(default=None, ge=0, le=1)
+    # v1.1 freshness / dedup fields (all optional, backward compatible)
+    published_at: datetime | None = None
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+    freshness_score: float | None = Field(default=None, ge=0, le=1)
+    content_fingerprint: str | None = None  # sha256(normalized text)
+    canonical_source_id: str | None = None  # normalized source id (URL / registered source)
+    source_family: str | None = None  # media family (duplicate-article detection)
+    similarity_group: str | None = None  # similarity group id (analytics)
     created_at: datetime = Field(default_factory=utcnow)
     version: int = 1
 

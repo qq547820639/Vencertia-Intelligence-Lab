@@ -7,16 +7,23 @@ save with the expected version. A stale write raises :class:`StaleWriteError`.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, ClassVar, Protocol, TypeVar, runtime_checkable
+from typing import Any, ClassVar, Protocol, TypeVar, runtime_checkable
 
 from vencertia.domain import (
     Action,
     Belief,
+    BeliefUpdateRecord,
+    CandidateClaim,
     Claim,
     CompanyCase,
     Decision,
+    DecisionSensitivity,
+    DecisionTrace,
     Evidence,
+    EvidenceClaimBinding,
+    EvidenceConflict,
     Experiment,
     FinancialSnapshot,
     FounderOpportunityPortfolio,
@@ -26,6 +33,9 @@ from vencertia.domain import (
     Outcome,
     PredictionEntry,
     Project,
+    ProviderCallRecord,
+    ResearchPlan,
+    ResearchTrace,
     Rule,
     RuleKind,
     VencertiaBaseModel,
@@ -126,6 +136,49 @@ class Repository(Protocol):
     def events_since(self, after_seq: int) -> list[DomainEvent]: ...
     def in_transaction(self, fn: Callable[[], None]) -> None: ...
 
+    # -- v1.1 claim binding ---------------------------------------------------
+    def save_binding(self, binding: EvidenceClaimBinding, expected_version: int | None = None) -> None: ...
+    def get_binding(self, binding_id: str) -> EvidenceClaimBinding | None: ...
+    def list_bindings(
+        self,
+        evidence_id: str | None = None,
+        claim_id: str | None = None,
+        status: str | None = None,
+    ) -> list[EvidenceClaimBinding]: ...
+    def save_candidate_claim(self, candidate: CandidateClaim, expected_version: int | None = None) -> None: ...
+    def list_candidate_claims(self, validation_status: str | None = None) -> list[CandidateClaim]: ...
+
+    # -- v1.1 belief update records ---------------------------------------------
+    def save_belief_update_record(self, record: BeliefUpdateRecord) -> None: ...
+    def list_belief_update_records(self, belief_id: str) -> list[BeliefUpdateRecord]: ...
+
+    # -- v1.1 research -----------------------------------------------------------
+    def save_research_plan(self, plan: ResearchPlan) -> None: ...
+    def get_research_plan(self, plan_id: str) -> ResearchPlan | None: ...
+    def list_research_plans(self, decision_id: str) -> list[ResearchPlan]: ...
+    def save_research_trace(self, trace: ResearchTrace) -> None: ...
+    def list_research_traces(self, decision_id: str) -> list[ResearchTrace]: ...
+
+    # -- v1.1 decision trace / sensitivity ----------------------------------------
+    def save_decision_trace(self, trace: DecisionTrace) -> None: ...
+    def get_decision_trace(self, decision_id: str) -> DecisionTrace | None: ...
+    def save_decision_sensitivity(
+        self, sensitivity: DecisionSensitivity, expected_version: int | None = None
+    ) -> None: ...
+    def get_decision_sensitivity(self, decision_id: str) -> DecisionSensitivity | None: ...
+
+    # -- v1.1 evidence conflict -----------------------------------------------------
+    def save_evidence_conflict(
+        self, conflict: EvidenceConflict, expected_version: int | None = None
+    ) -> None: ...
+    def list_evidence_conflicts(self, claim_id: str | None = None) -> list[EvidenceConflict]: ...
+
+    # -- v1.1 observability ----------------------------------------------------------
+    def save_call_record(self, record: ProviderCallRecord) -> None: ...
+    def list_call_records(
+        self, kind: str | None = None, since: datetime | None = None
+    ) -> list[ProviderCallRecord]: ...
+
 
 # Entity type keys (stored in the generic entities table)
 ENTITY_TYPES: dict[str, type[VencertiaBaseModel]] = {
@@ -145,6 +198,16 @@ ENTITY_TYPES: dict[str, type[VencertiaBaseModel]] = {
     "memory": MemoryRecord,
     "rule": Rule,
     "portfolio": FounderOpportunityPortfolio,
+    # v1.1 entity types (generic entities table)
+    "binding": EvidenceClaimBinding,
+    "candidate_claim": CandidateClaim,
+    "research_plan": ResearchPlan,
+    "research_trace": ResearchTrace,
+    "decision_sensitivity": DecisionSensitivity,
+    "decision_trace": DecisionTrace,
+    "evidence_conflict": EvidenceConflict,
+    "call_record": ProviderCallRecord,
+    "belief_update_record": BeliefUpdateRecord,
 }
 
 
@@ -391,3 +454,120 @@ class EntityStoreMixin:
 
     def in_transaction(self, fn: Callable[[], None]) -> None:
         self._txn(fn)
+
+    # -- v1.1 claim binding -----------------------------------------------------
+
+    def save_binding(
+        self, binding: EvidenceClaimBinding, expected_version: int | None = None
+    ) -> None:
+        self._save(binding, expected_version)
+
+    def get_binding(self, binding_id: str) -> EvidenceClaimBinding | None:
+        return self._get("binding", binding_id)
+
+    def _binding_by_id(self, binding_id: str) -> EvidenceClaimBinding | None:  # pragma: no cover
+        return self._get("binding", binding_id)
+
+    def list_bindings(
+        self,
+        evidence_id: str | None = None,
+        claim_id: str | None = None,
+        status: str | None = None,
+    ) -> list[EvidenceClaimBinding]:
+        rows = self._list("binding")
+        if evidence_id is not None:
+            rows = [b for b in rows if b.evidence_id == evidence_id]
+        if claim_id is not None:
+            rows = [b for b in rows if b.claim_id == claim_id]
+        if status is not None:
+            rows = [b for b in rows if b.status == status or b.status.value == status]
+        return rows
+
+    def save_candidate_claim(
+        self, candidate: CandidateClaim, expected_version: int | None = None
+    ) -> None:
+        self._save(candidate, expected_version)
+
+    def list_candidate_claims(self, validation_status: str | None = None) -> list[CandidateClaim]:
+        rows = self._list("candidate_claim")
+        if validation_status is not None:
+            rows = [c for c in rows if c.validation_status == validation_status]
+        return rows
+
+    # -- v1.1 belief update records ---------------------------------------------
+
+    def save_belief_update_record(self, record: BeliefUpdateRecord) -> None:
+        self._save(record)
+
+    def list_belief_update_records(self, belief_id: str) -> list[BeliefUpdateRecord]:
+        rows = self._list("belief_update_record")
+        return [r for r in rows if r.belief_id == belief_id]
+
+    # -- v1.1 research ------------------------------------------------------------
+
+    def save_research_plan(self, plan: ResearchPlan) -> None:
+        self._save(plan)
+
+    def get_research_plan(self, plan_id: str) -> ResearchPlan | None:
+        return self._get("research_plan", plan_id)
+
+    def list_research_plans(self, decision_id: str) -> list[ResearchPlan]:
+        return [p for p in self._list("research_plan") if p.decision_id == decision_id]
+
+    def save_research_trace(self, trace: ResearchTrace) -> None:
+        self._save(trace)
+
+    def list_research_traces(self, decision_id: str) -> list[ResearchTrace]:
+        return [t for t in self._list("research_trace") if t.decision_id == decision_id]
+
+    # -- v1.1 decision trace / sensitivity ------------------------------------------
+
+    def save_decision_trace(self, trace: DecisionTrace) -> None:
+        self._save(trace)
+
+    def get_decision_trace(self, decision_id: str) -> DecisionTrace | None:
+        for row in self._list("decision_trace"):
+            trace = DecisionTrace.model_validate(row)
+            if trace.decision_id == decision_id:
+                return trace
+        return None
+
+    def save_decision_sensitivity(
+        self, sensitivity: DecisionSensitivity, expected_version: int | None = None
+    ) -> None:
+        self._save(sensitivity, expected_version)
+
+    def get_decision_sensitivity(self, decision_id: str) -> DecisionSensitivity | None:
+        for row in self._list("decision_sensitivity"):
+            sensitivity = DecisionSensitivity.model_validate(row)
+            if sensitivity.decision_id == decision_id:
+                return sensitivity
+        return None
+
+    # -- v1.1 evidence conflict ------------------------------------------------------
+
+    def save_evidence_conflict(
+        self, conflict: EvidenceConflict, expected_version: int | None = None
+    ) -> None:
+        self._save(conflict, expected_version)
+
+    def list_evidence_conflicts(self, claim_id: str | None = None) -> list[EvidenceConflict]:
+        rows = self._list("evidence_conflict")
+        if claim_id is not None:
+            rows = [c for c in rows if c.claim_id == claim_id]
+        return rows
+
+    # -- v1.1 observability -----------------------------------------------------------
+
+    def save_call_record(self, record: ProviderCallRecord) -> None:
+        self._save(record)
+
+    def list_call_records(
+        self, kind: str | None = None, since: datetime | None = None
+    ) -> list[ProviderCallRecord]:
+        rows = self._list("call_record")
+        if kind is not None:
+            rows = [r for r in rows if r.kind == kind]
+        if since is not None:
+            rows = [r for r in rows if r.started_at >= since]
+        return rows

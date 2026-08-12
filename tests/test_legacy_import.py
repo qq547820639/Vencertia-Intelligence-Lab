@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vencertia.legacy.import_v10_2 import V10_2Importer, build_mapping_dictionary, extract_v10_2_enums
+from vencertia.legacy.import_v10_2 import (
+    V10_2Importer,
+    build_mapping_dictionary,
+    extract_v10_2_enums,
+)
 from vencertia.legacy.mapping import (
     MAPPING_VERSION,
     map_company_case,

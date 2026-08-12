@@ -6,9 +6,6 @@ candidate Objective/Decision/Claim/Belief structures via a ModelProvider.
 
 from __future__ import annotations
 
-from typing import Any, Dict
-from uuid import uuid4
-
 from vencertia.capabilities.base import Capability, CapabilityResult
 from vencertia.capabilities.challenger import ChallengerCapability
 from vencertia.capabilities.company_intelligence import CompanyIntelligenceCapability
@@ -60,7 +57,20 @@ class DecisionCompiler:
         problem: str,
         project_state: dict,
         options: list[DecisionOption] | None = None,
+        context=None,
     ) -> CompiledDecision:
+        context_payload = {}
+        if context is not None:
+            context_payload = {
+                "claims": [
+                    c.model_dump(mode="json") if hasattr(c, "model_dump") else c for c in getattr(context, "claims", []) or []
+                ],
+                "beliefs": [
+                    b.model_dump(mode="json") if hasattr(b, "model_dump") else b
+                    for b in getattr(context, "critical_assumptions", []) or []
+                ],
+                "evidence_count": len(getattr(context, "top_evidence", []) or []),
+            }
         raw = self.model.generate_structured(
             task=f"Compile a decision structure for: {problem}",
             schema={"kind": "compile_decision"},
@@ -68,6 +78,7 @@ class DecisionCompiler:
                 "problem_text": problem,
                 **project_state,
                 "options": [o.model_dump(mode="json") for o in options] if options else None,
+                "context": context_payload,
             },
         )
         objective_data = raw.get("objective") or {}
@@ -94,10 +105,9 @@ def build_capability_registry(
     repo: Repository | None = None,
     model: ModelProvider | None = None,
     search=None,
-) -> Dict[str, Capability]:
+) -> dict[str, Capability]:
     """Instantiate all capability modules (defaults to mock providers)."""
-    cfg = settings or get_settings()
-    capabilities: Dict[str, Capability] = {
+    capabilities: dict[str, Capability] = {
         "founder_diagnosis": FounderDiagnosisCapability(),
         "market": MarketCapability(),
         "financial": FinancialCapability(),

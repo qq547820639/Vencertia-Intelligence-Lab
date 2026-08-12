@@ -7,8 +7,6 @@ or falls back to an explicit value if the decision is absent.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Decision,

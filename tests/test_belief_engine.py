@@ -4,13 +4,9 @@ from __future__ import annotations
 
 from vencertia.domain import (
     Belief,
-    Direction,
     Evidence,
-    Scope,
-    Verification,
 )
 from vencertia.runtime.belief_engine import BeliefEngine, BeliefUpdateInput
-from vencertia.runtime.evidence_policy import EvidencePolicy
 
 
 def _belief(alpha=1.0, beta=1.0, scope="PROJECT") -> Belief:

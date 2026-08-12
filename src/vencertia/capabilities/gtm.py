@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from vencertia.capabilities.base import CapabilityResult
-from vencertia.domain import Experiment, Scope
+from vencertia.domain import Experiment
 from vencertia.runtime.context import ContextBundle
 
 

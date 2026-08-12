@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from vencertia.domain import AuthorityLevel, Direction, Evidence, Scope, Verification
+from vencertia.domain import AuthorityLevel, Direction, Evidence
 
 
 def _ev(evidence_type: str, scope: str = "PROJECT", **kw) -> Evidence:

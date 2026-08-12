@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from vencertia.domain import Belief, Decision, DecisionOption
 from vencertia.events.bus import EventBus
-from vencertia.providers.mock import MockProvider, MockSearchProvider, MockRetrievalProvider
+from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import SolveOrchestrator, SolveRequest
 from vencertia.runtime.decision_engine import DecisionEngine, DecisionEngineInput

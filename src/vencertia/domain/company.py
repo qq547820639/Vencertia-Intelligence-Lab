@@ -21,8 +21,8 @@ class CompanyCase(VencertiaBaseModel):
     data_completeness: str = "LOW"
     research_status: str = "DRAFT"
     claim_ids: list[str] = Field(default_factory=list)
-    founder_records: list["FounderRecord"] = Field(default_factory=list)
-    funding_rounds: list["FundingRound"] = Field(default_factory=list)
+    founder_records: list[FounderRecord] = Field(default_factory=list)
+    funding_rounds: list[FundingRound] = Field(default_factory=list)
     updated_at: datetime = Field(default_factory=utcnow)
     version: int = 1
 

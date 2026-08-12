@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import Field
 
-from vencertia.domain.base import RuleKind, VencertiaBaseModel, utcnow
+from vencertia.domain.base import RuleKind, VencertiaBaseModel
 
 
 class Rule(VencertiaBaseModel):

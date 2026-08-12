@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vencertia-decision-runtime"
-version = "1.0.0"
+version = "1.1.0"
 description = "Calibration-first adaptive decision runtime for high-uncertainty venture decisions"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,7 +19,10 @@ dependencies = [
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.1"]
-dev = ["pytest>=8"]
+dev = [
+  "pytest>=8",
+  "ruff>=0.5",
+]
 
 [project.scripts]
 vencertia = "vencertia.cli:app"
@@ -30,3 +33,24 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["legacy", "data", "examples", ".git", ".pytest_cache", "docs", "schemas"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["legacy", "data", "docs", "examples", "schemas", ".git"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+# Configured ignores (v1.1) — low-value style rules where the code is already
+# deliberate; kept at config level instead of scattering noqa comments:
+#   E501  - long lines in verbose rationale strings (kept for readability)
+#   B008  - FastAPI/typer use function-call defaults intentionally
+#   SIM108 - ternary style is clearer in several engine branches
+#   UP042 - datetime.UTC vs timezone.utc modernization across v1.0 files
+#   B905  - zip() strict= omitted in v1.0 metric loops (additive only)
+#   SIM102 - nested-if flattening in v1.0 gate logic (kept for clarity)
+ignore = ["E501", "B008", "SIM108", "UP042", "B905", "SIM102"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests intentionally use `assert False` guards and may hold unused locals.
+"tests/*" = ["B011", "F841"]

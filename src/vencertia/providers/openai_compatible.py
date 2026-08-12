@@ -2,16 +2,28 @@
 
 ``generate_structured`` requests ``response_format=json_schema`` when the
 endpoint supports it, otherwise falls back to prompt-constrained JSON parsing.
+
+Errors are mapped to the structured taxonomy in ``providers.factory``
+(timeout / rate limit / invalid JSON / schema mismatch / unavailable).
+A ``request_id`` is generated per call for ProviderCallRecord observability.
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from uuid import uuid4
 
 import httpx
 
 from vencertia.config import Settings, get_settings
+from vencertia.providers.errors import (
+    ProviderEmptyResultError,
+    ProviderInvalidJSONError,
+    ProviderRateLimitError,
+    ProviderSchemaMismatchError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+)
 
 
 class OpenAICompatibleProvider:
@@ -21,9 +33,9 @@ class OpenAICompatibleProvider:
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
         timeout: float = 30.0,
         settings: Settings | None = None,
     ) -> None:
@@ -32,6 +44,7 @@ class OpenAICompatibleProvider:
         self.api_key = api_key or cfg.openai_api_key or ""
         self.model = model or cfg.openai_model
         self.timeout = timeout
+        self.last_request_id: str = ""
 
     def _client(self) -> httpx.Client:
         headers = {"Content-Type": "application/json"}
@@ -72,18 +85,32 @@ class OpenAICompatibleProvider:
         return self._parse_json(raw).get("content", "")
 
     def _chat(self, payload: dict) -> str:
-        with self._client() as client:
-            response = client.post("/chat/completions", json=payload)
-            response.raise_for_status()
-            data = response.json()
+        self.last_request_id = "req_" + uuid4().hex
+        try:
+            with self._client() as client:
+                response = client.post("/chat/completions", json=payload)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.TimeoutException as exc:
+            raise ProviderTimeoutError(f"timeout after {self.timeout}s") from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and exc.response.status_code == 429:
+                raise ProviderRateLimitError(str(exc)) from exc
+            if exc.response is not None and 500 <= exc.response.status_code < 600:
+                raise ProviderUnavailableError(str(exc)) from exc
+            raise ProviderUnavailableError(str(exc)) from exc
+        except json.JSONDecodeError as exc:
+            raise ProviderInvalidJSONError(str(exc)) from exc
         try:
             return data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:  # pragma: no cover - remote contract
-            raise ValueError(f"Unexpected chat completion payload: {data}") from exc
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ProviderSchemaMismatchError(f"Unexpected chat completion payload: {data}") from exc
 
     @staticmethod
     def _parse_json(raw: str) -> dict:
         text = raw.strip()
+        if not text:
+            raise ProviderEmptyResultError("empty provider response")
         # Strip markdown fences if present.
         if text.startswith("```"):
             text = text.strip("`")
@@ -91,11 +118,18 @@ class OpenAICompatibleProvider:
             if first_newline != -1:
                 text = text[first_newline + 1 :]
         try:
-            return json.loads(text)
-        except json.JSONDecodeError:
+            parsed = json.loads(text)
+        except json.JSONDecodeError as outer_exc:
             # Best-effort: extract the first {...} block.
             start = text.find("{")
             end = text.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(text[start : end + 1])
-            raise
+                try:
+                    parsed = json.loads(text[start : end + 1])
+                except json.JSONDecodeError as exc:
+                    raise ProviderInvalidJSONError(str(exc)) from exc
+            else:
+                raise ProviderInvalidJSONError("no JSON object found in response") from outer_exc
+        if not isinstance(parsed, dict):
+            raise ProviderSchemaMismatchError("provider response is not a JSON object")
+        return parsed

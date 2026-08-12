@@ -6,7 +6,7 @@ numerical formula, not just direction of movement.
 
 from __future__ import annotations
 
-from vencertia.domain import Belief, Direction, Evidence, Scope, Verification
+from vencertia.domain import Belief, Evidence, Scope
 from vencertia.runtime.belief_engine import BeliefEngine, BeliefUpdateInput
 from vencertia.runtime.evidence_policy import EvidencePolicy
 

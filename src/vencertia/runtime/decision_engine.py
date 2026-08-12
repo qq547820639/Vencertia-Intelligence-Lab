@@ -6,19 +6,19 @@ Output uses :class:`DecisionResult` (aliased as DecisionEngineOutput).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
+    BeliefContribution,
     ConvergenceStatus,
     Decision,
     DecisionOption,
     DecisionResult,
+    DecisionTrace,
     DecisionType,
     Objective,
-    OptionScore,
     RuleSet,
 )
 from vencertia.runtime.uncertainty_engine import UncertaintyEngine, compute_option_scores
@@ -129,6 +129,61 @@ class DecisionEngine:
             if option.id == option_id:
                 return option
         return None
+
+    def build_trace(
+        self,
+        inp: DecisionEngineInput,
+        result: DecisionResult,
+    ) -> DecisionTrace:
+        """Pure decomposition of the decision evaluation into a DecisionTrace.
+
+        Does not persist; the orchestrator/API persists it.
+        """
+        from uuid import uuid4
+
+        option_utilities: list[dict] = []
+        for score in result.option_scores:
+            option_utilities.append(
+                {
+                    "option_id": score.option_id,
+                    "expected_utility": score.expected_utility,
+                    "uncertainty_penalty": score.uncertainty_penalty,
+                    "adjusted_utility": score.adjusted_utility,
+                }
+            )
+        contributions: list[BeliefContribution] = []
+        best = result.option_scores[0] if result.option_scores else None
+        best_option = self._option(inp.decision, best.option_id) if best else None
+        for belief in inp.beliefs:
+            best_coef = (best_option.belief_coefficients or {}).get(belief.id, 0.0) if best_option else 0.0
+            contribution = best_coef * belief.probability
+            direction = "NEUTRAL"
+            if contribution > 0:
+                direction = "SUPPORTS"
+            elif contribution < 0:
+                direction = "CONTRADICTS"
+            contributions.append(
+                BeliefContribution(
+                    belief_id=belief.id,
+                    claim_id=belief.claim_id,
+                    contribution=round(contribution, 6),
+                    direction=direction,
+                )
+            )
+        penalties = {
+            "risk_aversion": inp.risk_aversion,
+            "irreversible": sum(o.irreversible_cost for o in inp.decision.options),
+            "opportunity": sum(o.opportunity_cost for o in inp.decision.options),
+        }
+        return DecisionTrace(
+            id="DT_" + uuid4().hex,
+            decision_id=inp.decision.id,
+            option_utilities=option_utilities,
+            belief_contributions=contributions,
+            penalties=penalties,
+            margin=round(result.decision_margin, 6),
+            critical_uncertainty=round(result.critical_uncertainty, 6),
+        )
 
     @staticmethod
     def _map_decision_type(option: DecisionOption) -> DecisionType:

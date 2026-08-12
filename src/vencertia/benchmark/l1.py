@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import Field
 
@@ -20,7 +20,6 @@ from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
     Decision,
-    DecisionOption,
     Evidence,
     Experiment,
     VencertiaBaseModel,
@@ -39,8 +38,8 @@ class L1Case(VencertiaBaseModel):
     id: str
     domain: str = "general"
     decision_time: datetime
-    information_available_at_t0: Dict[str, Any]  # only this is injected
-    hindsight_data: Dict[str, Any] = Field(default_factory=dict)  # never injected
+    information_available_at_t0: dict[str, Any]  # only this is injected
+    hindsight_data: dict[str, Any] = Field(default_factory=dict)  # never injected
     future_outcome: str | None = None
     leakage_audit_passed: bool = False
     reviewer_ids: list[str] = Field(default_factory=list)
@@ -111,6 +110,13 @@ class L1Runner:
                 for r in results
             ]
         )
+        # v1.1 metrics: L1 case files do not yet carry binding/efficiency gold
+        # labels, so these are reported as None (rendered as N/A, never faked).
+        metrics["claim_binding_accuracy"] = None
+        metrics["research_efficiency"] = None
+        metrics["evidence_yield"] = None
+        metrics["belief_delta_quality"] = None
+        metrics["decision_change_precision"] = None
         n = len(results)
         return BenchmarkReport(
             level="L1",

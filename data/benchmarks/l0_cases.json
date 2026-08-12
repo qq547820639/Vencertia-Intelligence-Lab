@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "description": "Vencertia v1.0 synthetic L0 regression cases",
   "cases": [
     {
@@ -3678,6 +3678,94 @@
       "risk_aversion": null,
       "minimum_margin": null,
       "max_critical_uncertainty": null
+    },
+    {
+      "id": "l0_claim_binding",
+      "description": "v1.1 capability: evidence binds to an existing claim",
+      "capability": "claim_binding",
+      "params": {
+        "claim_id": "CLM_WTP",
+        "existing_claim_statement": "ICP will pay for the promised outcome",
+        "evidence_source": "New data confirms that ICP will pay for the promised outcome"
+      }
+    },
+    {
+      "id": "l0_unbound_evidence",
+      "description": "v1.1 capability: unmatched evidence becomes UNBOUND_EVIDENCE",
+      "capability": "unbound",
+      "params": {
+        "claim_id": "CLM_WTP",
+        "existing_claim_statement": "ICP will pay for the promised outcome",
+        "evidence_source": "Interest rates and global macro commentary unrelated to the venture"
+      }
+    },
+    {
+      "id": "l0_multiple_binding",
+      "description": "v1.1 capability: one evidence may bind to multiple claims",
+      "capability": "multiple_binding",
+      "params": {
+        "claim_statements": [
+          "ICP has a severe recurring problem",
+          "The recurring problem is severe for ICPs"
+        ],
+        "evidence_source": "ICP has a severe recurring problem"
+      }
+    },
+    {
+      "id": "l0_research_stop",
+      "description": "v1.1 capability: ResearchStopRule returns SEARCH_EXHAUSTED on low delta + high dup",
+      "capability": "research_stop",
+      "params": {
+        "belief_delta": 0.001,
+        "duplicate_rate": 0.8,
+        "no_new_evidence": true
+      }
+    },
+    {
+      "id": "l0_provider_factory",
+      "description": "v1.1 capability: provider factory wires mock bundle from settings",
+      "capability": "provider_factory",
+      "params": {
+        "model_provider": "mock"
+      }
+    },
+    {
+      "id": "l0_context_injection",
+      "description": "v1.1 capability: decision-relevant medium evidence outranks irrelevant strong evidence",
+      "capability": "context_injection",
+      "params": {}
+    },
+    {
+      "id": "l0_dedup",
+      "description": "v1.1 capability: exact fingerprint duplicates are dropped",
+      "capability": "dedup",
+      "params": {
+        "texts": [
+          "duplicate article text",
+          "duplicate article text",
+          "duplicate article text"
+        ]
+      }
+    },
+    {
+      "id": "l0_contradiction",
+      "description": "v1.1 capability: support+contradict above threshold → conflict + uncertainty raise",
+      "capability": "contradiction",
+      "params": {}
+    },
+    {
+      "id": "l0_sensitivity",
+      "description": "v1.1 capability: decision sensitivity computes flip thresholds + robustness",
+      "capability": "sensitivity",
+      "params": {}
+    },
+    {
+      "id": "l0_calibration_correction",
+      "description": "v1.1 capability: calibrator maps raw→calibrated with enough samples",
+      "capability": "calibration_correction",
+      "params": {
+        "samples": 40
+      }
     }
   ]
 }

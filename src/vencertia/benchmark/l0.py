@@ -1,15 +1,19 @@
-"""L0Runner — synthetic strategy regression (24+ cases).
+"""L0Runner — synthetic strategy regression (26 + 10 capability cases).
 
 Runs deterministic engines against gold-labeled cases (decision/abstention/
 experiment/critical/convergence/probability references). Also normalizes and
 runs the legacy v0.2.jsonl 24-case baseline to prove no behavioral regression.
+
+v1.1 adds 10 capability cases (claim binding / unbound / multiple binding /
+research stop / provider factory / context injection / dedup / contradiction /
+sensitivity / calibration correction) dispatched via ``capability``.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import Field
 
@@ -18,6 +22,7 @@ from vencertia.benchmark.metrics import compute_all
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
+    Claim,
     Decision,
     DecisionOption,
     Evidence,
@@ -33,11 +38,11 @@ from vencertia.runtime.uncertainty_engine import UncertaintyEngine
 
 
 class L0Case(VencertiaBaseModel):
-    """One synthetic regression case."""
+    """One synthetic regression case (decision-style or capability-style)."""
 
     id: str
     description: str = ""
-    decision: Decision
+    decision: Decision | None = None
     beliefs: list[Belief] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
     experiments: list[Experiment] = Field(default_factory=list)
@@ -49,6 +54,9 @@ class L0Case(VencertiaBaseModel):
     expected_abstain: bool = False
     reference_probability: dict[str, float] | None = None
     company_case_isolation: bool = False
+    # v1.1 capability cases
+    capability: str | None = None  # claim_binding | unbound | multiple_binding | ...
+    params: dict = Field(default_factory=dict)
     # Optional per-case engine parameters (fall back to Settings defaults).
     risk_aversion: float | None = None
     minimum_margin: float | None = None
@@ -87,6 +95,7 @@ class L0Runner:
             case_result = self._run_case(case)
             results.append(case_result)
             passed += 1 if case_result.correct else 0
+        decision_cases = [r for r in results if r.status]
         metrics = compute_all(
             [
                 {
@@ -101,9 +110,13 @@ class L0Runner:
                     "chosen_utility": r.chosen_utility,
                     "best_utility": r.best_utility,
                 }
-                for r in results
+                for r in decision_cases
             ]
         )
+        metrics["capability_passed"] = sum(
+            1 for r in results if r.correct and not r.status
+        )
+        metrics["capability_total"] = sum(1 for r in results if not r.status)
         n = len(results)
         return BenchmarkReport(
             level="L0",
@@ -139,6 +152,311 @@ class L0Runner:
     # -- case execution ----------------------------------------------------------
 
     def _run_case(self, case: L0Case) -> BenchmarkCaseResult:
+        if case.capability:
+            return self._run_capability_case(case)
+        return self._run_decision_case(case)
+
+    def _run_capability_case(self, case: L0Case) -> BenchmarkCaseResult:
+        handler = getattr(self, f"_cap_{case.capability}", None)
+        if handler is None:
+            return BenchmarkCaseResult(
+                id=case.id,
+                predicted_option="NO_DECISION",
+                gold_option="NO_DECISION",
+                decided=False,
+                correct=False,
+                status="",
+                notes=f"Unknown capability: {case.capability}",
+            )
+        try:
+            ok, notes = handler(case)
+        except Exception as exc:  # noqa: BLE001 - capability failures are recorded
+            ok, notes = False, f"capability raised {type(exc).__name__}: {exc}"
+        return BenchmarkCaseResult(
+            id=case.id,
+            predicted_option="CAPABILITY",
+            gold_option="CAPABILITY",
+            decided=False,
+            correct=ok,
+            status="",
+            notes=notes,
+        )
+
+    # -- v1.1 capability handlers -------------------------------------------------
+
+    def _cap_claim_binding(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.runtime.claim_binding import (
+            ClaimBindingEngine,
+            ClaimExtractor,
+            DeterministicClaimMatcher,
+            EvidenceClaimLinker,
+        )
+
+        params = case.params
+        existing = Claim(
+            id=params.get("claim_id", "CLM_X"),
+            statement=params.get("existing_claim_statement", "ICP will pay for the outcome"),
+            scope="PROJECT",
+        )
+        source = params.get("evidence_source", "Evidence that ICP will pay for the outcome")
+        repo = _MemoryRepoProxy()
+        engine = ClaimBindingEngine(
+            extractor=ClaimExtractor(settings=self.settings),
+            matcher=DeterministicClaimMatcher(self.settings),
+            linker=EvidenceClaimLinker(),
+            policy=self.policy,
+            repo=repo,
+            settings=self.settings,
+        )
+        output = engine.process(
+            __import__("vencertia.domain", fromlist=["ClaimBindingInput"]).ClaimBindingInput(
+                research_results=[{"id": "E_L0", "source": source, "scope": "MARKET"}],
+                context={"claims": [existing]},
+                existing_claims=[existing],
+                binding_confidence_threshold=0.6,
+            )
+        )
+        bound = len(output.bindings) > 0
+        return bound, f"bindings={len(output.bindings)} unbound={len(output.unbound)}"
+
+    def _cap_unbound(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.runtime.claim_binding import (
+            ClaimBindingEngine,
+            ClaimExtractor,
+            DeterministicClaimMatcher,
+            EvidenceClaimLinker,
+        )
+
+        params = case.params
+        existing = Claim(
+            id=params.get("claim_id", "CLM_X"),
+            statement=params.get("existing_claim_statement", "ICP will pay for the outcome"),
+            scope="PROJECT",
+        )
+        source = params.get(
+            "evidence_source", "Unrelated market commentary about interest rates"
+        )
+        repo = _MemoryRepoProxy()
+        engine = ClaimBindingEngine(
+            extractor=ClaimExtractor(settings=self.settings),
+            matcher=DeterministicClaimMatcher(self.settings),
+            linker=EvidenceClaimLinker(),
+            policy=self.policy,
+            repo=repo,
+            settings=self.settings,
+        )
+        output = engine.process(
+            __import__("vencertia.domain", fromlist=["ClaimBindingInput"]).ClaimBindingInput(
+                research_results=[{"id": "E_L0", "source": source, "scope": "MARKET"}],
+                context={"claims": [existing]},
+                existing_claims=[existing],
+                binding_confidence_threshold=0.6,
+            )
+        )
+        unbound_ok = len(output.unbound) > 0 and all(b.claim_id is None for b in output.unbound)
+        return unbound_ok, f"bindings={len(output.bindings)} unbound={len(output.unbound)}"
+
+    def _cap_multiple_binding(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.runtime.claim_binding import (
+            ClaimBindingEngine,
+            ClaimExtractor,
+            DeterministicClaimMatcher,
+            EvidenceClaimLinker,
+        )
+
+        params = case.params
+        statements = params.get(
+            "claim_statements", ["ICP has a severe recurring problem", "Problem severity drives churn"]
+        )
+        claims = [
+            Claim(id=f"CLM_{i}", statement=s, scope="PROJECT") for i, s in enumerate(statements)
+        ]
+        source = params.get(
+            "evidence_source", "ICP reports a severe recurring problem every week"
+        )
+        repo = _MemoryRepoProxy()
+        engine = ClaimBindingEngine(
+            extractor=ClaimExtractor(settings=self.settings),
+            matcher=DeterministicClaimMatcher(self.settings),
+            linker=EvidenceClaimLinker(),
+            policy=self.policy,
+            repo=repo,
+            settings=self.settings,
+        )
+        output = engine.process(
+            __import__("vencertia.domain", fromlist=["ClaimBindingInput"]).ClaimBindingInput(
+                research_results=[{"id": "E_L0", "source": source, "scope": "MARKET"}],
+                context={"claims": claims},
+                existing_claims=claims,
+                binding_confidence_threshold=0.5,
+            )
+        )
+        multi = len(output.bindings) >= 2
+        return multi, f"bindings={len(output.bindings)} claims={sorted({b.claim_id for b in output.bindings})}"
+
+    def _cap_research_stop(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.domain import ResearchTrace
+        from vencertia.runtime.research_stop import ResearchStopRule
+
+        params = case.params
+        rule = ResearchStopRule(self.settings)
+        delta = float(params.get("belief_delta", 0.001))
+        dup_rate = float(params.get("duplicate_rate", 0.8))
+        before = [Belief(id="b1", claim_id="CLM_1", statement="s", probability=0.5 - delta)]
+        after = [Belief(id="b1", claim_id="CLM_1", statement="s", probability=0.5)]
+        traces = [
+            ResearchTrace(
+                id="RT_L0", decision_id="DEC_L0", question_id="RQ_L0",
+                results_retrieved=10, duplicate_dropped=int(dup_rate * 10), queries_executed=3,
+                new_evidence_ids=[] if params.get("no_new_evidence") else ["E_1"],
+            )
+        ]
+        report = rule.evaluate(
+            traces, before, after, ["CLM_1"], round_no=2
+        )
+        expected = params.get("expected", "SEARCH_EXHAUSTED")
+        return report.status == expected, f"status={report.status} signals={report.signals}"
+
+    def _cap_provider_factory(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.providers.factory import create_provider_bundle
+
+        params = case.params
+        provider = params.get("model_provider", "mock")
+        cfg = Settings(model_provider=provider)
+        bundle = create_provider_bundle(cfg)
+        ok = getattr(bundle.model, "name", "") == "mock"
+        ok = ok and (bundle.search is None or getattr(bundle.search, "name", "") == "mock_search")
+        ok = ok and (
+            bundle.retrieval is None or getattr(bundle.retrieval, "name", "") == "mock_retrieval"
+        )
+        return ok, (
+            f"model={getattr(bundle.model, 'name', type(bundle.model).__name__)} "
+            f"search={getattr(bundle.search, 'name', None) if bundle.search else None}"
+        )
+
+    def _cap_context_injection(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.runtime.context_ranker import ContextRanker
+
+        ranker = ContextRanker(self.settings)
+        decision = Decision(
+            id="DEC_L0", decision_question="Should we build the MVP?", objective_id="OBJ_L0",
+            project_id="PRJ_L0",
+            options=[
+                DecisionOption(id="go", label="Go", belief_coefficients={"wtp": 0.8}),
+                DecisionOption(id="hold", label="Hold", belief_coefficients={"wtp": 0.1}),
+            ],
+            relevant_belief_ids=["wtp"],
+        )
+        beliefs = [Belief(id="wtp", claim_id="CLM_WTP", statement="wtp", probability=0.5)]
+        strong_irrelevant = Evidence(
+            id="E_IRR", claim_ids=[], scope="WORLD", evidence_type="REVIEWED_EXTERNAL_RESEARCH",
+            source="Irrelevant global macro commentary", authority_level="REVIEWED_EXTERNAL_RESEARCH",
+            strength=0.9, reliability=0.9, relevance=0.9,
+        )
+        medium_relevant = Evidence(
+            id="E_REL", claim_ids=["CLM_WTP"], scope="PROJECT", evidence_type="OBSERVED_BEHAVIOR",
+            source="ICP behavior about willingness to pay", authority_level="PROJECT_DIRECT_BEHAVIOR",
+            strength=0.5, reliability=0.5, relevance=0.5,
+        )
+        score_rel = ranker.score_evidence(medium_relevant, decision, beliefs)
+        score_irr = ranker.score_evidence(strong_irrelevant, decision, beliefs)
+        return score_rel > score_irr, f"relevant={score_rel} irrelevant={score_irr}"
+
+    def _cap_dedup(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.providers.search import content_fingerprint
+        from vencertia.runtime.evidence_dedup import EvidenceDedupEngine
+
+        params = case.params
+        texts = params.get("texts", ["same text", "same text", "same text"])
+        engine = EvidenceDedupEngine(self.settings)
+        evidence_list = [
+            Evidence(
+                id=f"E_{i}", claim_ids=[], scope="MARKET", evidence_type="REVIEWED_EXTERNAL_RESEARCH",
+                source=t, content_fingerprint=content_fingerprint(t),
+            )
+            for i, t in enumerate(texts)
+        ]
+        result = engine.group(evidence_list)
+        expected_dropped = len(texts) - 1
+        return len(result.dropped_ids) == expected_dropped, (
+            f"dropped={len(result.dropped_ids)} kept={len(result.kept_ids)}"
+        )
+
+    def _cap_contradiction(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.runtime.conflict_engine import ConflictEngine
+
+        support = Evidence(
+            id="E_SUP", claim_ids=["CLM_X"], scope="PROJECT", evidence_type="OBSERVED_BEHAVIOR",
+            source="supports", supports_or_contradicts="SUPPORTS", strength=0.9, reliability=0.9,
+        )
+        contradict = Evidence(
+            id="E_CON", claim_ids=["CLM_X"], scope="PROJECT", evidence_type="OBSERVED_BEHAVIOR",
+            source="contradicts", supports_or_contradicts="CONTRADICTS", strength=0.9, reliability=0.9,
+        )
+        engine = ConflictEngine(self.settings)
+        conflicts = engine.detect({"CLM_X": [support, contradict]}, threshold=0.3)
+        if not conflicts:
+            return False, "no conflict detected"
+        belief = Belief(id="b1", claim_id="CLM_X", statement="x", uncertainty=0.4)
+        raised = engine.apply_to_belief(belief, conflicts[0])
+        return conflicts[0].severity > 0 and raised.uncertainty > belief.uncertainty, (
+            f"severity={conflicts[0].severity} unc={belief.uncertainty}->{raised.uncertainty}"
+        )
+
+    def _cap_sensitivity(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.runtime.decision_sensitivity import DecisionSensitivityEngine
+
+        decision = Decision(
+            id="DEC_L0", decision_question="q", objective_id="OBJ_L0", project_id="PRJ_L0",
+            options=[
+                DecisionOption(id="go", label="Go", kind="GO", base_utility=0.1,
+                               belief_coefficients={"wtp": 0.8}, irreversible_cost=0.2),
+                DecisionOption(id="hold", label="Hold", kind="HOLD", base_utility=0.35,
+                               belief_coefficients={"wtp": 0.1}),
+            ],
+            relevant_belief_ids=["wtp"],
+        )
+        belief = Belief(
+            id="wtp", claim_id="CLM_WTP", statement="wtp", probability=0.42, uncertainty=0.3,
+        )
+        from vencertia.runtime.uncertainty_engine import compute_option_scores
+
+        scores = compute_option_scores(decision, [belief])
+        result = __import__("vencertia.domain", fromlist=["DecisionResult"]).DecisionResult(
+            decision_id=decision.id, status="HOLD", recommended_option_id=scores[0].option_id,
+            confidence=0.5, decision_margin=scores[0].adjusted_utility - scores[1].adjusted_utility,
+            option_scores=scores,
+        )
+        engine = DecisionSensitivityEngine(self.settings)
+        sensitivity = engine.compute(decision, [belief], result)
+        ok = sensitivity.robustness in ("STRONG_DECISION", "FRAGILE_DECISION")
+        return ok, (
+            f"robustness={sensitivity.robustness} flips={[(f.direction, round(f.threshold_value, 2), f.would_become) for f in sensitivity.flips]}"
+        )
+
+    def _cap_calibration_correction(self, case: L0Case) -> tuple[bool, str]:
+        from vencertia.repositories.memory import InMemoryRepository
+        from vencertia.runtime.confidence_calibrator import ConfidenceCalibrator
+
+        params = case.params
+        repo = InMemoryRepository()
+        samples = int(params.get("samples", 40))
+        for i in range(samples):
+            prob = 0.6 if i % 2 == 0 else 0.4
+            repo.save_prediction(
+                __import__("vencertia.domain", fromlist=["PredictionEntry"]).PredictionEntry(
+                    id=f"PRD_L0_{i}", project_id="PRJ_L0", target="t",
+                    predicted_probability=prob, resolution="TRUE" if prob > 0.5 else "FALSE",
+                    outcome=prob > 0.5, domain="general",
+                )
+            )
+        calibrator = ConfidenceCalibrator(repo=repo, settings=self.settings, min_samples=20)
+        calibrated = calibrator.calibrate(0.55, "default")
+        return calibrated.status == "CALIBRATED" and calibrated.calibrated is not None, (
+            f"status={calibrated.status} calibrated={calibrated.calibrated} n={calibrated.n}"
+        )
+
+    def _run_decision_case(self, case: L0Case) -> BenchmarkCaseResult:
         # Beliefs are derived state: recompute uncertainty/confidence from
         # alpha/beta so authored cases behave identically to persisted ones.
         beliefs = {b.id: b.model_copy(deep=True) for b in case.beliefs}
@@ -159,6 +477,7 @@ class L0Runner:
             )
             beliefs = {b.id: b for b in output.beliefs}
 
+        assert case.decision is not None
         belief_list = list(beliefs.values())
         criticals = self.uncertainty_engine.rank(case.decision, belief_list)
         pre_convergence = self.convergence_engine.check(
@@ -304,7 +623,7 @@ class L0Runner:
         return max(0.0, min(1.0, variance * (0.35 + 0.65 * maturity)))
 
     @staticmethod
-    def _normalize_legacy_case(raw: Dict[str, Any]) -> L0Case:
+    def _normalize_legacy_case(raw: dict[str, Any]) -> L0Case:
         request = raw["request"]
         beliefs: list[Belief] = []
         for b in request.get("beliefs", []):
@@ -411,3 +730,22 @@ class L0Runner:
             minimum_margin=request.get("minimum_decision_margin"),
             max_critical_uncertainty=request.get("max_unresolved_critical_uncertainty"),
         )
+
+
+class _MemoryRepoProxy:
+    """Minimal repository stand-in for capability handlers (in-memory only)."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, Any] = {}
+
+    def save_binding(self, binding, expected_version=None) -> None:
+        self._data[f"binding:{binding.id}"] = binding
+
+    def save_candidate_claim(self, candidate, expected_version=None) -> None:
+        self._data[f"candidate:{candidate.id}"] = candidate
+
+    def add_evidence(self, evidence) -> None:
+        self._data[f"evidence:{evidence.id}"] = evidence
+
+    def list_evidence(self, claim_ids=None):
+        return [v for k, v in self._data.items() if k.startswith("evidence:")]

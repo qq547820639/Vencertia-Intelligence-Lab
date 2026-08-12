@@ -24,12 +24,35 @@ from vencertia.domain.base import (
     utcnow,
 )
 from vencertia.domain.belief import Belief, ConflictAlert, EvidenceApplication
-from vencertia.domain.calibration import CalibrationProfile, CalibrationScope
+from vencertia.domain.belief_update import BeliefUpdateRecord
+from vencertia.domain.binding import (
+    BindingMethod,
+    BindingStatus,
+    CandidateClaim,
+    ClaimBindingInput,
+    ClaimBindingOutput,
+    ClaimMatchResult,
+    EvidenceClaimBinding,
+)
+from vencertia.domain.calibration import CalibratedConfidence, CalibrationProfile, CalibrationScope
 from vencertia.domain.claim import Claim
-from vencertia.domain.company import CaseUnitRef, ClaimTrace, CompanyCase, FounderRecord, FundingRound
+from vencertia.domain.company import (
+    CaseUnitRef,
+    ClaimTrace,
+    CompanyCase,
+    FounderRecord,
+    FundingRound,
+)
 from vencertia.domain.convergence import ConvergenceReport, CriticalUncertainty
 from vencertia.domain.decision import Decision, DecisionOption, DecisionResult, OptionScore
+from vencertia.domain.decision_trace import (
+    BeliefContribution,
+    DecisionSensitivity,
+    DecisionTrace,
+    FlipThreshold,
+)
 from vencertia.domain.evidence import Evidence, Provenance
+from vencertia.domain.evidence_conflict import ConflictType, EvidenceConflict
 from vencertia.domain.experiment import Experiment, RankedExperiment
 from vencertia.domain.founder import (
     FounderOpportunityPortfolio,
@@ -47,9 +70,16 @@ from vencertia.domain.memory import (
     MemoryType,
 )
 from vencertia.domain.objective import Objective, ObjectiveDirection
+from vencertia.domain.observability import ProviderCallRecord
 from vencertia.domain.policy import Rule, RuleSet
 from vencertia.domain.prediction import PredictionEntry
 from vencertia.domain.project import FinancialSnapshot, Project, ProjectKB, ProjectStatus, Stage
+from vencertia.domain.research import (
+    ResearchPlan,
+    ResearchQuestion,
+    ResearchStopReport,
+    ResearchTrace,
+)
 
 __all__ = [
     "Action",
@@ -57,30 +87,45 @@ __all__ = [
     "AccessClass",
     "AuthorityLevel",
     "Belief",
+    "BeliefContribution",
+    "BeliefUpdateRecord",
+    "BindingMethod",
+    "BindingStatus",
+    "CalibratedConfidence",
     "CalibrationProfile",
     "CalibrationScope",
+    "CandidateClaim",
     "CaseUnitRef",
     "Claim",
+    "ClaimBindingInput",
+    "ClaimBindingOutput",
+    "ClaimMatchResult",
     "ClaimStatus",
     "ClaimTrace",
     "ClaimType",
     "CompanyCase",
     "ConflictAlert",
     "ConflictStatus",
+    "ConflictType",
     "ConvergenceReport",
     "ConvergenceStatus",
     "CriticalUncertainty",
     "Decision",
     "DecisionOption",
     "DecisionResult",
+    "DecisionSensitivity",
+    "DecisionTrace",
     "DecisionType",
     "Direction",
     "Evidence",
     "EvidenceApplication",
+    "EvidenceClaimBinding",
+    "EvidenceConflict",
     "EvidenceType",
     "Experiment",
     "ExperimentStatus",
     "FinancialSnapshot",
+    "FlipThreshold",
     "FounderOpportunityPortfolio",
     "FounderProfile",
     "FounderRecord",
@@ -104,7 +149,12 @@ __all__ = [
     "ProjectKB",
     "ProjectStatus",
     "Provenance",
+    "ProviderCallRecord",
     "RankedExperiment",
+    "ResearchPlan",
+    "ResearchQuestion",
+    "ResearchStopReport",
+    "ResearchTrace",
     "Rule",
     "RuleKind",
     "RuleSet",

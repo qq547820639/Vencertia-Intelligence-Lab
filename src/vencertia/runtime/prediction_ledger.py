@@ -13,7 +13,6 @@ import hmac
 import json
 import warnings
 from datetime import timedelta
-from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from vencertia.config import Settings, get_settings
@@ -73,7 +72,12 @@ class PredictionLedger:
 
     # -- settlement ------------------------------------------------------------
 
-    def resolve(self, entry_id: str, outcome: bool) -> PredictionEntry:
+    def resolve(
+        self,
+        entry_id: str,
+        outcome: bool,
+        resolution_source: str | None = None,
+    ) -> PredictionEntry:
         entry = self.repo.get_prediction(entry_id)
         if entry is None:
             raise EntityNotFoundError("prediction", entry_id)
@@ -89,6 +93,7 @@ class PredictionLedger:
             warnings.warn(
                 f"Prediction {entry_id} snapshot hash mismatch — marked CANCELLED.",
                 RuntimeWarning,
+                stacklevel=2,
             )
             resolution = PredictionResolution.CANCELLED.value
             resolved_outcome = None
@@ -98,11 +103,42 @@ class PredictionLedger:
                 "outcome": resolved_outcome,
                 "resolved_at": resolved_at,
                 "snapshot_verified": verified,
+                "resolution_source": resolution_source,
                 "version": entry.version + 1,
             }
         )
         self.repo.save_prediction(updated, expected_version=entry.version)
         return updated
+
+    def correct(self, entry_id: str, new_outcome: bool, source: str) -> PredictionEntry:
+        """Create a corrected NEW version of a settled prediction (v1.1).
+
+        The original record is preserved under its own id (immutable); the new
+        version gets a fresh id, ``corrected=True`` and the correction source.
+        """
+        entry = self.repo.get_prediction(entry_id)
+        if entry is None:
+            raise EntityNotFoundError("prediction", entry_id)
+        if not entry.is_settled:
+            raise ValueError(f"Prediction {entry_id} is not settled; cannot correct an open entry.")
+        new_id = f"{entry.id}#v{entry.version + 1}"
+        corrected = entry.model_copy(
+            update={
+                "id": new_id,
+                "resolution": PredictionResolution.TRUE.value
+                if new_outcome
+                else PredictionResolution.FALSE.value,
+                "outcome": new_outcome,
+                "resolved_at": utcnow(),
+                "snapshot_verified": entry.snapshot_verified,
+                "resolution_source": source,
+                "corrected": True,
+                "version": entry.version + 1,
+            }
+        )
+        # New id → fresh record; the original entry is untouched.
+        self.repo.save_prediction(corrected)
+        return corrected
 
     def verify_snapshot(
         self,

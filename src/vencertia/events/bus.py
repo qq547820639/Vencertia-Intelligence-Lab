@@ -8,7 +8,7 @@ published event is also written to the event log for audit/replay.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Callable, List, Optional
+from collections.abc import Callable
 
 from vencertia.events.types import DomainEvent, EventType
 
@@ -19,8 +19,8 @@ EventSink = Callable[[DomainEvent], None]
 class EventBus:
     """Minimal synchronous publish/subscribe bus with an optional log sink."""
 
-    def __init__(self, sink: Optional[EventSink] = None) -> None:
-        self._handlers: dict[EventType, List[EventHandler]] = defaultdict(list)
+    def __init__(self, sink: EventSink | None = None) -> None:
+        self._handlers: dict[EventType, list[EventHandler]] = defaultdict(list)
         self._sink = sink
         self._sequence = 0
 
@@ -33,7 +33,7 @@ class EventBus:
         """Register a handler for a specific event type."""
         self._handlers[event_type].append(handler)
 
-    def handlers_for(self, event_type: EventType) -> List[EventHandler]:
+    def handlers_for(self, event_type: EventType) -> list[EventHandler]:
         """Return registered handlers for an event type."""
         return list(self._handlers.get(event_type, []))
 
@@ -45,7 +45,7 @@ class EventBus:
         for handler in self._handlers.get(event.event_type, []):
             handler(event)
 
-    def publish_many(self, events: List[DomainEvent]) -> None:
+    def publish_many(self, events: list[DomainEvent]) -> None:
         """Publish several events in order."""
         for event in events:
             self.publish(event)

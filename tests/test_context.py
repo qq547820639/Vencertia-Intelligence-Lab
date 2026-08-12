@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from vencertia.domain import Belief, Evidence, Project, Scope
-from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime.context import ContextBuilder
 
 

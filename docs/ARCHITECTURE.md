@@ -331,3 +331,48 @@ pyproject.toml
 - **实验 catalog 来源**：v1.0 由用户/模板提供；自动生成实验候选属后续能力。
 - **LLM compile 质量门**：v1.0 用 schema 校验 + L0 回归兜底；端到端质量指标待 L1 数据积累。
 - **多轮迭代节奏**：详见 TASK_BREAKDOWN.md 的迭代计划（3 轮）。
+
+---
+
+# 附录 A — v1.1 增量架构（Intelligence Ingestion）
+
+> 完整设计见 `docs/v1.1-design.md`；本附录只列增量要点。
+
+## A.1 新增组件
+
+| 组件 | 位置 | 职责 |
+|---|---|---|
+| ApplicationContainer | `container.py` | 单一装配根：Settings→Repo→Providers→Engines→Orchestrator→API/CLI |
+| Provider Factory | `providers/factory.py` | ProviderBundle + 注册表 + `with_resilience`（重试/结构化错误） |
+| ClaimBindingEngine | `runtime/claim_binding.py` | Extract→Match→Validate→Link→Bind 四段流水线 |
+| DecisionRelevantContextBuilder | `runtime/context_ranker.py` | 15 类上下文 + 10 维排序 |
+| ResearchPlanner / ResearchStopRule | `runtime/research_planner.py` / `research_stop.py` | 研究规划 + 8 类信号停止 |
+| EvidenceDedupEngine / ConflictEngine | `runtime/evidence_dedup.py` / `conflict_engine.py` | 去重 + 矛盾抬升 |
+| DecisionSensitivityEngine | `runtime/decision_sensitivity.py` | 翻转阈值 + STRONG/FRAGILE |
+| ConfidenceCalibrator | `runtime/confidence_calibrator.py` | 样本不足 UNCALIBRATED，不伪造 |
+| CallRecorder | `runtime/observability.py` | ProviderCallRecord（不记 prompt） |
+| L2Runner / OSSAdmissionExperiment | `benchmark/l2.py` / `oss_admission.py` | prospective 预测 + 冻结用例准入 |
+
+## A.2 /v1/solve 闭环（v1.1）
+
+```
+Context → Compiler → CriticalUnknowns → ResearchPlanner → ResearchRun
+→ Dedup → ClaimBinding → EvidencePolicy → BeliefUpdate → StopCheck
+→ Uncertainty → Convergence → Decision+Trace → Sensitivity
+→ (ABSTAIN/未收敛 → ExperimentOptimizer) → PredictionLedger → Persist
+```
+
+输出段：DECISION / CONVERGENCE / CONFIDENCE / WHY / CRITICAL UNCERTAINTY /
+BELIEF SNAPSHOT / WHAT COULD CHANGE MY MIND / RESEARCH PERFORMED /
+EVIDENCE USED / EVIDENCE REJECTED / NEXT EXPERIMENT / SUCCESS CRITERIA /
+FAILURE CRITERIA / STOP CONDITION。
+
+## A.3 v1.1 不变式（继承 + 新增）
+
+1~9 与 v1.0 相同（见上文）；新增：
+10. **外部智能不能直接改 canonical 状态**（ADR-012）：Candidate → Validation → 持久化。
+11. **研究证据必须绑定 Claim**（ADR-008）：`claim_ids=[]` 空绑定已删除。
+12. **Context 是决策相关的**（ADR-010）：不是"最新 N 条"。
+13. **研究必须有停止规则**（ADR-011）：SEARCH_EXHAUSTED 是诚实声明，不是兜底。
+14. **Provider 配置在装配根**（ADR-009）：`MODEL_PROVIDER` 真实生效。
+15. **可观测性红线**：ProviderCallRecord 不得含 prompt/敏感内容。

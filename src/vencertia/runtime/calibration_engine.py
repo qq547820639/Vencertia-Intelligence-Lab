@@ -7,11 +7,16 @@ the engine never rewrites an original probability (docs/calibration.md).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 from uuid import uuid4
 
 from vencertia.config import Settings, get_settings
-from vencertia.domain import CalibrationProfile, CalibrationScope, PredictionEntry, utcnow
+from vencertia.domain import (
+    CalibratedConfidence,
+    CalibrationProfile,
+    CalibrationScope,
+    PredictionEntry,
+    utcnow,
+)
 from vencertia.events.bus import EventBus
 from vencertia.events.types import DomainEvent, EventType
 
@@ -165,3 +170,83 @@ class CalibrationEngine:
                     )
                 )
         return profiles
+
+    def calibrate(
+        self,
+        raw: float,
+        calibration_group: str = "default",
+        predictions: list[PredictionEntry] | None = None,
+        min_samples: int = 20,
+    ) -> CalibratedConfidence:
+        """Map a raw confidence to a calibrated value (v1.1).
+
+        Uses settled predictions of the group (``domain == group`` for
+        non-default groups; all settled for ``default``). With fewer than
+        ``min_samples`` samples, returns ``UNCALIBRATED`` with calibrated=None
+        — the system never fabricates calibration it cannot support.
+        """
+        raw = max(0.0, min(1.0, float(raw)))
+        if predictions is None:
+            return CalibratedConfidence(raw=raw, calibrated=None, status="UNCALIBRATED", n=0)
+        settled = [
+            p
+            for p in predictions
+            if p.resolution in ("TRUE", "FALSE")
+            and (calibration_group == "default" or p.domain == calibration_group)
+        ]
+        n = len(settled)
+        if n < min_samples:
+            return CalibratedConfidence(
+                raw=raw,
+                calibrated=None,
+                status="UNCALIBRATED",
+                n=n,
+                calibration_group=calibration_group,
+            )
+        bins = self._bins(settled)
+        calibrated = self._map_piecewise(raw, bins)
+        return CalibratedConfidence(
+            raw=raw,
+            calibrated=calibrated,
+            status="CALIBRATED",
+            n=n,
+            calibration_group=calibration_group,
+        )
+
+    @staticmethod
+    def _bins(settled: list[PredictionEntry]) -> list[dict]:
+        n_bins = 10
+        bins: list[dict] = []
+        for i in range(n_bins):
+            lo = i / n_bins
+            hi = (i + 1) / n_bins
+            bucket = [
+                p
+                for p in settled
+                if lo <= p.predicted_probability < hi
+                or (i == n_bins - 1 and p.predicted_probability == 1.0)
+            ]
+            if not bucket:
+                continue
+            conf = sum(x.predicted_probability for x in bucket) / len(bucket)
+            rate = sum(1.0 for x in bucket if x.outcome) / len(bucket)
+            bins.append({"lo": lo, "hi": hi, "mean_confidence": conf, "empirical_rate": rate})
+        return bins
+
+    @staticmethod
+    def _map_piecewise(raw: float, bins: list[dict]) -> float:
+        if not bins:
+            return raw
+        raw = max(0.0, min(1.0, raw))
+        for idx, current in enumerate(bins):
+            next_bin = bins[idx + 1] if idx + 1 < len(bins) else None
+            lo = current["mean_confidence"]
+            hi = next_bin["mean_confidence"] if next_bin else 1.0
+            if lo <= raw <= hi:
+                rate_lo = current["empirical_rate"]
+                rate_hi = next_bin["empirical_rate"] if next_bin else rate_lo
+                if hi == lo:
+                    return round(rate_lo, 6)
+                fraction = (raw - lo) / (hi - lo)
+                return round(rate_lo + fraction * (rate_hi - rate_lo), 6)
+        return round(bins[-1]["empirical_rate"], 6)

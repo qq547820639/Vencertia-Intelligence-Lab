@@ -28,3 +28,17 @@ class CalibrationProfile(VencertiaBaseModel):
     empirical_rate: float | None = None
     bins: list[dict] = Field(default_factory=list)
     updated_at: datetime = Field(default_factory=utcnow)
+
+
+class CalibratedConfidence(VencertiaBaseModel):
+    """Raw confidence with an optional calibrated correction (v1.1).
+
+    ``status == UNCALIBRATED`` when there are not enough settled samples;
+    the system never fabricates a calibration it cannot support.
+    """
+
+    raw: float = Field(ge=0, le=1)
+    calibrated: float | None = Field(default=None, ge=0, le=1)
+    status: str = "UNCALIBRATED"  # UNCALIBRATED | CALIBRATED
+    n: int = 0
+    calibration_group: str = "default"

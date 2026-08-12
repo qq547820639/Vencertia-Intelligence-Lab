@@ -16,7 +16,7 @@ Run:  PYTHONPATH=src python examples/demo_b2b_saas_mvp.py
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from vencertia.domain import (
     Action,
@@ -28,8 +28,8 @@ from vencertia.domain import (
     FinancialSnapshot,
     MemoryRecord,
     MemoryScope,
-    MemoryType,
     MemoryStatus,
+    MemoryType,
     OutcomeType,
     Project,
     ProjectStatus,
@@ -145,7 +145,7 @@ def _make_paid_pilot_experiment() -> Experiment:
     )
 
 
-def run_demo(console=None) -> Dict[str, Any]:
+def run_demo(console=None) -> dict[str, Any]:
     """Run the demo; returns a JSON-serializable summary dict."""
     if console is None:
         from rich.console import Console
@@ -223,7 +223,7 @@ def run_demo(console=None) -> Dict[str, Any]:
         outcome_type=OutcomeType.FAILURE,
     )
     wtp_after = next(b for b in repo.get_beliefs(PROJECT_ID) if b.id == "wtp").probability
-    console.print(f"  Outcome: FAILURE — 20 outreach / 6 replies / 3 demos / 0 paid")
+    console.print("  Outcome: FAILURE — 20 outreach / 6 replies / 3 demos / 0 paid")
     console.print(f"  Belief WTP: [bold]{wtp_before:.3f} -> {wtp_after:.3f}[/bold] "
                   f"(decreased by {wtp_before - wtp_after:.3f})")
     if recorded.decision_update:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from vencertia.domain import Belief, Decision, DecisionOption, Evidence, Project, Scope
+from vencertia.domain import Belief, Evidence, Project, Scope
 from vencertia.events.types import DomainEvent, EventType
 from vencertia.repositories.base import EntityNotFoundError, StaleWriteError
 from vencertia.repositories.memory import InMemoryRepository

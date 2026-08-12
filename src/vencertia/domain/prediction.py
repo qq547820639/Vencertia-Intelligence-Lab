@@ -26,6 +26,8 @@ class PredictionEntry(VencertiaBaseModel):
     resolved_at: datetime | None = None
     outcome: bool | None = None
     snapshot_verified: bool | None = None
+    resolution_source: str | None = None  # v1.1: outcome_id / evidence_id / user
+    corrected: bool = False  # v1.1: True on corrected() new versions
     created_at: datetime = Field(default_factory=utcnow)
     version: int = 1
 

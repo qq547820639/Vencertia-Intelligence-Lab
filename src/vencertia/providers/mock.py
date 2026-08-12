@@ -1,16 +1,15 @@
-"""Mock providers — deterministic offline outputs (default for v1.0).
+"""Mock providers — deterministic offline outputs (default for v1.0/v1.1).
 
-The mock provider recognizes task kinds (compile/research) and returns canned,
-deterministic structures so the whole system runs without any external API.
+The mock provider recognizes task kinds (compile/research/extract/match/
+research_plan) and returns canned, deterministic structures so the whole system
+runs without any external API. Provider names are normalized (``name``
+attribute) so observability records are stable.
 """
 
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import Any, Dict, List
 from uuid import uuid4
 
-from vencertia.domain import utcnow
 from vencertia.providers.models import Document, SearchResult
 
 
@@ -25,6 +24,12 @@ class MockProvider:
             return self._compile(context)
         if "research" in kind or "search" in kind:
             return self._research(context)
+        if "extract" in kind:
+            return self._extract(context)
+        if "match" in kind:
+            return self._match(context)
+        if "research_plan" in kind:
+            return self._research_plan(context)
         return {
             "result": task,
             "context": {k: v for k, v in context.items() if not isinstance(v, (bytes, bytearray))},
@@ -246,29 +251,106 @@ class MockProvider:
             ]
         }
 
+    def _extract(self, context: dict) -> dict:
+        """Deterministic candidate-claim extraction template (T03 hook).
+
+        The runtime's ClaimExtractor uses this when a model is available; the
+        extractor itself performs lexical overlap against existing claims so
+        the pipeline remains deterministic even without this template.
+        """
+        text = str(context.get("text", ""))
+        existing = context.get("existing_claims") or []
+        candidates = []
+        for claim in existing:
+            statement = str(claim.get("statement", "")) if isinstance(claim, dict) else str(claim)
+            lowered = text.lower()
+            tokens = [t for t in statement.lower().split() if len(t) > 2]
+            hits = sum(1 for t in tokens if t in lowered)
+            score = hits / len(tokens) if tokens else 0.0
+            if score >= 0.5:
+                candidates.append(
+                    {
+                        "id": "CC_" + uuid4().hex,
+                        "statement": statement,
+                        "scope": claim.get("scope", "PROJECT") if isinstance(claim, dict) else "PROJECT",
+                        "claim_type": "HYPOTHESIS",
+                        "extraction_confidence": round(score, 6),
+                    }
+                )
+        return {"candidates": candidates}
+
+    def _match(self, context: dict) -> dict:
+        """Deterministic match template (normalized + lexical)."""
+        candidate = context.get("candidate", {})
+        existing = context.get("existing_claims") or []
+        statement = str(candidate.get("statement", "")).lower()
+        matched: list[dict] = []
+        for claim in existing:
+            text = str(claim.get("statement", "")).lower() if isinstance(claim, dict) else str(claim).lower()
+            shared = set(statement.split()) & set(text.split())
+            score = len(shared) / max(1, len(set(statement.split()) | set(text.split())))
+            if score >= 0.5:
+                matched.append({"claim_id": claim.get("id") if isinstance(claim, dict) else claim, "score": round(score, 6)})
+        return {"matched": matched}
+
+    def _research_plan(self, context: dict) -> dict:
+        """Deterministic research-plan template (T03 hook)."""
+        criticals = context.get("criticals") or []
+        questions = []
+        for idx, c in enumerate(criticals):
+            belief_id = c.get("belief_id", f"b{idx}")
+            statement = c.get("statement", belief_id)
+            impact = float(c.get("impact", 0.5))
+            questions.append(
+                {
+                    "id": f"RQ_{uuid4().hex}",
+                    "target_claim_ids": c.get("claim_ids", []),
+                    "question": f"What is the best available evidence on: {statement}?",
+                    "reason": f"Critical uncertainty impact={impact:.3f}",
+                    "expected_decision_impact": round(min(1.0, impact), 6),
+                    "preferred_source_types": ["OFFICIAL_DATA", "PRIMARY_RESEARCH"],
+                    "search_queries": [f"{statement} evidence", f"{statement} market data"],
+                    "stop_condition": "3 independent sources agree or belief delta < 0.02",
+                }
+            )
+        return {"questions": questions}
+
 
 class MockSearchProvider:
-    """Returns a small built-in document set (no network)."""
+    """Returns a small built-in document set (no network).
+
+    Snippets deliberately echo claim statements (problem / wtp / access) so the
+    deterministic ClaimExtractor can bind them in offline scenarios.
+    """
 
     name = "mock_search"
 
-    def search(self, query: str, k: int = 5) -> List[SearchResult]:
+    def search(self, query: str, k: int = 5) -> list[SearchResult]:
         results = [
             SearchResult(
-                title="B2B SaaS early-stage validation benchmarks",
-                url="https://mock.example/benchmarks",
+                title="Willingness to pay signals in SMB",
+                url="https://mock.example/wtp",
                 snippet=(
-                    "Early B2B SaaS teams that run paid concierge pilots convert "
-                    "interest into revenue at materially higher rates."
+                    "Interviews alone overstate willingness to pay; ICP will pay for the "
+                    "promised outcome only when value is demonstrated by a paid pilot."
                 ),
                 source="mock_research",
             ),
             SearchResult(
-                title="Willingness-to-pay signals in SMB",
-                url="https://mock.example/wtp",
+                title="ICP problem severity benchmarks",
+                url="https://mock.example/problem",
                 snippet=(
-                    "Interviews alone overstate willingness to pay; paid pilots "
-                    "are the strongest early signal."
+                    "Early ICPs report a severe recurring problem: 8 of 10 list it as a "
+                    "top-three pain point each week."
+                ),
+                source="mock_research",
+            ),
+            SearchResult(
+                title="Founder reachability for validation",
+                url="https://mock.example/access",
+                snippet=(
+                    "Founders who can reach enough ICPs for validation in two weeks are "
+                    "significantly more likely to get decision-relevant signals."
                 ),
                 source="mock_research",
             ),
@@ -281,7 +363,7 @@ class MockRetrievalProvider:
 
     name = "mock_retrieval"
 
-    def retrieve(self, query: str, k: int = 5) -> List[Document]:
+    def retrieve(self, query: str, k: int = 5) -> list[Document]:
         corpus = [
             Document(
                 id="DOC_01",
@@ -290,7 +372,10 @@ class MockRetrievalProvider:
             ),
             Document(
                 id="DOC_02",
-                content="Paid pilot evidence: 0 of 4 pilot prospects paid in first round.",
+                content=(
+                    "Paid pilot evidence: 0 of 4 pilot prospects paid in first round — "
+                    "ICP did not pay for the promised outcome in this sample."
+                ),
                 metadata={"topic": "wtp", "source": "mock"},
             ),
             Document(

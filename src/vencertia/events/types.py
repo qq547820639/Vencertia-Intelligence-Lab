@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field
@@ -36,6 +36,16 @@ class EventType(str, Enum):
     CONTEXT_INVALIDATED = "CONTEXT_INVALIDATED"
     FOUNDER_PROFILE_CHANGED = "FOUNDER_PROFILE_CHANGED"
     COMPANY_CASE_UPDATED = "COMPANY_CASE_UPDATED"
+    # v1.1 research / binding / sensitivity / provider events
+    RESEARCH_PLANNED = "RESEARCH_PLANNED"
+    RESEARCH_STARTED = "RESEARCH_STARTED"
+    RESEARCH_COMPLETED = "RESEARCH_COMPLETED"
+    RESEARCH_EXHAUSTED = "RESEARCH_EXHAUSTED"
+    EVIDENCE_BOUND_TO_CLAIM = "EVIDENCE_BOUND_TO_CLAIM"
+    EVIDENCE_BINDING_REJECTED = "EVIDENCE_BINDING_REJECTED"
+    DECISION_SENSITIVITY_COMPUTED = "DECISION_SENSITIVITY_COMPUTED"
+    PROVIDER_SELECTED = "PROVIDER_SELECTED"
+    PREDICTION_CORRECTED = "PREDICTION_CORRECTED"
 
 
 def new_event_id() -> str:
@@ -50,7 +60,7 @@ class DomainEvent(VencertiaBaseModel):
     event_type: EventType
     entity_type: str
     entity_id: str
-    payload: Dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = Field(default_factory=dict)
     actor: str = "system"
     occurred_at: datetime = Field(default_factory=utcnow)
     seq: int | None = None  # assigned by the event log when persisted
@@ -60,7 +70,7 @@ def make_event(
     event_type: EventType,
     entity_type: str,
     entity_id: str,
-    payload: Dict[str, Any] | None = None,
+    payload: dict[str, Any] | None = None,
     actor: str = "system",
 ) -> DomainEvent:
     """Convenience factory for domain events."""

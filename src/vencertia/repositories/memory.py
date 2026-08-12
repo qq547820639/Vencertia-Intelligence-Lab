@@ -7,8 +7,8 @@ payloads always validate under ``extra="forbid"``.
 from __future__ import annotations
 
 import copy
-from datetime import datetime
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from vencertia.domain.base import VencertiaBaseModel, utcnow
 from vencertia.events.types import DomainEvent

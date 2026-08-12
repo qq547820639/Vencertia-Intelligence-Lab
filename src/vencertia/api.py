@@ -1,37 +1,34 @@
-"""Vencertia v1.0 REST API (FastAPI).
+"""Vencertia v1.1 REST API (FastAPI).
 
 Unified response envelope: ``{"code": 0, "data": ..., "message": "ok"}``.
 Domain errors: EntityNotFoundError -> 404, StaleWriteError -> 409,
 ValueError -> 400.
+
+The app is wired through :class:`~vencertia.container.ApplicationContainer`
+(ADR-009); ``create_app`` remains a plain function so tests can inject custom
+repositories/runtimes.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from vencertia.config import Settings, get_settings
+from vencertia.config import Settings
+from vencertia.container import build_container
 from vencertia.domain import (
     Action,
-    Belief,
-    Decision,
+    ClaimBindingInput,
     DecisionOption,
     Evidence,
     Experiment,
-    Outcome,
     OutcomeType,
-    PredictionEntry,
-    Project,
     VencertiaBaseModel,
 )
-from vencertia.events.bus import EventBus
-from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.base import EntityNotFoundError, Repository, StaleWriteError
-from vencertia.repositories.sqlite import SQLiteRepository
-from vencertia.runtime import SolveOrchestrator, SolveRequest, SolveResult, default_engine_bundle
-from vencertia.runtime.evidence_policy import EvidencePolicy
+from vencertia.runtime import SolveOrchestrator, SolveRequest
 
 
 class ApiResponse(BaseModel):
@@ -61,7 +58,7 @@ class EvidenceRequest(VencertiaBaseModel):
 class OutcomeRequest(VencertiaBaseModel):
     action_id: str
     result: str
-    quantitative: Dict[str, float] = Field(default_factory=dict)
+    quantitative: dict[str, float] = Field(default_factory=dict)
     outcome_type: OutcomeType | str = OutcomeType.PARTIAL
     direction: str | None = None
 
@@ -75,7 +72,7 @@ class ExperimentProposeRequest(VencertiaBaseModel):
 class ExperimentResolveRequest(VencertiaBaseModel):
     result: str
     outcome_type: OutcomeType | str = OutcomeType.PARTIAL
-    quantitative: Dict[str, float] = Field(default_factory=dict)
+    quantitative: dict[str, float] = Field(default_factory=dict)
 
 
 class PredictionCreateRequest(VencertiaBaseModel):
@@ -91,12 +88,33 @@ class CalibrationQuery(BaseModel):
     key: str = "ALL"
 
 
+class ResearchPlanRequest(VencertiaBaseModel):
+    decision_id: str
+
+
+class ResearchRunRequest(VencertiaBaseModel):
+    decision_id: str
+    question_ids: list[str] | None = None
+    max_queries: int | None = None
+
+
+class EvidenceBindRequest(VencertiaBaseModel):
+    evidence_id: str
+    candidate_claims: list[dict] | None = None
+    auto_extract: bool = True
+
+
+class PredictionCorrectRequest(VencertiaBaseModel):
+    new_outcome: bool
+    source: str
+
+
 def create_app(
     settings: Settings,
     repo: Repository,
     runtime: SolveOrchestrator,
 ) -> FastAPI:
-    app = FastAPI(title="Vencertia Decision Runtime", version="1.0.0")
+    app = FastAPI(title="Vencertia Decision Runtime", version="1.1.0")
 
     def ok(data: Any = None, message: str = "ok") -> ApiResponse:
         return ApiResponse(code=0, data=data, message=message)
@@ -111,7 +129,8 @@ def create_app(
         return ok(
             {
                 "ok": True,
-                "version": "1.0.0",
+                "version": "1.0.0",  # backward-compatible v1.0 contract
+                "api_version": "1.1.0",
                 "policy_version": settings.policy_version,
                 "model_provider": settings.model_provider,
             }
@@ -185,6 +204,8 @@ def create_app(
 
     @app.post("/v1/experiments/propose", response_model=ApiResponse)
     def propose_experiment(req: ExperimentProposeRequest) -> ApiResponse:
+        from vencertia.runtime.experiment_optimizer import ExperimentProposalInput
+
         decision = repo.get_decision(req.decision_id)
         if decision is None:
             raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
@@ -192,7 +213,7 @@ def create_app(
         criticals = runtime.engines.uncertainty_engine.rank(decision, beliefs)
         critical_belief_id = criticals[0].belief_id if criticals else None
         proposal = runtime.engines.experiment_optimizer.propose(
-            __import__("vencertia.runtime.experiment_optimizer", fromlist=["ExperimentProposalInput"]).ExperimentProposalInput(
+            ExperimentProposalInput(
                 decision=decision,
                 beliefs=beliefs,
                 critical_belief_id=critical_belief_id,
@@ -222,7 +243,6 @@ def create_app(
             experiment_id=experiment.id,
             status="RUNNING",
         )
-        # Find the decision's project to attach the action correctly.
         if experiment.decision_id is not None:
             decision = repo.get_decision(experiment.decision_id)
             if decision is not None:
@@ -264,6 +284,28 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.post("/v1/predictions/{prediction_id}/correct", response_model=ApiResponse)
+    def correct_prediction(prediction_id: str, req: PredictionCorrectRequest) -> ApiResponse:
+        from vencertia.events.types import EventType, make_event
+
+        try:
+            entry = runtime.engines.prediction_ledger.correct(
+                prediction_id, req.new_outcome, req.source
+            )
+            runtime.bus.publish(
+                make_event(
+                    EventType.PREDICTION_CORRECTED,
+                    "prediction",
+                    entry.id,
+                    {"outcome": entry.outcome, "source": req.source, "version": entry.version},
+                )
+            )
+            return ok(entry.model_dump(mode="json"))
+        except EntityNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     # -- calibration -------------------------------------------------------------------
 
     @app.get("/v1/calibration", response_model=ApiResponse)
@@ -274,8 +316,8 @@ def create_app(
         predictions = repo.list_predictions()
         try:
             cal_scope = CalibrationScope(scope.upper())
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"invalid scope: {scope}")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"invalid scope: {scope}") from exc
         profile = runtime.engines.calibration_engine.report(
             CalibrationInput(predictions, cal_scope, key, settings.ece_bins)
         )
@@ -298,6 +340,133 @@ def create_app(
         criticals = runtime.engines.uncertainty_engine.rank(latest, beliefs)
         return ok([c.model_dump(mode="json") for c in criticals])
 
+    # -- v1.1: research ----------------------------------------------------------------
+
+    @app.post("/v1/research/plan", response_model=ApiResponse)
+    def research_plan(req: ResearchPlanRequest) -> ApiResponse:
+        decision = repo.get_decision(req.decision_id)
+        if decision is None:
+            raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
+        beliefs = repo.get_beliefs(decision.project_id)
+        criticals = runtime.engines.uncertainty_engine.rank(decision, beliefs)
+        if runtime.engines.research_planner is None:
+            raise HTTPException(status_code=400, detail="research_planner not wired")
+        plan = runtime.engines.research_planner.plan(decision, beliefs, criticals, None)
+        repo.save_research_plan(plan)
+        return ok(plan.model_dump(mode="json"))
+
+    @app.post("/v1/research/run", response_model=ApiResponse)
+    def research_run(req: ResearchRunRequest) -> ApiResponse:
+        decision = repo.get_decision(req.decision_id)
+        if decision is None:
+            raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
+        plans = repo.list_research_plans(decision.id)
+        if not plans:
+            raise HTTPException(status_code=400, detail="no research plan; POST /v1/research/plan first")
+        plan = plans[-1]
+        traces: list = []
+        for idx, question in enumerate(plan.questions):
+            if req.question_ids and question.id not in req.question_ids:
+                continue
+            if runtime.engines.claim_binding_engine is None:
+                continue
+            trace = runtime._run_research_round(
+                SolveRequest(project_id=decision.project_id, problem_text=decision.decision_question),
+                repo.get_project(decision.project_id),
+                decision,
+                plan,
+                idx + 1,
+            )[0]
+            repo.save_research_trace(trace)
+            traces.append(trace)
+        return ok([t.model_dump(mode="json") for t in traces])
+
+    @app.post("/v1/evidence/bind", response_model=ApiResponse)
+    def evidence_bind(req: EvidenceBindRequest) -> ApiResponse:
+        evidence = repo.get_evidence(req.evidence_id)
+        if evidence is None:
+            raise HTTPException(status_code=404, detail=f"evidence not found: {req.evidence_id}")
+        if runtime.engines.claim_binding_engine is None:
+            raise HTTPException(status_code=400, detail="claim_binding_engine not wired")
+        existing_claims = repo.list_claims()
+
+        output = runtime.engines.claim_binding_engine.process(
+            ClaimBindingInput(
+                research_results=[
+                    {
+                        "evidence_id": evidence.id,
+                        "id": evidence.id,
+                        "scope": evidence.scope.value if hasattr(evidence.scope, "value") else evidence.scope,
+                        "evidence_type": evidence.evidence_type.value
+                        if hasattr(evidence.evidence_type, "value")
+                        else evidence.evidence_type,
+                        "source": evidence.source,
+                        "supports_or_contradicts": evidence.supports_or_contradicts.value
+                        if hasattr(evidence.supports_or_contradicts, "value")
+                        else evidence.supports_or_contradicts,
+                        "directness": evidence.directness,
+                        "reliability": evidence.reliability,
+                        "relevance": evidence.relevance,
+                        "strength": evidence.strength,
+                        "authority_level": evidence.authority_level.value
+                        if hasattr(evidence.authority_level, "value")
+                        else evidence.authority_level,
+                        "verification": evidence.verification.value
+                        if hasattr(evidence.verification, "value")
+                        else evidence.verification,
+                        "content_fingerprint": evidence.content_fingerprint,
+                        "canonical_source_id": evidence.canonical_source_id,
+                        "source_family": evidence.source_family,
+                    }
+                ],
+                context={"claims": [c.model_dump(mode="json") for c in existing_claims]},
+                existing_claims=[c.model_dump(mode="json") for c in existing_claims],
+                auto_extract=req.auto_extract,
+                binding_confidence_threshold=settings.binding_confidence_threshold,
+            )
+        )
+        return ok(output.model_dump(mode="json"))
+
+    @app.get("/v1/evidence/{evidence_id}/bindings", response_model=ApiResponse)
+    def evidence_bindings(evidence_id: str) -> ApiResponse:
+        bindings = repo.list_bindings(evidence_id=evidence_id)
+        return ok([b.model_dump(mode="json") for b in bindings])
+
+    @app.get("/v1/decisions/{decision_id}/sensitivity", response_model=ApiResponse)
+    def decision_sensitivity(decision_id: str) -> ApiResponse:
+        sensitivity = repo.get_decision_sensitivity(decision_id)
+        if sensitivity is None:
+            raise HTTPException(status_code=404, detail=f"sensitivity not found: {decision_id}")
+        return ok(sensitivity.model_dump(mode="json"))
+
+    @app.get("/v1/decisions/{decision_id}/trace", response_model=ApiResponse)
+    def decision_trace(decision_id: str) -> ApiResponse:
+        trace = repo.get_decision_trace(decision_id)
+        if trace is None:
+            raise HTTPException(status_code=404, detail=f"trace not found: {decision_id}")
+        return ok(trace.model_dump(mode="json"))
+
+    @app.get("/v1/beliefs/{belief_id}/history", response_model=ApiResponse)
+    def belief_history(belief_id: str) -> ApiResponse:
+        records = repo.list_belief_update_records(belief_id)
+        return ok([r.model_dump(mode="json") for r in records])
+
+    @app.get("/v1/research/{decision_id}/trace", response_model=ApiResponse)
+    def research_trace(decision_id: str) -> ApiResponse:
+        traces = repo.list_research_traces(decision_id)
+        return ok([t.model_dump(mode="json") for t in traces])
+
+    @app.post("/v1/claims/candidates/{candidate_id}/validate", response_model=ApiResponse)
+    def validate_candidate(candidate_id: str) -> ApiResponse:
+        candidates = repo.list_candidate_claims()
+        candidate = next((c for c in candidates if c.id == candidate_id), None)
+        if candidate is None:
+            raise HTTPException(status_code=404, detail=f"candidate not found: {candidate_id}")
+
+        updated = candidate.model_copy(update={"validation_status": "VALIDATED"})
+        repo.save_candidate_claim(updated, expected_version=candidate.version)
+        return ok(updated.model_dump(mode="json"))
+
     # -- solve ----------------------------------------------------------------------------
 
     @app.post("/v1/solve", response_model=ApiResponse)
@@ -314,7 +483,9 @@ def create_app(
 
     @app.exception_handler(StaleWriteError)
     async def stale_write_handler(_, exc: StaleWriteError):
-        return __import__("fastapi.responses", fromlist=["JSONResponse"]).JSONResponse(
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
             status_code=409,
             content=fail(409, str(exc)).model_dump(mode="json"),
         )
@@ -322,27 +493,5 @@ def create_app(
     return app
 
 
-def default_runtime(
-    settings: Settings | None = None,
-    repo: Repository | None = None,
-) -> SolveOrchestrator:
-    """Build the default offline runtime (mock providers, SQLite)."""
-    cfg = settings or get_settings()
-    repository = repo or SQLiteRepository(cfg.db_dsn)
-    bus = EventBus(sink=repository.append_event)
-    engines = default_engine_bundle(repository, cfg, bus)
-    return SolveOrchestrator(
-        repo=repository,
-        policy=engines.evidence_policy,
-        engines=engines,
-        model=MockProvider(),
-        search=MockSearchProvider(),
-        retrieval=MockRetrievalProvider(),
-        bus=bus,
-        settings=cfg,
-    )
-
-
-_settings = get_settings()
-_repo = SQLiteRepository(_settings.db_dsn)
-app = create_app(_settings, _repo, default_runtime(_settings, _repo))
+_container = build_container()
+app = _container.fastapi_app()

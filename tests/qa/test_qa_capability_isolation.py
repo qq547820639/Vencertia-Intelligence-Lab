@@ -8,12 +8,10 @@ pipeline may do so.
 
 from __future__ import annotations
 
-import pytest
-
 from vencertia.capabilities.base import Capability, CapabilityResult
 from vencertia.domain import Belief, Direction, Evidence, Project, Scope, Verification
 from vencertia.events.bus import EventBus
-from vencertia.providers.mock import MockProvider, MockSearchProvider, MockRetrievalProvider
+from vencertia.providers.mock import MockProvider
 from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import SolveOrchestrator, SolveRequest
 

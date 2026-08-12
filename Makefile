@@ -1,7 +1,7 @@
-PYTHON ?= /Users/panhao/.workbuddy/binaries/python/envs/default/bin/python
+PYTHON ?= python3
 export PYTHONPATH := src
 
-.PHONY: install test benchmark demo api verify
+.PHONY: install test benchmark demo api lint ci verify release
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -18,6 +18,20 @@ demo:
 api:
 	$(PYTHON) -m uvicorn vencertia.api:app --host 0.0.0.0 --port 8000
 
+lint:
+	$(PYTHON) -m ruff check src tests examples
+
+ci: lint test benchmark api-smoke cli-smoke
+
+api-smoke:
+	$(PYTHON) -c "from vencertia.api import app; print('API import OK')"
+
+cli-smoke:
+	$(PYTHON) -c "from vencertia.cli import app; print('CLI import OK')"
+
 verify: test benchmark
 	$(PYTHON) -c "from vencertia.cli import app; print('CLI import OK')"
 	$(PYTHON) -c "from vencertia.api import app; print('API import OK')"
+
+release:
+	$(PYTHON) scripts/make_release.py

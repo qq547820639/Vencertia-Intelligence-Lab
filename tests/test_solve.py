@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from vencertia.domain import Action, Belief, Decision, DecisionOption, OutcomeType, Project
+from tests.conftest import make_belief
+from vencertia.domain import Action, Decision, DecisionOption, OutcomeType, Project
 from vencertia.events.bus import EventBus
 from vencertia.events.types import EventType
 from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import SolveOrchestrator, SolveRequest
-from tests.conftest import make_belief
 
 
 def _orchestrator() -> tuple[SolveOrchestrator, InMemoryRepository, EventBus]:

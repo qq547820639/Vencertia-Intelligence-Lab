@@ -4,16 +4,21 @@ Beliefs are derived state: every update records update_method and the evidence
 chain. Company-case evidence is gated: non-eligible case facts may only update
 WORLD/MARKET priors; eligible case facts update project priors (never
 pseudo-counts).
+
+v1.1: every belief update also produces a :class:`BeliefUpdateRecord` and
+increments ``posterior_version``. Records are returned in the output; the
+orchestrator persists them (single persistence entry point, ADR-002).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from uuid import uuid4
 
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
+    BeliefUpdateRecord,
     ConflictAlert,
     Direction,
     Evidence,
@@ -39,6 +44,7 @@ class BeliefUpdateOutput:
     beliefs: list[Belief]
     applications: list[EvidenceApplication] = field(default_factory=list)
     conflicts: list[ConflictAlert] = field(default_factory=list)
+    update_records: list[BeliefUpdateRecord] = field(default_factory=list)  # v1.1
 
 
 class BeliefEngine:
@@ -74,12 +80,27 @@ class BeliefEngine:
         applications: list[EvidenceApplication] = []
         support_weights: dict[str, float] = {}
         contradict_weights: dict[str, float] = {}
+        records_data: dict[str, dict] = {}
 
         for evidence in sorted(inp.evidence, key=lambda e: e.observed_at):
             grade = self.policy.grade(evidence)
             for belief in by_id.values():
                 if belief.claim_id not in evidence.claim_ids:
                     continue
+                data = records_data.setdefault(
+                    belief.id,
+                    {
+                        "old_probability": belief.probability,
+                        "old_uncertainty": belief.uncertainty,
+                        "evidence_used": [],
+                        "total_weight": 0.0,
+                        "correlation": 1.0,
+                        "scope": 1.0,
+                        "freshness": 1.0,
+                        "authority": "",
+                        "verification": "",
+                    },
+                )
                 app = self._apply_one(
                     belief=belief,
                     evidence=evidence,
@@ -91,6 +112,27 @@ class BeliefEngine:
                 if app is None:
                     continue
                 applications.append(app)
+                data["evidence_used"].append(evidence.id)
+                data["total_weight"] += app.effective_weight
+                data["correlation"] *= app.dedup_discount
+                data["freshness"] *= float(grade.freshness_discount)
+                authority = (
+                    grade.authority_level.value
+                    if hasattr(grade.authority_level, "value")
+                    else str(grade.authority_level)
+                )
+                if not data["authority"] or self._authority_rank(authority) > self._authority_rank(
+                    data["authority"]
+                ):
+                    data["authority"] = authority
+                verification = (
+                    grade.evidence.verification
+                    if hasattr(grade.evidence.verification, "value")
+                    else str(grade.evidence.verification)
+                )
+                data["verification"] = verification or data["verification"]
+                if app.scope_gate == "COMPANY_CASE_PRIOR_ONLY":
+                    data["scope"] = min(data["scope"], 0.5)
                 if app.scope_gate == "OK":
                     if evidence.supports_or_contradicts == Direction.SUPPORTS.value:
                         support_weights[belief.claim_id] = (
@@ -104,10 +146,12 @@ class BeliefEngine:
         conflicts = self._detect_conflicts(
             support_weights, contradict_weights, inp.conflict_weight_threshold
         )
+        update_records = self._build_records(inp.update_method, by_id, records_data)
         return BeliefUpdateOutput(
             beliefs=list(by_id.values()),
             applications=applications,
             conflicts=conflicts,
+            update_records=update_records,
         )
 
     def _apply_one(
@@ -147,6 +191,7 @@ class BeliefEngine:
         else:  # NEUTRAL
             alpha_delta = beta_delta = 0.15 * mass
 
+        self._snapshot_if_first(belief)
         belief.alpha += alpha_delta
         belief.beta += beta_delta
         self._refresh_belief(belief, evidence.observed_at)
@@ -176,9 +221,9 @@ class BeliefEngine:
         scope_gate: str,
     ) -> EvidenceApplication:
         """Prior-only update: shifts posterior without touching pseudo-counts."""
-        transferability = evidence.transferability or 0.0
         direction = evidence.supports_or_contradicts
         prior = belief.posterior
+        self._snapshot_if_first(belief)
         if direction == Direction.SUPPORTS.value or direction == "SUPPORTS":
             delta = grade_weight * (1.0 - prior)
         elif direction == Direction.CONTRADICTS.value or direction == "CONTRADICTS":
@@ -191,6 +236,7 @@ class BeliefEngine:
         object.__setattr__(belief, "probability", new_posterior)
         belief.updated_at = evidence.observed_at or evidence.created_at
         belief.version += 1
+        belief.posterior_version += 1
         if direction == Direction.SUPPORTS.value or direction == "SUPPORTS":
             if evidence.id not in belief.supporting_evidence_ids:
                 belief.supporting_evidence_ids.append(evidence.id)
@@ -215,6 +261,17 @@ class BeliefEngine:
         belief.confidence = 1.0 - belief.uncertainty
         belief.updated_at = observed_at or belief.updated_at
         belief.version += 1
+        belief.posterior_version += 1
+
+    def _snapshot_if_first(self, belief: Belief) -> None:
+        """Capture the pre-update snapshot once per belief (first mutation)."""
+        if belief.previous_snapshot is None:
+            belief.previous_snapshot = {
+                "probability": belief.probability,
+                "uncertainty": belief.uncertainty,
+                "alpha": belief.alpha,
+                "beta": belief.beta,
+            }
 
     # -- log-odds (replaceable, [H2]) ----------------------------------------
 
@@ -222,6 +279,7 @@ class BeliefEngine:
         """Weighted log-odds update (heuristic Bayesian-like)."""
         by_id = {b.id: b.model_copy(deep=True) for b in inp.beliefs}
         applications: list[EvidenceApplication] = []
+        records_data: dict[str, dict] = {}
         for evidence in sorted(inp.evidence, key=lambda e: e.observed_at):
             grade = self.policy.grade(evidence)
             for belief in by_id.values():
@@ -233,6 +291,21 @@ class BeliefEngine:
                         Scope.CUSTOMER.value,
                     ):
                         continue
+                data = records_data.setdefault(
+                    belief.id,
+                    {
+                        "old_probability": belief.probability,
+                        "old_uncertainty": belief.uncertainty,
+                        "evidence_used": [],
+                        "total_weight": 0.0,
+                        "correlation": 1.0,
+                        "scope": 1.0,
+                        "freshness": 1.0,
+                        "authority": "",
+                        "verification": "",
+                    },
+                )
+                self._snapshot_if_first(belief)
                 odds = belief.posterior / max(1e-6, 1.0 - belief.posterior)
                 sign = 1.0
                 if evidence.supports_or_contradicts == Direction.CONTRADICTS.value:
@@ -249,6 +322,7 @@ class BeliefEngine:
                 belief.update_method = UpdateMethod.WEIGHTED_LOG_ODDS
                 belief.updated_at = evidence.observed_at
                 belief.version += 1
+                belief.posterior_version += 1
                 applications.append(
                     EvidenceApplication(
                         evidence_id=evidence.id,
@@ -259,7 +333,54 @@ class BeliefEngine:
                         scope_gate=grade.scope_gate,
                     )
                 )
-        return BeliefUpdateOutput(beliefs=list(by_id.values()), applications=applications)
+                data["evidence_used"].append(evidence.id)
+                data["total_weight"] += grade.effective_weight
+                data["freshness"] *= float(grade.freshness_discount)
+        update_records = self._build_records(inp.update_method, by_id, records_data)
+        return BeliefUpdateOutput(
+            beliefs=list(by_id.values()),
+            applications=applications,
+            update_records=update_records,
+        )
+
+    # -- records --------------------------------------------------------------
+
+    def _build_records(
+        self,
+        update_method: UpdateMethod,
+        by_id: dict[str, Belief],
+        records_data: dict[str, dict],
+    ) -> list[BeliefUpdateRecord]:
+        records: list[BeliefUpdateRecord] = []
+        for belief_id, belief in by_id.items():
+            data = records_data.get(belief_id)
+            if data is None:
+                continue
+            records.append(
+                BeliefUpdateRecord(
+                    id="BUR_" + uuid4().hex,
+                    belief_id=belief_id,
+                    claim_id=belief.claim_id,
+                    old_probability=round(float(data["old_probability"]), 6),
+                    old_uncertainty=round(float(data["old_uncertainty"]), 6),
+                    evidence_used=data["evidence_used"],
+                    authority=data["authority"] or "MODEL_PRIOR",
+                    verification=data["verification"] or "UNKNOWN",
+                    correlation_discount=round(float(data["correlation"]), 6),
+                    scope_discount=round(float(data["scope"]), 6),
+                    freshness_discount=round(float(data["freshness"]), 6),
+                    effective_weight=round(float(data["total_weight"]), 6),
+                    new_probability=round(belief.probability, 6),
+                    new_uncertainty=round(belief.uncertainty, 6),
+                    conflict_uncertainty_raise=0.0,
+                    update_method=update_method.value
+                    if hasattr(update_method, "value")
+                    else str(update_method),
+                    policy_version="1.1",
+                    posterior_version=belief.posterior_version,
+                )
+            )
+        return records
 
     # -- conflict detection ----------------------------------------------------
 
@@ -287,3 +408,18 @@ class BeliefEngine:
                     )
                 )
         return conflicts
+
+    @staticmethod
+    def _authority_rank(authority: str) -> int:
+        order = [
+            "PROJECT_REALITY",
+            "PROJECT_DIRECT_BEHAVIOR",
+            "PROJECT_EXPERIMENT_RESULT",
+            "CUSTOMER_COMMITMENT_OR_PAYMENT",
+            "ELIGIBLE_EXTERNAL_CASE_FACT",
+            "REVIEWED_EXTERNAL_RESEARCH",
+            "FOUNDER_STATEMENT",
+            "LLM_INFERENCE",
+            "MODEL_PRIOR",
+        ]
+        return order.index(authority) if authority in order else len(order)

@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from vencertia.domain.base import VencertiaBaseModel, utcnow
 from vencertia.events.types import DomainEvent
@@ -152,3 +153,152 @@ class SQLiteRepository(EntityStoreMixin):
         except Exception:
             self.conn.rollback()
             raise
+
+    # -- v1.1 special tables (hot paths) ----------------------------------------
+
+    def save_binding(
+        self, binding, expected_version: int | None = None
+    ) -> None:
+        payload = binding.model_dump_json()
+        if expected_version is not None:
+            cursor = self.conn.execute(
+                "UPDATE claim_bindings SET claim_id=?, binding_confidence=?, binding_method=?, "
+                "status=?, model=?, provider=?, matched_at=?, retry_count=?, version=?, payload=? "
+                "WHERE id=? AND version=?",
+                (
+                    binding.claim_id,
+                    binding.binding_confidence,
+                    binding.binding_method.value
+                    if hasattr(binding.binding_method, "value")
+                    else str(binding.binding_method),
+                    binding.status.value if hasattr(binding.status, "value") else str(binding.status),
+                    binding.model,
+                    binding.provider,
+                    binding.matched_at.isoformat(),
+                    binding.retry_count,
+                    binding.version,
+                    payload,
+                    binding.id,
+                    expected_version,
+                ),
+            )
+            if cursor.rowcount == 0:
+                existing = self.conn.execute(
+                    "SELECT version FROM claim_bindings WHERE id=?", (binding.id,)
+                ).fetchone()
+                if existing is None:
+                    self.conn.execute(
+                        "INSERT INTO claim_bindings(id,evidence_id,claim_id,binding_confidence,"
+                        "binding_method,status,model,provider,matched_at,retry_count,version,payload) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (
+                            binding.id,
+                            binding.evidence_id,
+                            binding.claim_id,
+                            binding.binding_confidence,
+                            binding.binding_method.value
+                            if hasattr(binding.binding_method, "value")
+                            else str(binding.binding_method),
+                            binding.status.value
+                            if hasattr(binding.status, "value")
+                            else str(binding.status),
+                            binding.model,
+                            binding.provider,
+                            binding.matched_at.isoformat(),
+                            binding.retry_count,
+                            binding.version,
+                            payload,
+                        ),
+                    )
+                else:
+                    self.conn.commit()
+                    raise StaleWriteError("binding", binding.id, expected_version)
+        else:
+            self.conn.execute(
+                "INSERT INTO claim_bindings(id,evidence_id,claim_id,binding_confidence,"
+                "binding_method,status,model,provider,matched_at,retry_count,version,payload) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(id) DO UPDATE SET "
+                "claim_id=excluded.claim_id, binding_confidence=excluded.binding_confidence, "
+                "binding_method=excluded.binding_method, status=excluded.status, "
+                "model=excluded.model, provider=excluded.provider, matched_at=excluded.matched_at, "
+                "retry_count=excluded.retry_count, version=excluded.version, payload=excluded.payload",
+                (
+                    binding.id,
+                    binding.evidence_id,
+                    binding.claim_id,
+                    binding.binding_confidence,
+                    binding.binding_method.value
+                    if hasattr(binding.binding_method, "value")
+                    else str(binding.binding_method),
+                    binding.status.value if hasattr(binding.status, "value") else str(binding.status),
+                    binding.model,
+                    binding.provider,
+                    binding.matched_at.isoformat(),
+                    binding.retry_count,
+                    binding.version,
+                    payload,
+                ),
+            )
+        self.conn.commit()
+
+    def get_binding(self, binding_id: str):
+        row = self.conn.execute(
+            "SELECT payload FROM claim_bindings WHERE id=?", (binding_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        from vencertia.domain import EvidenceClaimBinding
+
+        return EvidenceClaimBinding.model_validate_json(row["payload"])
+
+    def list_bindings(
+        self,
+        evidence_id: str | None = None,
+        claim_id: str | None = None,
+        status: str | None = None,
+    ) -> list:
+        sql = "SELECT payload FROM claim_bindings WHERE 1=1"
+        params: list[Any] = []
+        if evidence_id is not None:
+            sql += " AND evidence_id=?"
+            params.append(evidence_id)
+        if claim_id is not None:
+            sql += " AND claim_id=?"
+            params.append(claim_id)
+        if status is not None:
+            sql += " AND status=?"
+            params.append(status)
+        rows = self.conn.execute(sql, params).fetchall()
+        from vencertia.domain import EvidenceClaimBinding
+
+        return [EvidenceClaimBinding.model_validate_json(r["payload"]) for r in rows]
+
+    def save_belief_update_record(self, record) -> None:
+        payload = record.model_dump_json()
+        self.conn.execute(
+            "INSERT INTO belief_update_records(id,belief_id,claim_id,posterior_version,"
+            "created_at,payload) VALUES(?,?,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET "
+            "belief_id=excluded.belief_id, claim_id=excluded.claim_id, "
+            "posterior_version=excluded.posterior_version, created_at=excluded.created_at, "
+            "payload=excluded.payload",
+            (
+                record.id,
+                record.belief_id,
+                record.claim_id,
+                record.posterior_version,
+                record.created_at.isoformat(),
+                payload,
+            ),
+        )
+        self.conn.commit()
+
+    def list_belief_update_records(self, belief_id: str) -> list:
+        rows = self.conn.execute(
+            "SELECT payload FROM belief_update_records WHERE belief_id=? ORDER BY posterior_version",
+            (belief_id,),
+        ).fetchall()
+        from vencertia.domain import BeliefUpdateRecord
+
+        return [BeliefUpdateRecord.model_validate_json(r["payload"]) for r in rows]

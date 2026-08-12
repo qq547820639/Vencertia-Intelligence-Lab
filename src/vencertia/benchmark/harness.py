@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -36,10 +36,10 @@ class BenchmarkReport(BaseModel):
     passed: int = 0
     failed: int = 0
     pass_rate: float = 0.0
-    metrics: Dict[str, Any] = Field(default_factory=dict)
-    cases: List[BenchmarkCaseResult] = Field(default_factory=list)
-    rejected: List[str] = Field(default_factory=list)  # rejected case ids (e.g. leakage)
-    comparison: Dict[str, Any] | None = None
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    cases: list[BenchmarkCaseResult] = Field(default_factory=list)
+    rejected: list[str] = Field(default_factory=list)  # rejected case ids (e.g. leakage)
+    comparison: dict[str, Any] | None = None
 
 
 def comparison_report(baseline: BenchmarkReport, candidate: BenchmarkReport) -> dict:
@@ -70,4 +70,43 @@ def comparison_report(baseline: BenchmarkReport, candidate: BenchmarkReport) -> 
         "admission": "CANDIDATE_ADMITTED"
         if candidate.pass_rate >= baseline.pass_rate
         else "CANDIDATE_REJECTED",
+    }
+
+
+def oss_admission_experiment(
+    baseline: BenchmarkReport,
+    candidate: BenchmarkReport,
+    frozen_cases: list[str],
+) -> dict:
+    """OSS admission experiment (ADR-006): compare frozen-case deltas.
+
+    Returns the admission verdict. A candidate is ADMITTED when it does not
+    regress on any frozen case AND its overall pass rate is not lower than the
+    baseline. Deliberate degradation on a frozen case yields CANDIDATE_REJECTED.
+    """
+    base_by_id = {c.id: c for c in baseline.cases}
+    cand_by_id = {c.id: c for c in candidate.cases}
+    regressions: list[str] = []
+    frozen_present = 0
+    for case_id in frozen_cases:
+        if case_id not in base_by_id or case_id not in cand_by_id:
+            continue
+        frozen_present += 1
+        base_ok = base_by_id[case_id].correct
+        cand_ok = cand_by_id[case_id].correct
+        if base_ok and not cand_ok:
+            regressions.append(case_id)
+    admitted = not regressions and candidate.pass_rate >= baseline.pass_rate
+    notes: list[str] = []
+    if not frozen_cases:
+        notes.append("No frozen cases provided; admission based on pass rate only.")
+    if regressions:
+        notes.append(f"Frozen-case regressions: {', '.join(regressions)}")
+    return {
+        "baseline": {"pass_rate": baseline.pass_rate, "n": baseline.n},
+        "candidate": {"pass_rate": candidate.pass_rate, "n": candidate.n},
+        "delta": {"pass_rate": round(candidate.pass_rate - baseline.pass_rate, 6)},
+        "admission": "CANDIDATE_ADMITTED" if admitted else "CANDIDATE_REJECTED",
+        "frozen_case_count": frozen_present,
+        "notes": notes,
     }

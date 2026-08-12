@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from pydantic import Field
 
@@ -13,11 +13,11 @@ from vencertia.runtime.context import ContextBundle
 class CapabilityResult(VencertiaBaseModel):
     """Candidate outputs produced by a capability module."""
 
-    claims: List[Claim] = Field(default_factory=list)
-    evidence: List[Evidence] = Field(default_factory=list)
-    decision_skeleton: Optional[Decision] = None
-    experiments: List[Experiment] = Field(default_factory=list)
-    notes: List[str] = Field(default_factory=list)
+    claims: list[Claim] = Field(default_factory=list)
+    evidence: list[Evidence] = Field(default_factory=list)
+    decision_skeleton: Decision | None = None
+    experiments: list[Experiment] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 @runtime_checkable

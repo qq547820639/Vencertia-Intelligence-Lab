@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
-
-from vencertia.domain import Belief, Decision, DecisionOption
 from tests.conftest import make_belief
+from vencertia.domain import Belief, Decision, DecisionOption
 from vencertia.runtime.decision_engine import DecisionEngine, DecisionEngineInput
 from vencertia.runtime.uncertainty_engine import UncertaintyEngine
 

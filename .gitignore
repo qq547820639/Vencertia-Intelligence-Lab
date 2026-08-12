@@ -19,6 +19,11 @@ venv/
 
 # Local data
 *.log
+*.db
+*.zip
+coverage/
+.coverage
+htmlcov/
 
 # WorkBuddy project data
 .workbuddy/
@@ -26,3 +31,6 @@ venv/
 # Test caches
 .pytest_cache/
 .ruff_cache/
+
+# Benchmark temporary output
+data/benchmarks/output/

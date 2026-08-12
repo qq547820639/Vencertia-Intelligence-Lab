@@ -1,0 +1,69 @@
+sequenceDiagram
+    autonumber
+    actor U as User/CLI/API
+    participant C as ApplicationContainer
+    participant ORCH as SolveOrchestrator
+    participant CTX as DecisionRelevantContextBuilder
+    participant CMP as DecisionCompiler
+    participant UE as UncertaintyEngine
+    participant RP as ResearchPlanner
+    participant RUN as ResearchRun(Search+Adapter)
+    participant DD as EvidenceDedupEngine
+    participant CB as ClaimBindingEngine
+    participant EP as EvidencePolicy
+    participant CON as ConflictEngine
+    participant BE as BeliefEngine
+    participant STOP as ResearchStopRule
+    participant CE as ConvergenceEngine
+    participant DE as DecisionEngine
+    participant SEN as DecisionSensitivityEngine
+    participant EO as ExperimentOptimizer
+    participant PL as PredictionLedger
+    participant REPO as Repository
+
+    U->>C: solve(project_id, problem_text, ...)
+    C->>ORCH: orchestrator.solve(req)
+    ORCH->>CTX: build_for_decision(project_id)
+    CTX-->>ORCH: ContextBundleV11
+    ORCH->>CMP: compile(problem, context)
+    CMP-->>ORCH: CompiledDecision (candidate)
+    ORCH->>REPO: persist objective/claims/beliefs(canonical wins)
+    ORCH->>UE: rank(decision, beliefs)
+    UE-->>ORCH: critical_uncertainties
+    ORCH->>RP: plan(decision, beliefs, criticals, context)
+    RP-->>ORCH: ResearchPlan
+    ORCH->>REPO: save_research_plan + RESEARCH_PLANNED
+    loop 每轮研究（max research_max_rounds）
+        ORCH->>RUN: run(questions)
+        RUN-->>ORCH: candidate evidence[]
+        ORCH->>DD: group(candidates)
+        DD-->>ORCH: DedupResult (dropped/kept+groups)
+        ORCH->>CB: process(results, context)
+        CB->>EP: grade(bound evidence)
+        CB-->>ORCH: bindings/unbound/applied/rejected + events
+        ORCH->>CON: detect(evidence_by_claim)
+        CON-->>ORCH: conflicts[]
+        ORCH->>BE: update(beliefs, applied, records)
+        BE-->>ORCH: beliefs + BeliefUpdateRecord[] (posterior_version++)
+        ORCH->>STOP: evaluate(traces, before/after, ...)
+        STOP-->>ORCH: ResearchStopReport
+        alt RESEARCH_MORE
+            Note over ORCH,RUN: 继续下一轮
+        else SEARCH_EXHAUSTED / EXPERIMENT_REQUIRED
+            ORCH->>REPO: RESEARCH_EXHAUSTED 事件
+        end
+    end
+    ORCH->>UE: rank(decision, updated beliefs)
+    ORCH->>CE: check(...)
+    CE-->>ORCH: convergence
+    ORCH->>DE: evaluate(...)
+    DE-->>ORCH: DecisionResult + DecisionTrace
+    ORCH->>SEN: compute(decision, beliefs, result)
+    SEN-->>ORCH: DecisionSensitivity (flips/robustness/what_could_change_my_mind)
+    alt ABSTAIN / 未收敛
+        ORCH->>EO: propose(validate+brank)
+        EO-->>ORCH: ranked experiments + criteria
+    end
+    ORCH->>PL: register(decision, beliefs)
+    ORCH->>REPO: persist decision/trace/sensitivity/predictions/traces
+    ORCH-->>U: SolveResultV11（标准输出段）

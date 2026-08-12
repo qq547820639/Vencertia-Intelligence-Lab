@@ -7,7 +7,8 @@ Instantiating without ``VENCERTIA_PG_DSN`` (or without the optional
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from vencertia.config import get_settings
 from vencertia.domain.base import VencertiaBaseModel, utcnow

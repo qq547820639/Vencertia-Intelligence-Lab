@@ -6,8 +6,6 @@ CONDITIONALLY_CONVERGED / CONVERGED / EXECUTE.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
@@ -31,9 +29,10 @@ class ConvergenceEngine:
         decision: Decision,
         beliefs: list[Belief],
         critical: list[CriticalUncertainty],
-        experiments: Optional[list[Experiment]] = None,
-        decision_margin: Optional[float] = None,
-        decision_status: Optional[DecisionType] = None,
+        experiments: list[Experiment] | None = None,
+        decision_margin: float | None = None,
+        decision_status: DecisionType | None = None,
+        research_stop_status: str | None = None,
     ) -> ConvergenceReport:
         threshold = self.settings.max_critical_uncertainty
         experiments = experiments or []
@@ -41,6 +40,25 @@ class ConvergenceEngine:
             decision_status = DecisionType(decision_status)
         max_impact = max((c.impact for c in critical), default=0.0)
         critical_ids = {c.belief_id for c in critical}
+
+        # v1.1: the ResearchStopRule may declare SEARCH_EXHAUSTED; inject that
+        # signal so convergence does not claim cheap research is still useful.
+        if research_stop_status == "SEARCH_EXHAUSTED" and max_impact > threshold:
+            executable = [
+                e
+                for e in experiments
+                if e.status in (None, "PROPOSED", "RUNNING") or e.status == "PROPOSED"
+            ]
+            if not executable:
+                return ConvergenceReport(
+                    decision_id=decision.id,
+                    status=ConvergenceStatus.SEARCH_EXHAUSTED,
+                    reason=(
+                        "ResearchStopRule: search exhausted and no executable "
+                        "experiment; decide under residual uncertainty."
+                    ),
+                    critical_uncertainties=critical,
+                )
 
         # Already-resolved decisions.
         if decision_status is not None and decision_status != DecisionType.ABSTAIN:

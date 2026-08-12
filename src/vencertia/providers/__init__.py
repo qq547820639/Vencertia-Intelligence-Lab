@@ -11,7 +11,6 @@ from vencertia.providers.models import (
     SearchResult,
 )
 from vencertia.providers.openai_compatible import OpenAICompatibleProvider
-from vencertia.providers.retrieval import RetrievalProvider as _RetrievalProvider
 from vencertia.providers.search import SearchAdapter
 
 __all__ = [
