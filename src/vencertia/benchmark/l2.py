@@ -14,7 +14,9 @@ from pathlib import Path
 from vencertia.domain import PredictionEntry, utcnow
 from vencertia.repositories.base import EntityNotFoundError, Repository
 
-L2_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "data" / "benchmarks" / "l2" / "predictions.jsonl"
+# Repository root = parents[3] (benchmark -> vencertia -> src -> repo root)
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+L2_SCHEMA_PATH = _REPO_ROOT / "data" / "benchmarks" / "l2" / "predictions.jsonl"
 
 L2_FIELDS = [
     "id",
