@@ -11,10 +11,20 @@ from vencertia.domain.base import VencertiaBaseModel, utcnow
 
 
 class SearchResult(VencertiaBaseModel):
+    """Internal, provider-agnostic search result (GAP-02).
+
+    Adapters MUST normalize any vendor DTO into this shape; vendor fields
+    never leak into the domain. ``content``/``published_at``/``metadata``
+    are optional (present only when the external response carries them).
+    """
+
     title: str
     url: str = ""
     snippet: str = ""
+    content: str = ""
+    published_at: datetime | None = None
     source: str = ""
+    metadata: dict[str, Any] = Field(default_factory=dict)
     retrieved_at: datetime = Field(default_factory=utcnow)
 
 

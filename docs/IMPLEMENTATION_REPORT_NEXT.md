@@ -2,6 +2,12 @@
 
 > 版本：1.1 · 作者：寇豆码（工程师）· 状态：完成
 > 基线：v1.0（65 src 文件 / 174 tests / L0 26-26 / L1 6-6 / demo 闭环）
+>
+> **后续更新（GAP-09）**：本文档是 v1.1 pre-RC 的历史记录（283 passed /
+> 1 skipped）。v1.1.1 RC Hardening 的最终数字见
+> `docs/IMPLEMENTATION_REPORT_V1_1_RC.md`（345 passed / 1 skipped，
+> L0 36/36，Synthetic Claim Binding Benchmark 8 指标）。
+> 历史数字与最终数字按状态区分，不混用（`docs/BASELINE_V1_0.md`）。
 
 ## 1. 交付摘要
 

@@ -56,6 +56,7 @@ class ResearchTrace(VencertiaBaseModel):
     provider: str = ""
     model: str = ""
     request_id: str = ""
+    notes: list[str] = Field(default_factory=list)  # v1.1.1 provider-failure notes
     version: int = 1
 
 

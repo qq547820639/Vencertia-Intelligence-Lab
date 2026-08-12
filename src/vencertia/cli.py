@@ -400,7 +400,8 @@ app.add_typer(benchmark_app, name="benchmark")
 
 @benchmark_app.command("run")
 def benchmark_run(level: str = "L0", path: Path | None = None) -> None:
-    """Run L0 (synthetic) or L1 (time-sliced) benchmarks."""
+    """Run L0, L1, L2 or CLAIM_BINDING benchmarks."""
+    from vencertia.benchmark.claim_binding import ClaimBindingBenchmarkRunner
     from vencertia.benchmark.l0 import L0Runner
     from vencertia.benchmark.l1 import L1Runner
 
@@ -430,8 +431,17 @@ def benchmark_run(level: str = "L0", path: Path | None = None) -> None:
         runner = L2Runner()
         report = runner.due_report()
         _dump([e.model_dump(mode="json") for e in report])
+    elif level.upper() in ("BINDING", "CLAIM_BINDING", "CB"):
+        runner = ClaimBindingBenchmarkRunner()
+        report = runner.run(path or root / "data/benchmarks/claim_binding_cases.json")
+        print(runner.render(report))
+        # Known limitations are reported but do not fail the gate; unexpected
+        # failures do.
+        failed = [r for r in report.cases if not r.correct and not r.known_limitation]
+        if failed:
+            raise typer.Exit(code=1)
     else:
-        raise typer.BadParameter("level must be L0, L1 or L2")
+        raise typer.BadParameter("level must be L0, L1, L2 or CLAIM_BINDING")
 
 
 # -- project ---------------------------------------------------------------------

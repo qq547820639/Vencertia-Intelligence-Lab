@@ -1,7 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := src
 
-.PHONY: install test benchmark demo api lint ci verify release
+.PHONY: install test benchmark benchmark-binding benchmark-all demo api lint ci verify release
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -11,6 +11,13 @@ test:
 
 benchmark:
 	$(PYTHON) -m vencertia.cli benchmark run --level L0
+
+# GAP-04: independent Synthetic Claim Binding Benchmark (NOT real-world accuracy).
+benchmark-binding:
+	$(PYTHON) -m vencertia.cli benchmark run --level CLAIM_BINDING
+
+# L0 + Claim Binding benchmark.
+benchmark-all: benchmark benchmark-binding
 
 demo:
 	$(PYTHON) examples/demo_b2b_saas_mvp.py

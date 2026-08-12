@@ -69,7 +69,7 @@ def test_solve_v11_persists_decision_trace_and_sensitivity():
     assert result.why is not None
     assert repo.get_decision_trace(result.decision_id) is not None
     assert repo.get_decision_sensitivity(result.decision_id) is not None
-    assert result.robustness in ("STRONG_DECISION", "FRAGILE_DECISION")
+    assert result.robustness in ("ROBUST_DECISION", "MODERATE_DECISION", "FRAGILE_DECISION")
 
 
 def test_solve_v11_belief_update_records_persisted():

@@ -135,7 +135,12 @@ def test_engine_marks_unbound_explicitly():
     assert output.unbound[0].status == "UNBOUND_EVIDENCE"
 
 
-def test_multiple_match_binds_one_evidence_to_two_claims():
+def test_multiple_close_claims_are_ambiguous_not_forced():
+    """GAP-01: two near-identical claims → AMBIGUOUS (forcing top-1 is forbidden).
+
+    Claims A and B share the same normalized token set, so top-1/top-2 scores
+    are equal and the gap is below binding_ambiguity_margin.
+    """
     claim_a = Claim(
         id="CLM_A", statement="ICP has a severe recurring problem", scope=Scope.PROJECT
     )
@@ -158,8 +163,11 @@ def test_multiple_match_binds_one_evidence_to_two_claims():
             binding_confidence_threshold=0.5,
         )
     )
-    claim_ids = {b.claim_id for b in output.bindings}
-    assert len(claim_ids) >= 2
+    assert output.bindings == []
+    assert len(output.unbound) == 1
+    assert output.unbound[0].status == BindingStatus.AMBIGUOUS.value or output.unbound[0].status == "AMBIGUOUS"
+    assert output.unbound[0].candidate_claim_ids == ["CLM_A", "CLM_B"]
+    assert output.unbound[0].selected_claim_ids == []
 
 
 def test_candidate_claim_requires_validation_before_canonical():

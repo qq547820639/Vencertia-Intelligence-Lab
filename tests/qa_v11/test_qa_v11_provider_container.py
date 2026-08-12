@@ -12,6 +12,7 @@ import pytest
 from vencertia.config import Settings
 from vencertia.container import build_container
 from vencertia.events.bus import EventBus
+from vencertia.events.types import EventType
 from vencertia.providers.errors import ProviderError
 from vencertia.providers.factory import (
     ProviderBundle,
@@ -37,7 +38,12 @@ def test_qa_model_provider_factory_follows_settings():
 
 
 def test_qa_bundle_builds_for_both_providers():
-    """create_provider_bundle works for mock and openai_compatible (no key)."""
+    """create_provider_bundle works for mock and openai_compatible (no key).
+
+    GAP-02: the search provider is selected independently by
+    ``settings.search_provider`` (default ``mock``), so the bundle always
+    wires a search adapter (never silently drops it).
+    """
     bundle_mock = create_provider_bundle(Settings(model_provider="mock"))
     assert isinstance(bundle_mock, ProviderBundle)
     assert bundle_mock.model is not None
@@ -47,8 +53,9 @@ def test_qa_bundle_builds_for_both_providers():
         Settings(model_provider="openai_compatible", openai_api_key=None)
     )
     assert isinstance(bundle_oai, ProviderBundle)
-    # Live web search is intentionally not bundled (adapter contract only).
-    assert bundle_oai.search is None
+    # Search remains wired (search_provider defaults to mock independently of
+    # the model gateway).
+    assert bundle_oai.search is not None
 
 
 def test_qa_container_provider_follows_settings_and_api_follows_container():
@@ -88,7 +95,9 @@ class AlwaysFailsSearch(MockSearchProvider):
 
 
 def test_qa_provider_failure_does_not_pollute_canonical_state():
-    """A provider failure must propagate a structured error and leave state clean."""
+    """GAP-02: a provider failure degrades gracefully — PROVIDER_FAILED is
+    recorded and NO pseudo-evidence/binding from the failed provider is
+    persisted (never a silent fallback to mock, never a fabricated result)."""
     settings = Settings(
         provider_max_retries=0,
         provider_retry_backoff_base=0.0,
@@ -104,14 +113,18 @@ def test_qa_provider_failure_does_not_pollute_canonical_state():
         retrieval=None,
         settings=settings,
     )
-    with pytest.raises(ProviderError):
-        orchestrator.solve(
-            SolveRequest(project_id="PRJ_FAIL", problem_text="Should we commit six weeks to the MVP?", user_id="u1")
-        )
+    result = orchestrator.solve(
+        SolveRequest(project_id="PRJ_FAIL", problem_text="Should we commit six weeks to the MVP?", user_id="u1")
+    )
+    # The failure was recorded (structured event), not swallowed.
+    event_types = [e.event_type for e in repo._events_since(0)]
+    assert EventType.PROVIDER_FAILED.value in event_types
     # No research evidence / bindings from the failed search were persisted.
     assert repo.list_evidence() == []
     assert repo.list_bindings() == []
     assert repo.list_research_traces("whatever") == []
+    # The solve still completed with a degraded (research-stopped) state.
+    assert result.stop_condition in ("SEARCH_EXHAUSTED", "RESEARCH_MORE", "EXPERIMENT_REQUIRED")
 
 
 def test_qa_resilience_maps_timeout_to_structured_error():

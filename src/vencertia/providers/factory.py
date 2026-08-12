@@ -26,6 +26,7 @@ from vencertia.providers.errors import (
     ProviderTimeoutError,
     ProviderUnavailableError,
 )
+from vencertia.providers.http_search import HttpSearchProvider
 from vencertia.providers.mock import (
     MockProvider,
     MockRetrievalProvider,
@@ -180,6 +181,14 @@ def register_model_provider(name: str, factory: Callable[[Settings], ModelProvid
     _MODEL_PROVIDER_REGISTRY[name] = factory
 
 
+_SEARCH_PROVIDER_REGISTRY: dict[str, Callable[[Settings], SearchProvider]] = {}
+
+
+def register_search_provider(name: str, factory: Callable[[Settings], SearchProvider]) -> None:
+    """Register a search provider factory under a settings key (OSS admission)."""
+    _SEARCH_PROVIDER_REGISTRY[name] = factory
+
+
 def create_model_provider(settings: Settings) -> ModelProvider:
     """Create the model provider selected by ``settings.model_provider``."""
     name = (settings.model_provider or "mock").lower()
@@ -201,13 +210,32 @@ def create_model_provider(settings: Settings) -> ModelProvider:
 
 
 def create_search_provider(settings: Settings) -> SearchProvider | None:
-    """Create the search provider for the configured gateway (may be None)."""
-    name = (settings.model_provider or "mock").lower()
+    """Create the search provider selected by ``settings.search_provider``.
+
+    GAP-02: ``http`` requires ``VENCERTIA_SEARCH_URL``; if it is missing the
+    factory FAILS LOUD (ProviderUnavailableError) instead of silently falling
+    back to the mock provider (which would hide a configuration mistake).
+    """
+    name = (settings.search_provider or "mock").lower()
     if name == "mock":
         return MockSearchProvider()
-    # Live web search is not bundled: keep the adapter contract, report
-    # "Adapter implemented, live provider unavailable without credentials".
-    return None
+    if name == "http":
+        if not settings.search_url:
+            raise ProviderUnavailableError(
+                "search_provider=http requires VENCERTIA_SEARCH_URL to be set "
+                "(fail loud; no silent fallback to the mock provider)"
+            )
+        return HttpSearchProvider(
+            url=settings.search_url,
+            api_key=settings.search_api_key,
+            timeout=settings.search_timeout_seconds,
+            settings=settings,
+        )
+    if name in _SEARCH_PROVIDER_REGISTRY:
+        return _SEARCH_PROVIDER_REGISTRY[name](settings)
+    # Unknown provider: fail loud with a structured error rather than silently
+    # falling back to mock (which would hide configuration mistakes).
+    raise ProviderUnavailableError(f"Unknown search_provider: {settings.search_provider!r}")
 
 
 def create_retrieval_provider(settings: Settings) -> RetrievalProvider | None:
@@ -252,5 +280,6 @@ __all__ = [
     "create_search_provider",
     "provider_name",
     "register_model_provider",
+    "register_search_provider",
     "with_resilience",
 ]

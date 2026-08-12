@@ -185,7 +185,13 @@ def token_recall(a: str, b: str) -> float:
 
 
 class DeterministicClaimMatcher:
-    """Normalized matching baseline: exact → normalized → lexical."""
+    """Normalized matching baseline: exact → normalized → lexical.
+
+    v1.1.1 (GAP-01): the match threshold is ``settings.binding_min_score``
+    (no hard-coded magic number), and the returned :class:`ClaimMatchResult`
+    always carries the full score map so the engine can classify
+    BOUND / AMBIGUOUS / REJECTED / UNBOUND_EVIDENCE.
+    """
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
@@ -219,9 +225,12 @@ class DeterministicClaimMatcher:
             for claim, score in zip(existing, semantic_scores):
                 scores[claim.id] = max(scores.get(claim.id, 0.0), float(score))
 
-        matched = [(cid, s) for cid, s in scores.items() if s >= 0.7]
+        min_score = self.settings.binding_min_score
+        matched = [(cid, s) for cid, s in scores.items() if s >= min_score]
         if not matched:
-            return ClaimMatchResult(candidate=candidate, verdict="NO_MATCH")
+            # Always return the full score map (GAP-01) so the engine can
+            # distinguish "no candidate" from "candidate below reliability".
+            return ClaimMatchResult(candidate=candidate, scores=scores, verdict="NO_MATCH")
         if len(matched) > 1:
             return ClaimMatchResult(
                 candidate=candidate,
@@ -299,11 +308,23 @@ class ClaimBindingEngine:
         applied: list[Evidence] = []
         rejected: list[dict] = []
         notes: list[str] = []
+        min_score = inp.binding_min_score if inp.binding_min_score is not None else self.settings.binding_min_score
+        ambiguity_margin = (
+            inp.binding_ambiguity_margin
+            if inp.binding_ambiguity_margin is not None
+            else self.settings.binding_ambiguity_margin
+        )
+        reject_threshold = (
+            inp.binding_reject_threshold
+            if inp.binding_reject_threshold is not None
+            else self.settings.binding_reject_threshold
+        )
 
         for result in inp.research_results:
             evidence = self._to_evidence(result)
             candidates = self.extractor.extract(result, inp.context) if inp.auto_extract else []
             match_results: list[ClaimMatchResult] = []
+            validation_failed = False
             for candidate in candidates:
                 mr = self.matcher.match(candidate, existing)
                 match_results.append(mr)
@@ -313,11 +334,11 @@ class ClaimBindingEngine:
                             self.repo.save_candidate_claim(candidate)
                         new_candidates.append(candidate)
                     else:
+                        validation_failed = True
                         rejected.append(
                             {"evidence_id": evidence.id, "reason": "candidate failed deterministic validation"}
                         )
 
-            bound_claims: set[str] = set()
             claim_scope_by_id = {c.id: c.scope.value if hasattr(c.scope, "value") else c.scope for c in existing}
 
             def _scope_ok(evidence_scope, claim_id: str, _scope_map: dict = claim_scope_by_id) -> bool:
@@ -326,22 +347,85 @@ class ClaimBindingEngine:
                     return True
                 return ClaimBindingEngine._scope_ok(evidence_scope, cscope)
 
+            # ---- GAP-01 four-state classification per evidence ----
+            candidate_scores: dict[str, float] = {}
+            claim_extraction: dict[str, float] = {}
             for mr in match_results:
-                if mr.verdict not in ("EXISTING_MATCH", "MULTIPLE_MATCH"):
-                    continue
-                linked = self.linker.link(evidence, mr, inp.binding_confidence_threshold, _scope_ok)
-                for binding in linked:
-                    if binding.claim_id is not None:
-                        bindings.append(binding)
-                        bound_claims.add(binding.claim_id)
-                    else:
-                        unbound.append(binding)
+                conf = float(mr.candidate.extraction_confidence)
+                for cid, score in mr.scores.items():
+                    if score >= reject_threshold:
+                        candidate_scores[cid] = max(candidate_scores.get(cid, 0.0), score)
+                        claim_extraction[cid] = max(claim_extraction.get(cid, 0.0), conf)
+            candidate_ids = sorted(candidate_scores, key=lambda c: (-candidate_scores[c], c))
 
-            if not bound_claims and not any(
-                u.evidence_id == evidence.id for u in unbound
-            ):
-                # No acceptable match at all → explicit UNBOUND_EVIDENCE
-                # (guard against duplicate UNBOUND rows for the same evidence).
+            bound_claims: set[str] = set()
+            status = BindingStatus.UNBOUND_EVIDENCE
+            reason = "no candidate reached minimum reliability score"
+            if validation_failed and not candidate_scores:
+                status = BindingStatus.REJECTED
+                reason = "candidate failed deterministic validation"
+
+            reliable = {cid: s for cid, s in candidate_scores.items() if s >= min_score}
+            if reliable:
+                scope_ok_ids = [cid for cid in reliable if _scope_ok(evidence.scope, cid)]
+                if not scope_ok_ids:
+                    # Candidates existed but every one violates the binding
+                    # scope matrix → explicit REJECTED (not UNBOUND).
+                    status = BindingStatus.REJECTED
+                    reason = "scope mismatch / company-case isolation violation"
+                else:
+                    ranked = sorted(scope_ok_ids, key=lambda c: (-reliable[c], c))
+                    # Round the top-1/top-2 gap to 7dp so a gap exactly on the
+                    # ambiguity margin (e.g. 0.90-0.80=0.09999...98) is not
+                    # misclassified by binary float noise (MAJOR-CB-001; same
+                    # guard class as decision_sensitivity._classify). 7dp keeps
+                    # genuine sub-boundary gaps (e.g. 0.0999999) below the
+                    # margin, while 6dp would collapse them to the boundary.
+                    if (
+                        len(ranked) >= 2
+                        and round(reliable[ranked[0]] - reliable[ranked[1]], 7) < ambiguity_margin
+                    ):
+                        # Top-1/top-2 are too close: forcing top-1 is forbidden.
+                        status = BindingStatus.AMBIGUOUS
+                        reason = (
+                            f"top candidates within ambiguity margin: "
+                            f"{ranked[0]}={reliable[ranked[0]]:.3f}, {ranked[1]}={reliable[ranked[1]]:.3f}"
+                        )
+                    else:
+                        linked: list[EvidenceClaimBinding] = []
+                        for cid in ranked:
+                            match_score = reliable[cid]
+                            confidence = round(match_score * claim_extraction.get(cid, 0.5), 6)
+                            if confidence < inp.binding_confidence_threshold:
+                                continue
+                            linked.append(
+                                EvidenceClaimBinding(
+                                    id="EB_" + uuid4().hex,
+                                    evidence_id=evidence.id,
+                                    claim_id=cid,
+                                    binding_confidence=confidence,
+                                    binding_method=ClaimBindingEngine._binding_method(match_score),
+                                    model=match_results[0].candidate.extractor_model if match_results else None,
+                                    provider=match_results[0].candidate.extractor_provider if match_results else None,
+                                    matched_at=utcnow(),
+                                    candidate_claim_ids=candidate_ids,
+                                    candidate_scores=dict(candidate_scores),
+                                    selected_claim_ids=[cid],
+                                    reason="clear match reached binding threshold",
+                                )
+                            )
+                        if linked:
+                            status = BindingStatus.BOUND
+                            selected = [b.claim_id for b in linked]
+                            bindings.extend(linked)
+                            bound_claims.update(selected)
+                        else:
+                            # Reliable candidate(s) but the combined confidence
+                            # (score × extraction) did not reach the threshold.
+                            status = BindingStatus.UNBOUND_EVIDENCE
+                            reason = "candidates reliable but binding confidence below threshold"
+
+            if status != BindingStatus.BOUND:
                 unbound.append(
                     EvidenceClaimBinding(
                         id="EB_" + uuid4().hex,
@@ -349,8 +433,14 @@ class ClaimBindingEngine:
                         claim_id=None,
                         binding_confidence=0.0,
                         binding_method=BindingMethod.EXTRACTOR_INFERRED,
-                        status=BindingStatus.UNBOUND_EVIDENCE,
+                        status=status,
+                        model=match_results[0].candidate.extractor_model if match_results else None,
+                        provider=match_results[0].candidate.extractor_provider if match_results else None,
                         matched_at=utcnow(),
+                        candidate_claim_ids=candidate_ids,
+                        candidate_scores=dict(candidate_scores),
+                        selected_claim_ids=[],
+                        reason=reason,
                     )
                 )
 
@@ -400,6 +490,7 @@ class ClaimBindingEngine:
                             "evidence_id": binding.evidence_id,
                             "claim_id": binding.claim_id,
                             "confidence": binding.binding_confidence,
+                            "status": binding.status,
                         },
                     )
                 )
@@ -409,14 +500,19 @@ class ClaimBindingEngine:
                         EventType.EVIDENCE_BINDING_REJECTED,
                         "binding",
                         binding.id,
-                        {"evidence_id": binding.evidence_id, "reason": "no acceptable claim match"},
+                        {
+                            "evidence_id": binding.evidence_id,
+                            "status": binding.status,
+                            "reason": binding.reason,
+                        },
                     )
                 )
 
         if new_candidates:
             notes.append(f"{len(new_candidates)} candidate claim(s) saved (PENDING validation).")
         if unbound:
-            notes.append(f"{len(unbound)} evidence item(s) marked UNBOUND_EVIDENCE.")
+            notes.append(f"{len(unbound)} evidence item(s) not bound "
+                         f"({', '.join(sorted({u.status for u in unbound}))}).")
         return ClaimBindingOutput(
             bindings=bindings,
             unbound=unbound,
@@ -427,6 +523,15 @@ class ClaimBindingEngine:
         )
 
     # -- helpers ---------------------------------------------------------------
+
+    @staticmethod
+    def _binding_method(score: float) -> BindingMethod:
+        """Pick the binding method from the match score (deterministic)."""
+        if score >= 0.999:
+            return BindingMethod.EXACT_MATCH
+        if score >= 0.85:
+            return BindingMethod.NORMALIZED_MATCH
+        return BindingMethod.LEXICAL_MATCH
 
     @staticmethod
     def _scope_ok(evidence_scope: str, claim_scope: str) -> bool:

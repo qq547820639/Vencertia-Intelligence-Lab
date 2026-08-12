@@ -87,10 +87,29 @@ v1.1 closes the v1.0 gap where research evidence never reached the judgment loop
 - demo: closed loop (40 events).
 - CLI/API import: OK.
 
+## Verification at delivery (v1.1.1 RC hardening)
+
+- pytest: **390 passed / 1 skipped**（v1.0 174 / v1.1-pre-RC 283 零回归）.
+- L0: **36/36**; legacy reference 20/24 (unchanged, honestly reported).
+- L1: **6/6**（l1-07-leak 被 leakage gate 拒绝）.
+- Synthetic Claim Binding Benchmark（GAP-04，34 cases / 14 类）:
+  Precision 1.0 / Recall 0.96 / F1 0.9796 / Unbound 1.0 / Ambiguous 1.0 /
+  Rejected 1.0 / Multi-Exact 0.75 / Multi-Partial 0.25 / Coverage 1.0
+  （**Synthetic，非真实世界准确率**；CB-034 已知局限已标记）。
+- L1 三层契约（GAP-05）：template→schema→model_validate→L1Runner 全链通过；
+  leakage_audit_passed != true 的 case 拒绝执行正式 L1 benchmark。
+- 三 Provider adapter PASS：mock / openai_compatible（构造）/ http
+  （httpx MockTransport 10 种失败模式）。
+- legacy V10.2 compat PASS；API/CLI smoke PASS；ruff 0 error。
+- 版本：1.1.1（禁止 1.2.0）。
+
 ## What is intentionally not claimed (v1.1)
 
 - Real Web Search / LLM are not called: mock default; `openai_compatible` is
   construction-tested only; live provider needs credentials.
+- **Generic HTTP Search adapter implemented. No commercial search vendor is
+  bundled. Live use requires user-supplied endpoint and credentials**
+  （GAP-10，未集成任何商业搜索服务）。
 - L1 v1.1 metrics (Claim Binding Accuracy / Research Efficiency / Evidence Yield /
   Belief Delta Quality / Decision Change Precision) are N/A until labeled or
   prospective data accumulates.

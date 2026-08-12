@@ -1,15 +1,282 @@
 {
   "id": "historical-case-001",
-  "t0_timestamp": "2026-01-15T09:00:00Z",
   "domain": "b2b_saas",
+  "decision_time": "2026-01-15T09:00:00Z",
+  "information_available_at_t0": {
+    "decision": {
+      "id": "DEC_TEMPLATE_001",
+      "decision_question": "Should the founder commit six weeks to building the MVP now?",
+      "objective_id": "OBJ_TEMPLATE",
+      "project_id": "PRJ_TEMPLATE",
+      "options": [
+        {
+          "id": "commit_mvp",
+          "label": "Commit six weeks to build MVP",
+          "kind": "GO",
+          "base_utility": 0.05,
+          "belief_coefficients": {
+            "problem": 0.45,
+            "wtp": 0.85,
+            "access": 0.3
+          },
+          "irreversible_cost": 0.35,
+          "opportunity_cost": 0.1
+        },
+        {
+          "id": "stop_project",
+          "label": "Stop and redeploy resources",
+          "kind": "KILL",
+          "base_utility": 0.65,
+          "belief_coefficients": {
+            "problem": -0.2,
+            "wtp": -0.3,
+            "access": -0.1
+          },
+          "irreversible_cost": 0.02,
+          "opportunity_cost": 0.0
+        }
+      ],
+      "horizon": "short",
+      "reversible": true,
+      "relevant_belief_ids": ["problem", "wtp", "access"],
+      "status": "DRAFT"
+    },
+    "beliefs": [
+      {
+        "id": "problem",
+        "claim_id": "CLM_P",
+        "statement": "ICP has a severe recurring problem",
+        "scope": "PROJECT",
+        "project_id": "PRJ_TEMPLATE",
+        "posterior": 0.85,
+        "probability": 0.85,
+        "alpha": 28.0,
+        "beta": 5.0,
+        "decision_weight": 0.8,
+        "decision_relevant": true,
+        "uncertainty": 0.3,
+        "confidence": 0.7
+      },
+      {
+        "id": "wtp",
+        "claim_id": "CLM_W",
+        "statement": "ICP will pay at least EUR 500/month",
+        "scope": "PROJECT",
+        "project_id": "PRJ_TEMPLATE",
+        "posterior": 0.9,
+        "probability": 0.9,
+        "alpha": 36.0,
+        "beta": 4.0,
+        "decision_weight": 1.0,
+        "decision_relevant": true,
+        "uncertainty": 0.25,
+        "confidence": 0.75
+      },
+      {
+        "id": "access",
+        "claim_id": "CLM_A",
+        "statement": "Founder can reach 20 ICPs in two weeks",
+        "scope": "PROJECT",
+        "project_id": "PRJ_TEMPLATE",
+        "posterior": 0.8,
+        "probability": 0.8,
+        "alpha": 20.0,
+        "beta": 5.0,
+        "decision_weight": 0.7,
+        "decision_relevant": true,
+        "uncertainty": 0.3,
+        "confidence": 0.7
+      }
+    ],
+    "evidence": [
+      {
+        "id": "e1",
+        "claim_ids": [
+          "CLM_P"
+        ],
+        "scope": "PROJECT",
+        "evidence_type": "PRIMARY_RESEARCH",
+        "provenance": {
+          "tool": "template",
+          "raw_extract": "16 of 20 interviews described the pain as severe"
+        },
+        "source": "16 of 20 interviews described the pain as severe",
+        "directness": 0.8,
+        "reliability": 0.8,
+        "relevance": 0.8,
+        "strength": 0.75,
+        "supports_or_contradicts": "SUPPORTS",
+        "independence_group": "interview_batch_1",
+        "observed_at": "2026-01-10T09:00:00Z",
+        "authority_level": "REVIEWED_EXTERNAL_RESEARCH",
+        "verification": "VERIFIED"
+      },
+      {
+        "id": "e2",
+        "claim_ids": [
+          "CLM_W"
+        ],
+        "scope": "PROJECT",
+        "evidence_type": "OBSERVED_BEHAVIOR",
+        "provenance": {
+          "tool": "template",
+          "raw_extract": "0 of 4 qualified prospects accepted a EUR 500 paid pilot"
+        },
+        "source": "0 of 4 qualified prospects accepted a EUR 500 paid pilot",
+        "directness": 0.95,
+        "reliability": 0.95,
+        "relevance": 0.9,
+        "strength": 0.55,
+        "supports_or_contradicts": "CONTRADICTS",
+        "independence_group": "sales_batch_1",
+        "observed_at": "2026-01-12T09:00:00Z",
+        "authority_level": "PROJECT_DIRECT_BEHAVIOR",
+        "verification": "VERIFIED"
+      }
+    ],
+    "experiments": [
+      {
+        "id": "paid_pilot",
+        "name": "Sell a paid concierge pilot",
+        "decision_id": "DEC_TEMPLATE_001",
+        "target_belief_ids": [
+          "wtp"
+        ],
+        "hypothesis": "At least 2 of 20 ICPs pay for a manual pilot",
+        "action": "Offer the promised outcome manually to 20 ICPs within 30 days",
+        "predicted_observation": ">=2 paid pilots",
+        "success_criteria": ">=2 paid pilots",
+        "failure_criteria": "0 paid pilots",
+        "ambiguity_criteria": "1 paid pilot",
+        "expected_information_gain": 0.95,
+        "decision_impact": 1.0,
+        "cost": 1.0,
+        "time": 3.0,
+        "reversibility": 1.0,
+        "status": "PROPOSED"
+      }
+    ]
+  },
+  "claims_at_t0": [
+    {
+      "id": "CLM_P",
+      "statement": "ICP has a severe recurring problem",
+      "scope": "PROJECT",
+      "claim_type": "HYPOTHESIS",
+      "project_id": "PRJ_TEMPLATE"
+    },
+    {
+      "id": "CLM_W",
+      "statement": "ICP will pay at least EUR 500/month",
+      "scope": "PROJECT",
+      "claim_type": "HYPOTHESIS",
+      "project_id": "PRJ_TEMPLATE"
+    },
+    {
+      "id": "CLM_A",
+      "statement": "Founder can reach 20 ICPs in two weeks",
+      "scope": "PROJECT",
+      "claim_type": "HYPOTHESIS",
+      "project_id": "PRJ_TEMPLATE"
+    }
+  ],
+  "beliefs_at_t0": [
+    {
+      "id": "problem",
+      "claim_id": "CLM_P",
+      "statement": "ICP has a severe recurring problem",
+      "scope": "PROJECT",
+      "project_id": "PRJ_TEMPLATE",
+      "posterior": 0.85,
+      "probability": 0.85,
+      "alpha": 28.0,
+      "beta": 5.0,
+      "decision_weight": 0.8,
+      "decision_relevant": true
+    },
+    {
+      "id": "wtp",
+      "claim_id": "CLM_W",
+      "statement": "ICP will pay at least EUR 500/month",
+      "scope": "PROJECT",
+      "project_id": "PRJ_TEMPLATE",
+      "posterior": 0.9,
+      "probability": 0.9,
+      "alpha": 36.0,
+      "beta": 4.0,
+      "decision_weight": 1.0,
+      "decision_relevant": true
+    },
+    {
+      "id": "access",
+      "claim_id": "CLM_A",
+      "statement": "Founder can reach 20 ICPs in two weeks",
+      "scope": "PROJECT",
+      "project_id": "PRJ_TEMPLATE",
+      "posterior": 0.8,
+      "probability": 0.8,
+      "alpha": 20.0,
+      "beta": 5.0,
+      "decision_weight": 0.7,
+      "decision_relevant": true
+    }
+  ],
+  "evidence_at_t0": [
+    {
+      "id": "e1",
+      "claim_ids": [
+        "CLM_P"
+      ],
+      "scope": "PROJECT",
+      "evidence_type": "PRIMARY_RESEARCH",
+      "provenance": {
+        "tool": "template",
+        "raw_extract": "16 of 20 interviews described the pain as severe"
+      },
+      "source": "16 of 20 interviews described the pain as severe",
+      "directness": 0.8,
+      "reliability": 0.8,
+      "relevance": 0.8,
+      "strength": 0.75,
+      "supports_or_contradicts": "SUPPORTS",
+      "independence_group": "interview_batch_1",
+      "observed_at": "2026-01-10T09:00:00Z",
+      "authority_level": "REVIEWED_EXTERNAL_RESEARCH",
+      "verification": "VERIFIED"
+    },
+    {
+      "id": "e2",
+      "claim_ids": [
+        "CLM_W"
+      ],
+      "scope": "PROJECT",
+      "evidence_type": "OBSERVED_BEHAVIOR",
+      "provenance": {
+        "tool": "template",
+        "raw_extract": "0 of 4 qualified prospects accepted a EUR 500 paid pilot"
+      },
+      "source": "0 of 4 qualified prospects accepted a EUR 500 paid pilot",
+      "directness": 0.95,
+      "reliability": 0.95,
+      "relevance": 0.9,
+      "strength": 0.55,
+      "supports_or_contradicts": "CONTRADICTS",
+      "independence_group": "sales_batch_1",
+      "observed_at": "2026-01-12T09:00:00Z",
+      "authority_level": "PROJECT_DIRECT_BEHAVIOR",
+      "verification": "VERIFIED"
+    }
+  ],
   "decision": {
-    "id": "demo-b2b-saas-commit",
-    "question": "Should the founder commit six weeks to building the MVP now?",
-    "objective": "Maximize expected venture value while preserving runway and option value.",
+    "id": "DEC_TEMPLATE_001",
+    "decision_question": "Should the founder commit six weeks to building the MVP now?",
+    "objective_id": "OBJ_TEMPLATE",
+    "project_id": "PRJ_TEMPLATE",
     "options": [
       {
         "id": "commit_mvp",
         "label": "Commit six weeks to build MVP",
+        "kind": "GO",
         "base_utility": 0.05,
         "belief_coefficients": {
           "problem": 0.45,
@@ -22,6 +289,7 @@
       {
         "id": "stop_project",
         "label": "Stop and redeploy resources",
+        "kind": "KILL",
         "base_utility": 0.65,
         "belief_coefficients": {
           "problem": -0.2,
@@ -32,112 +300,54 @@
         "opportunity_cost": 0.0
       }
     ],
-    "beliefs": [
-      {
-        "id": "problem",
-        "statement": "ICP has a severe recurring problem",
-        "alpha": 4.279999999999999,
-        "beta": 1.7200000000000002,
-        "decision_weight": 0.8
-      },
-      {
-        "id": "wtp",
-        "statement": "ICP will pay at least EUR 500/month",
-        "alpha": 2.8,
-        "beta": 3.2,
-        "decision_weight": 1.0
-      },
-      {
-        "id": "access",
-        "statement": "Founder can reach 20 ICPs in two weeks",
-        "alpha": 4.279999999999999,
-        "beta": 1.7200000000000002,
-        "decision_weight": 0.7
-      }
-    ],
-    "evidence": [
-      {
-        "id": "e1",
-        "belief_id": "problem",
-        "claim": "16 of 20 interviews described the pain as severe",
-        "source_type": "primary_research",
-        "verification": "verified",
-        "direction": "supports",
-        "strength": 0.75,
-        "source_reliability": 0.8,
-        "directness": 0.8,
-        "independence_key": "interview_batch_1"
-      },
-      {
-        "id": "e2",
-        "belief_id": "wtp",
-        "claim": "0 of 4 qualified prospects accepted a EUR 500 paid pilot",
-        "source_type": "observed_behavior",
-        "verification": "verified",
-        "direction": "contradicts",
-        "strength": 0.55,
-        "source_reliability": 0.95,
-        "directness": 0.95,
-        "independence_key": "sales_batch_1"
-      }
-    ],
-    "risk_aversion": 0.28,
-    "minimum_decision_margin": 0.08,
-    "max_unresolved_critical_uncertainty": 0.45
+    "horizon": "short",
+    "reversible": true,
+    "relevant_belief_ids": ["problem", "wtp", "access"],
+    "status": "DRAFT"
   },
-  "experiments": [
+  "options": [
     {
-      "id": "paid_pilot",
-      "name": "Sell a paid concierge pilot",
-      "target_belief_ids": [
-        "wtp"
-      ],
-      "expected_information_gain": 0.95,
-      "decision_impact": 1.0,
-      "cost": 1.0,
-      "days": 3,
-      "reversibility": 1.0,
-      "description": "Offer the promised outcome manually before building product.",
-      "success_signal": "At least one ICP pays >= EUR 500.",
-      "failure_signal": "No qualified ICP accepts payment after a predefined sales sample."
+      "id": "commit_mvp",
+      "label": "Commit six weeks to build MVP",
+      "kind": "GO",
+      "base_utility": 0.05,
+      "belief_coefficients": {
+        "problem": 0.45,
+        "wtp": 0.85,
+        "access": 0.3
+      },
+      "irreversible_cost": 0.35,
+      "opportunity_cost": 0.1
     },
     {
-      "id": "problem_interviews",
-      "name": "Run problem interviews",
-      "target_belief_ids": [
-        "problem"
-      ],
-      "expected_information_gain": 0.6,
-      "decision_impact": 0.7,
-      "cost": 0.8,
-      "days": 2,
-      "reversibility": 1.0,
-      "description": "Interview qualified ICPs about current workflow and pain.",
-      "success_signal": "Repeated severe pain with concrete current workaround.",
-      "failure_signal": "Pain is infrequent or low priority."
-    },
-    {
-      "id": "access_test",
-      "name": "Run ICP outreach test",
-      "target_belief_ids": [
-        "access"
-      ],
-      "expected_information_gain": 0.7,
-      "decision_impact": 0.65,
-      "cost": 0.8,
-      "days": 3,
-      "reversibility": 1.0,
-      "description": "Attempt to reach a fixed sample of qualified ICPs.",
-      "success_signal": "Reach target response/demo threshold.",
-      "failure_signal": "Access rate remains below threshold."
+      "id": "stop_project",
+      "label": "Stop and redeploy resources",
+      "kind": "KILL",
+      "base_utility": 0.65,
+      "belief_coefficients": {
+        "problem": -0.2,
+        "wtp": -0.3,
+        "access": -0.1
+      },
+      "irreversible_cost": 0.02,
+      "opportunity_cost": 0.0
     }
   ],
-  "t0_context": "Only include facts and evidence genuinely available at T0. Remove all hindsight information.",
-  "future_outcome": null,
-  "resolved_at": null,
-  "reference_option_id": null,
+  "gold_decision": "commit_mvp",
+  "actual_decision": "commit_mvp",
+  "reference_option_id": "commit_mvp",
   "reference_experiment_id": null,
-  "leakage_audit_passed": false,
-  "reviewer_ids": [],
+  "reference_critical_belief_id": "wtp",
+  "reference_convergence": "EXECUTE",
+  "future_outcome": "SUCCESS",
+  "hindsight_data": {
+    "outcome": "mvp shipped, 3 customers paid"
+  },
+  "leakage_audit_passed": true,
+  "metadata": {
+    "template": true,
+    "note": "Structural template of the canonical L1 contract. Reuse the shape; adjudicate the gold reference independently before adding to a frozen benchmark."
+  },
+  "reviewer_ids": ["template-reviewer"],
   "notes": "Template: adjudicate independently before adding to frozen benchmark."
 }

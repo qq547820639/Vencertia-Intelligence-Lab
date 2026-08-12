@@ -81,7 +81,7 @@ def test_decision_sensitivity_endpoint(client):
     tc, _, result = client
     r = tc.get(f"/v1/decisions/{result.decision_id}/sensitivity")
     assert r.status_code == 200
-    assert r.json()["data"]["robustness"] in ("STRONG_DECISION", "FRAGILE_DECISION")
+    assert r.json()["data"]["robustness"] in ("ROBUST_DECISION", "MODERATE_DECISION", "FRAGILE_DECISION")
 
 
 def test_decision_trace_endpoint(client):

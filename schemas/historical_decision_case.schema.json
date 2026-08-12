@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vencertia.dev/schemas/historical_decision_case.schema.json",
   "$defs": {
     "Belief": {
       "properties": {
@@ -6,8 +8,20 @@
           "title": "Id",
           "type": "string"
         },
+        "claim_id": {
+          "title": "Claim Id",
+          "type": "string"
+        },
         "statement": {
           "title": "Statement",
+          "type": "string"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "project_id": {
+          "title": "Project Id",
           "type": "string"
         },
         "alpha": {
@@ -22,10 +36,50 @@
           "title": "Beta",
           "type": "number"
         },
+        "prior": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Prior",
+          "type": "number"
+        },
+        "posterior": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Posterior",
+          "type": "number"
+        },
+        "probability": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probability",
+          "type": "number"
+        },
         "decision_weight": {
           "default": 1.0,
           "minimum": 0,
           "title": "Decision Weight",
+          "type": "number"
+        },
+        "decision_relevant": {
+          "default": false,
+          "title": "Decision Relevant",
+          "type": "boolean"
+        },
+        "uncertainty": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Uncertainty",
+          "type": "number"
+        },
+        "confidence": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
           "type": "number"
         },
         "updated_at": {
@@ -36,6 +90,7 @@
       },
       "required": [
         "id",
+        "claim_id",
         "statement"
       ],
       "title": "Belief",
@@ -49,6 +104,10 @@
         },
         "label": {
           "title": "Label",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
           "type": "string"
         },
         "base_utility": {
@@ -149,51 +208,58 @@
       "title": "DecisionRequest",
       "type": "object"
     },
+    "AuthorityLevel": {
+      "enum": [
+        "PROJECT_REALITY",
+        "PROJECT_DIRECT_BEHAVIOR",
+        "PROJECT_EXPERIMENT_RESULT",
+        "CUSTOMER_COMMITMENT_OR_PAYMENT",
+        "ELIGIBLE_EXTERNAL_CASE_FACT",
+        "REVIEWED_EXTERNAL_RESEARCH",
+        "FOUNDER_STATEMENT",
+        "LLM_INFERENCE",
+        "MODEL_PRIOR"
+      ],
+      "title": "AuthorityLevel",
+      "type": "string"
+    },
     "Direction": {
       "enum": [
-        "supports",
-        "contradicts",
-        "neutral"
+        "SUPPORTS",
+        "CONTRADICTS",
+        "NEUTRAL"
       ],
       "title": "Direction",
       "type": "string"
     },
     "Evidence": {
+      "description": "Domain Evidence shape (src/vencertia/domain/evidence.py). The envelope and evidence_at_t0 validate against this same shape so schema and L1Case/runner agree.",
       "properties": {
         "id": {
           "title": "Id",
           "type": "string"
         },
-        "belief_id": {
-          "title": "Belief Id",
+        "claim_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "evidence_type": {
+          "$ref": "#/$defs/EvidenceType"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": {}
+        },
+        "source": {
+          "title": "Source",
           "type": "string"
-        },
-        "claim": {
-          "title": "Claim",
-          "type": "string"
-        },
-        "source_type": {
-          "$ref": "#/$defs/SourceType"
-        },
-        "verification": {
-          "$ref": "#/$defs/Verification",
-          "default": "unknown"
-        },
-        "direction": {
-          "$ref": "#/$defs/Direction"
-        },
-        "strength": {
-          "maximum": 1,
-          "minimum": 0,
-          "title": "Strength",
-          "type": "number"
-        },
-        "source_reliability": {
-          "default": 0.7,
-          "maximum": 1,
-          "minimum": 0,
-          "title": "Source Reliability",
-          "type": "number"
         },
         "directness": {
           "default": 0.7,
@@ -202,7 +268,32 @@
           "title": "Directness",
           "type": "number"
         },
-        "independence_key": {
+        "reliability": {
+          "default": 0.7,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Reliability",
+          "type": "number"
+        },
+        "relevance": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Relevance",
+          "type": "number"
+        },
+        "strength": {
+          "default": 0.8,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Strength",
+          "type": "number"
+        },
+        "supports_or_contradicts": {
+          "$ref": "#/$defs/Direction",
+          "default": "NEUTRAL"
+        },
+        "independence_group": {
           "anyOf": [
             {
               "type": "string"
@@ -212,14 +303,59 @@
             }
           ],
           "default": null,
-          "title": "Independence Key"
+          "title": "Independence Group"
         },
         "observed_at": {
           "format": "date-time",
           "title": "Observed At",
           "type": "string"
         },
-        "source_ref": {
+        "conflict_status": {
+          "enum": [
+            "NO_CONFLICT",
+            "CONFLICTED",
+            "SUPERSEDED"
+          ],
+          "default": "NO_CONFLICT",
+          "title": "Conflict Status",
+          "type": "string"
+        },
+        "authority_level": {
+          "$ref": "#/$defs/AuthorityLevel",
+          "default": "MODEL_PRIOR"
+        },
+        "verification": {
+          "$ref": "#/$defs/Verification",
+          "default": "UNKNOWN"
+        },
+        "transferability": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transferability"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Published At"
+        },
+        "content_fingerprint": {
           "anyOf": [
             {
               "type": "string"
@@ -229,21 +365,75 @@
             }
           ],
           "default": null,
-          "title": "Source Ref"
+          "title": "Content Fingerprint"
+        },
+        "canonical_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canonical Source Id"
+        },
+        "source_family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Family"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "title": "Version",
+          "type": "integer"
         }
       },
       "required": [
         "id",
-        "belief_id",
-        "claim",
-        "source_type",
-        "direction",
-        "strength"
+        "scope",
+        "evidence_type",
+        "source"
       ],
       "title": "Evidence",
       "type": "object"
     },
+    "EvidenceType": {
+      "enum": [
+        "REAL_PAYMENT",
+        "CONTRACT",
+        "OBSERVED_BEHAVIOR",
+        "EXPERIMENT_RESULT",
+        "CUSTOMER_COMMITMENT",
+        "OFFICIAL_DATA",
+        "PRIMARY_RESEARCH",
+        "REVIEWED_EXTERNAL_RESEARCH",
+        "ELIGIBLE_EXTERNAL_CASE_FACT",
+        "COMPANY_CASE_FACT",
+        "FOUNDER_STATEMENT",
+        "EXPERT_INPUT",
+        "LLM_INFERENCE",
+        "MODEL_PRIOR",
+        "SYSTEM_DERIVED"
+      ],
+      "title": "EvidenceType",
+      "type": "string"
+    },
     "Experiment": {
+      "description": "Domain Experiment shape (src/vencertia/domain/experiment.py).",
       "properties": {
         "id": {
           "title": "Id",
@@ -253,19 +443,64 @@
           "title": "Name",
           "type": "string"
         },
+        "decision_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision Id"
+        },
         "target_belief_ids": {
+          "default": [],
           "items": {
             "type": "string"
           },
           "title": "Target Belief Ids",
           "type": "array"
         },
+        "hypothesis": {
+          "default": "",
+          "title": "Hypothesis",
+          "type": "string"
+        },
+        "action": {
+          "default": "",
+          "title": "Action",
+          "type": "string"
+        },
+        "predicted_observation": {
+          "default": "",
+          "title": "Predicted Observation",
+          "type": "string"
+        },
+        "success_criteria": {
+          "default": "",
+          "title": "Success Criteria",
+          "type": "string"
+        },
+        "failure_criteria": {
+          "default": "",
+          "title": "Failure Criteria",
+          "type": "string"
+        },
+        "ambiguity_criteria": {
+          "default": "",
+          "title": "Ambiguity Criteria",
+          "type": "string"
+        },
         "expected_information_gain": {
+          "default": 0.0,
           "minimum": 0,
           "title": "Expected Information Gain",
           "type": "number"
         },
         "decision_impact": {
+          "default": 0.0,
           "minimum": 0,
           "title": "Decision Impact",
           "type": "number"
@@ -276,10 +511,10 @@
           "title": "Cost",
           "type": "number"
         },
-        "days": {
+        "time": {
           "default": 1.0,
           "exclusiveMinimum": 0,
-          "title": "Days",
+          "title": "Time",
           "type": "number"
         },
         "reversibility": {
@@ -289,31 +524,172 @@
           "title": "Reversibility",
           "type": "number"
         },
-        "description": {
-          "title": "Description",
+        "status": {
+          "enum": [
+            "PROPOSED",
+            "RUNNING",
+            "RESOLVED_SUPPORT",
+            "RESOLVED_REFUTE",
+            "RESOLVED_AMBIGUOUS",
+            "ABANDONED"
+          ],
+          "default": "PROPOSED",
+          "title": "Status",
           "type": "string"
         },
-        "success_signal": {
-          "title": "Success Signal",
+        "outcome_evidence_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome Evidence Id"
+        },
+        "executability": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Executability",
+          "type": "number"
+        },
+        "founder_constraints": {
+          "default": {},
+          "title": "Founder Constraints",
+          "type": "object"
+        },
+        "sample_quality": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Sample Quality",
+          "type": "number"
+        },
+        "ambiguity_clarity": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Ambiguity Clarity",
+          "type": "number"
+        },
+        "measurement_reliability": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Measurement Reliability",
+          "type": "number"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
           "type": "string"
         },
-        "failure_signal": {
-          "title": "Failure Signal",
-          "type": "string"
+        "resolved_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resolved At"
+        },
+        "version": {
+          "default": 1,
+          "title": "Version",
+          "type": "integer"
         }
       },
       "required": [
         "id",
-        "name",
-        "target_belief_ids",
-        "expected_information_gain",
-        "decision_impact",
-        "description",
-        "success_signal",
-        "failure_signal"
+        "name"
       ],
       "title": "Experiment",
       "type": "object"
+    },
+    "Provenance": {
+      "properties": {
+        "source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool"
+        },
+        "actor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actor"
+        },
+        "raw_extract": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Extract"
+        }
+      },
+      "title": "Provenance",
+      "type": "object"
+    },
+    "Scope": {
+      "enum": [
+        "FOUNDER",
+        "PROJECT",
+        "CUSTOMER",
+        "MARKET",
+        "COMPANY_CASE",
+        "WORLD"
+      ],
+      "title": "Scope",
+      "type": "string"
     },
     "SourceType": {
       "enum": [
@@ -331,101 +707,183 @@
       "title": "SourceType",
       "type": "string"
     },
+    "T0Envelope": {
+      "additionalProperties": true,
+      "description": "The full T0 information envelope. Only this is ever injected into the L1 replay; hindsight_data/future_outcome are never injected (ADR-006).",
+      "properties": {
+        "decision": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "beliefs": {
+          "items": {
+            "$ref": "#/$defs/Belief"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "type": "array"
+        },
+        "experiments": {
+          "items": {
+            "$ref": "#/$defs/Experiment"
+          },
+          "type": "array"
+        }
+      },
+      "title": "T0Envelope",
+      "type": "object"
+    },
     "Verification": {
       "enum": [
-        "verified",
-        "estimated",
-        "assumed",
-        "unknown"
+        "VERIFIED",
+        "ESTIMATED",
+        "ASSUMED",
+        "UNKNOWN"
       ],
       "title": "Verification",
       "type": "string"
     }
   },
+  "description": "Canonical L1 historical decision case contract (GAP-05). This schema, src/vencertia/benchmark/l1.py::L1Case, data/templates/historical_case_template.json and data/benchmarks/l1_cases.jsonl must agree field-for-field. Old cases missing claims_at_t0/beliefs_at_t0/evidence_at_t0 default to []; they are never backfilled from future_outcome/hindsight_data (leakage, ADR-006).",
   "properties": {
     "id": {
       "title": "Id",
       "type": "string"
     },
-    "t0_timestamp": {
-      "format": "date-time",
-      "title": "T0 Timestamp",
-      "type": "string"
-    },
     "domain": {
-      "default": "venture",
+      "default": "general",
       "title": "Domain",
       "type": "string"
     },
-    "decision": {
-      "$ref": "#/$defs/DecisionRequest"
-    },
-    "experiments": {
-      "items": {
-        "$ref": "#/$defs/Experiment"
-      },
-      "title": "Experiments",
-      "type": "array"
-    },
-    "t0_context": {
-      "title": "T0 Context",
+    "decision_time": {
+      "format": "date-time",
+      "title": "Decision Time",
       "type": "string"
     },
-    "future_outcome": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Future Outcome"
+    "information_available_at_t0": {
+      "$ref": "#/$defs/T0Envelope"
     },
-    "resolved_at": {
-      "anyOf": [
-        {
-          "format": "date-time",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
+    "claims_at_t0": {
+      "default": [],
+      "items": {
+        "type": "object"
+      },
+      "title": "Claims At T0",
+      "type": "array"
+    },
+    "beliefs_at_t0": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Belief"
+      },
+      "title": "Beliefs At T0",
+      "type": "array"
+    },
+    "evidence_at_t0": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Evidence At T0",
+      "type": "array"
+    },
+    "decision": {
+      "additionalProperties": true,
       "default": null,
-      "title": "Resolved At"
+      "title": "Decision",
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "options": {
+      "default": null,
+      "items": {
+        "type": "object"
+      },
+      "title": "Options",
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "gold_decision": {
+      "default": null,
+      "title": "Gold Decision",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "actual_decision": {
+      "default": null,
+      "title": "Actual Decision",
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "reference_option_id": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
       "default": null,
-      "title": "Reference Option Id"
+      "title": "Reference Option Id",
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "reference_experiment_id": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
       "default": null,
-      "title": "Reference Experiment Id"
+      "title": "Reference Experiment Id",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reference_critical_belief_id": {
+      "default": null,
+      "title": "Reference Critical Belief Id",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reference_convergence": {
+      "default": null,
+      "title": "Reference Convergence",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "future_outcome": {
+      "default": null,
+      "title": "Future Outcome",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "hindsight_data": {
+      "default": {},
+      "title": "Hindsight Data",
+      "type": "object"
     },
     "leakage_audit_passed": {
       "default": false,
       "title": "Leakage Audit Passed",
       "type": "boolean"
     },
+    "metadata": {
+      "default": {},
+      "title": "Metadata",
+      "type": "object"
+    },
     "reviewer_ids": {
+      "default": [],
       "items": {
         "type": "string"
       },
@@ -433,23 +891,18 @@
       "type": "array"
     },
     "notes": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Notes"
+      "default": "",
+      "title": "Notes",
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "required": [
     "id",
-    "t0_timestamp",
-    "decision",
-    "t0_context"
+    "decision_time",
+    "information_available_at_t0"
   ],
   "title": "HistoricalDecisionCase",
   "type": "object"

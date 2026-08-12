@@ -49,7 +49,7 @@ def test_sensitivity_finds_flip_thresholds():
     # At p=0.42 HOLD wins (base 0.35 vs go 0.1+0.8*0.42-0.2=0.236); a rise above
     # ~0.64 flips to GO, a fall keeps HOLD (margin-dependent).
     assert sensitivity.decision_id == decision.id
-    assert sensitivity.robustness in ("STRONG_DECISION", "FRAGILE_DECISION")
+    assert sensitivity.robustness in ("ROBUST_DECISION", "MODERATE_DECISION", "FRAGILE_DECISION")
     assert sensitivity.flips is not None
     assert sensitivity.what_could_change_my_mind
 
@@ -71,7 +71,7 @@ def test_sensitivity_flip_direction_semantics():
 
 
 def test_sensitivity_strong_when_no_nearby_flip():
-    settings = Settings(sensitivity_step=0.01, robustness_margin_threshold=0.05)
+    settings = Settings(sensitivity_step=0.01, fragile_margin=0.05)
     engine = DecisionSensitivityEngine(settings)
     decision = Decision(
         id="DEC_S2", decision_question="q", objective_id="OBJ_S", project_id="PRJ_S",
@@ -84,4 +84,4 @@ def test_sensitivity_strong_when_no_nearby_flip():
     belief = _belief(0.5)
     result = _result(decision, belief, "GO")
     sensitivity = engine.compute(decision, [belief], result)
-    assert sensitivity.robustness == "STRONG_DECISION"
+    assert sensitivity.robustness == "ROBUST_DECISION"

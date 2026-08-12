@@ -75,11 +75,11 @@ def test_qa_flip_threshold_direction_semantics():
 
 
 def test_qa_robustness_strong_vs_fragile():
-    """Robust: no nearby flip and healthy margin -> STRONG; else FRAGILE."""
-    settings = Settings(sensitivity_step=0.01, robustness_margin_threshold=0.05)
+    """GAP-03: no nearby flip + healthy margin -> ROBUST; else FRAGILE."""
+    settings = Settings(sensitivity_step=0.01, fragile_margin=0.05)
     engine = DecisionSensitivityEngine(settings)
 
-    # STRONG: option utilities barely depend on the belief -> no flip nearby.
+    # ROBUST: option utilities barely depend on the belief -> no flip nearby.
     strong_decision = Decision(
         id="DEC_S2", decision_question="q", objective_id="OBJ_S", project_id="PRJ_S",
         options=[
@@ -89,7 +89,7 @@ def test_qa_robustness_strong_vs_fragile():
         relevant_belief_ids=["wtp"],
     )
     strong = engine.compute(strong_decision, [_belief(0.5)], _result(strong_decision, _belief(0.5)))
-    assert strong.robustness == "STRONG_DECISION"
+    assert strong.robustness == "ROBUST_DECISION"
 
     # FRAGILE: belief strongly drives the decision with a nearby flip threshold
     # and a thin margin at the current p.

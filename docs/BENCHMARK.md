@@ -24,6 +24,12 @@ regression is guaranteed by the new L0 suite + unit tests.
 - Discipline: only `information_available_at_t0` is injected; `hindsight_data`
   is never fed to the decision. Cases with `leakage_audit_passed != true` are
   rejected by the harness.
+- **Leakage gate is flag-based (authoring-time audit, MINOR-L1-004)**:
+  `leakage_audit_passed` is set by the case author/reviewer after a manual
+  audit (ADR-006). It is NOT a runtime content scan — a case whose flag is
+  true but whose T0 envelope accidentally contains future-looking data will
+  run. Cases must be audited at authoring time before being added to a frozen
+  benchmark.
 - Run: `vencertia benchmark run --level L1`.
 
 Result (iteration 3): **L1 6/6 pass_rate 1.0, 1 rejected (leakage)**.

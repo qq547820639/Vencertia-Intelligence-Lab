@@ -1,0 +1,815 @@
+[
+  {
+    "id": "CB-001",
+    "category": "single_match",
+    "evidence": {
+      "id": "E_CB-001",
+      "scope": "MARKET",
+      "source": "New data confirms ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_1"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-002",
+    "category": "single_match",
+    "evidence": {
+      "id": "E_CB-002",
+      "scope": "MARKET",
+      "source": "Interviews show the founder can reach enough ICPs for validation"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_2"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-003",
+    "category": "single_match",
+    "evidence": {
+      "id": "E_CB-003",
+      "scope": "MARKET",
+      "source": "Customers report a severe recurring problem every week"
+    },
+    "claims": [
+      {
+        "id": "CLM_3",
+        "statement": "Customers report a severe recurring problem every week",
+        "scope": "WORLD"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_3"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-004",
+    "category": "multi_claim",
+    "evidence": {
+      "id": "E_CB-004",
+      "scope": "MARKET",
+      "source": "ICP has a severe recurring problem"
+    },
+    "claims": [
+      {
+        "id": "CLM_A",
+        "statement": "ICP has a severe recurring problem",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_B",
+        "statement": "The recurring problem is severe for ICPs",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_A",
+      "CLM_B"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {
+      "binding_ambiguity_margin": 0.0,
+      "binding_confidence_threshold": 0.5
+    }
+  },
+  {
+    "id": "CB-005",
+    "category": "multi_claim",
+    "evidence": {
+      "id": "E_CB-005",
+      "scope": "MARKET",
+      "source": "Founder can reach enough ICPs and ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_F",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_W",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_F",
+      "CLM_W"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {
+      "binding_ambiguity_margin": 0.0
+    }
+  },
+  {
+    "id": "CB-006",
+    "category": "multi_claim",
+    "evidence": {
+      "id": "E_CB-006",
+      "scope": "MARKET",
+      "source": "The severe recurring problem is real and ICPs will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_P",
+        "statement": "ICP has a severe recurring problem",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_Q",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_P",
+      "CLM_Q"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {
+      "binding_ambiguity_margin": 0.0
+    }
+  },
+  {
+    "id": "CB-007",
+    "category": "irrelevant",
+    "evidence": {
+      "id": "E_CB-007",
+      "scope": "MARKET",
+      "source": "Quarterly earnings for large banks beat expectations"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "UNBOUND_EVIDENCE",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-008",
+    "category": "irrelevant",
+    "evidence": {
+      "id": "E_CB-008",
+      "scope": "MARKET",
+      "source": "Macro commentary about interest rates and inflation"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "UNBOUND_EVIDENCE",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-009",
+    "category": "ambiguous",
+    "evidence": {
+      "id": "E_CB-009",
+      "scope": "MARKET",
+      "source": "ICP has a severe recurring problem"
+    },
+    "claims": [
+      {
+        "id": "CLM_A",
+        "statement": "ICP has a severe recurring problem",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_B",
+        "statement": "The recurring problem is severe for ICPs",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "AMBIGUOUS",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [
+      "CLM_A",
+      "CLM_B"
+    ],
+    "config": {}
+  },
+  {
+    "id": "CB-010",
+    "category": "ambiguous",
+    "evidence": {
+      "id": "E_CB-010",
+      "scope": "MARKET",
+      "source": "ICPs will pay for the promised outcomes"
+    },
+    "claims": [
+      {
+        "id": "CLM_C",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_D",
+        "statement": "ICPs will pay for the promised outcomes",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "AMBIGUOUS",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [
+      "CLM_C",
+      "CLM_D"
+    ],
+    "config": {}
+  },
+  {
+    "id": "CB-011",
+    "category": "ambiguous",
+    "evidence": {
+      "id": "E_CB-011",
+      "scope": "MARKET",
+      "source": "Founder can reach enough ICPs for validation"
+    },
+    "claims": [
+      {
+        "id": "CLM_E",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_F",
+        "statement": "Founders can reach sufficient ICPs for validation",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "AMBIGUOUS",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [
+      "CLM_E",
+      "CLM_F"
+    ],
+    "config": {}
+  },
+  {
+    "id": "CB-012",
+    "category": "rejected_scope",
+    "evidence": {
+      "id": "E_CB-012",
+      "scope": "COMPANY_CASE",
+      "source": "A company case where ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "REJECTED",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-013",
+    "category": "rejected_scope",
+    "evidence": {
+      "id": "E_CB-013",
+      "scope": "COMPANY_CASE",
+      "source": "Company case fact: ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "CUSTOMER"
+      }
+    ],
+    "gold_status": "REJECTED",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-014",
+    "category": "company_case",
+    "evidence": {
+      "id": "E_CB-014",
+      "scope": "COMPANY_CASE",
+      "source": "Company case fact: ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_CC",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "COMPANY_CASE"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_CC"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-015",
+    "category": "company_case",
+    "evidence": {
+      "id": "E_CB-015",
+      "scope": "COMPANY_CASE",
+      "source": "Company case fact: ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_W",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "WORLD"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_W"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-016",
+    "category": "project_outcome",
+    "evidence": {
+      "id": "E_CB-016",
+      "scope": "PROJECT",
+      "source": "Project outcome: ICP will pay for the promised outcome confirmed by 2 paid pilots"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_1"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-017",
+    "category": "project_outcome",
+    "evidence": {
+      "id": "E_CB-017",
+      "scope": "PROJECT",
+      "source": "Project outcome: ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "CUSTOMER"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_2"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-018",
+    "category": "external_research",
+    "evidence": {
+      "id": "E_CB-018",
+      "scope": "MARKET",
+      "source": "Secondary research: ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "WORLD"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_1"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-019",
+    "category": "external_research",
+    "evidence": {
+      "id": "E_CB-019",
+      "scope": "MARKET",
+      "source": "Market study: the market rewards faster onboarding"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "The market rewards faster onboarding",
+        "scope": "MARKET"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_2"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-020",
+    "category": "llm_inference",
+    "evidence": {
+      "id": "E_CB-020",
+      "scope": "MARKET",
+      "source": "Model inference: ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "WORLD"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_1"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-021",
+    "category": "llm_inference",
+    "evidence": {
+      "id": "E_CB-021",
+      "scope": "MARKET",
+      "source": "LLM summary: ICP has a severe recurring problem"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "ICP has a severe recurring problem",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_2"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-022",
+    "category": "contradiction",
+    "evidence": {
+      "id": "E_CB-022",
+      "scope": "MARKET",
+      "source": "ICP will not pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_1"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-023",
+    "category": "contradiction",
+    "evidence": {
+      "id": "E_CB-023",
+      "scope": "MARKET",
+      "source": "The severe recurring problem is absent in this ICP segment"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "ICP has a severe recurring problem",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_2"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-024",
+    "category": "near_duplicate_claims",
+    "evidence": {
+      "id": "E_CB-024",
+      "scope": "MARKET",
+      "source": "ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_A",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_B",
+        "statement": "ICPs will pay for the promised outcomes",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "AMBIGUOUS",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [
+      "CLM_A",
+      "CLM_B"
+    ],
+    "config": {}
+  },
+  {
+    "id": "CB-025",
+    "category": "near_duplicate_claims",
+    "evidence": {
+      "id": "E_CB-025",
+      "scope": "MARKET",
+      "source": "Founder can reach enough ICPs for validation"
+    },
+    "claims": [
+      {
+        "id": "CLM_E",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_F",
+        "statement": "Founders can reach sufficient ICPs for validation",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "AMBIGUOUS",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [
+      "CLM_E",
+      "CLM_F"
+    ],
+    "config": {}
+  },
+  {
+    "id": "CB-026",
+    "category": "same_keywords_different_meaning",
+    "evidence": {
+      "id": "E_CB-026",
+      "scope": "MARKET",
+      "source": "ICP will pay for the promised outcome"
+    },
+    "claims": [
+      {
+        "id": "CLM_A",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_B",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "AMBIGUOUS",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [
+      "CLM_A",
+      "CLM_B"
+    ],
+    "config": {}
+  },
+  {
+    "id": "CB-027",
+    "category": "same_keywords_different_meaning",
+    "evidence": {
+      "id": "E_CB-027",
+      "scope": "MARKET",
+      "source": "Founder can reach enough ICPs for validation"
+    },
+    "claims": [
+      {
+        "id": "CLM_A",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_B",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "AMBIGUOUS",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [
+      "CLM_A",
+      "CLM_B"
+    ],
+    "config": {}
+  },
+  {
+    "id": "CB-028",
+    "category": "weak_lexical_overlap",
+    "evidence": {
+      "id": "E_CB-028",
+      "scope": "MARKET",
+      "source": "Some firms occasionally pay for outcomes"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "UNBOUND_EVIDENCE",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-029",
+    "category": "weak_lexical_overlap",
+    "evidence": {
+      "id": "E_CB-029",
+      "scope": "MARKET",
+      "source": "A few customers buy products sometimes"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "UNBOUND_EVIDENCE",
+    "gold_claim_ids": [],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-030",
+    "category": "strong_semantic_relation",
+    "evidence": {
+      "id": "E_CB-030",
+      "scope": "MARKET",
+      "source": "ICPs will pay for the promised outcome when value is demonstrated by a paid pilot"
+    },
+    "claims": [
+      {
+        "id": "CLM_1",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_1"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-031",
+    "category": "strong_semantic_relation",
+    "evidence": {
+      "id": "E_CB-031",
+      "scope": "MARKET",
+      "source": "Founders who can reach enough ICPs for validation get decision-relevant signals"
+    },
+    "claims": [
+      {
+        "id": "CLM_2",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_2"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-032",
+    "category": "single_match",
+    "evidence": {
+      "id": "E_CB-032",
+      "scope": "MARKET",
+      "source": "The severe recurring problem is the top pain point"
+    },
+    "claims": [
+      {
+        "id": "CLM_3",
+        "statement": "ICP has a severe recurring problem",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_3"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-033",
+    "category": "external_research",
+    "evidence": {
+      "id": "E_CB-033",
+      "scope": "MARKET",
+      "source": "Secondary research: the market rewards faster onboarding"
+    },
+    "claims": [
+      {
+        "id": "CLM_4",
+        "statement": "The market rewards faster onboarding",
+        "scope": "WORLD"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_4"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {}
+  },
+  {
+    "id": "CB-034",
+    "category": "multi_claim",
+    "evidence": {
+      "id": "E_CB-034",
+      "scope": "MARKET",
+      "source": "ICP will pay for the promised outcome; the founder is reachable"
+    },
+    "claims": [
+      {
+        "id": "CLM_A",
+        "statement": "ICP will pay for the promised outcome",
+        "scope": "PROJECT"
+      },
+      {
+        "id": "CLM_B",
+        "statement": "Founder can reach enough ICPs for validation",
+        "scope": "PROJECT"
+      }
+    ],
+    "gold_status": "BOUND",
+    "gold_claim_ids": [
+      "CLM_A",
+      "CLM_B"
+    ],
+    "gold_candidate_claim_ids": [],
+    "config": {
+      "binding_ambiguity_margin": 0.0
+    },
+    "known_limitation": true,
+    "notes": "Human-reviewed gold: evidence 'the founder is reachable' partially supports CLM_B; deterministic extractor (recall>=0.6) under-binds. Documented limitation; not a gold fix."
+  }
+]

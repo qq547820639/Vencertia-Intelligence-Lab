@@ -18,21 +18,27 @@ v1.1（Intelligence Ingestion）把研究证据真正接进判断闭环：Claim 
 
 ```bash
 make install          # pip install -e ".[dev]"
-make test             # pytest（245 passed / 1 skipped）
+make test             # pytest（390 passed / 1 skipped）—— v1.1.1 RC 最终回归
 make demo             # B2B SaaS MVP 6 周决策闭环演示
 make benchmark        # L0 基准（36/36）+ legacy 参考
+make benchmark-binding  # Synthetic Claim Binding Benchmark（GAP-04，独立）
+make benchmark-all    # L0 + Binding
 make lint             # ruff check（0 error）
 make ci               # lint → test → benchmark → API/CLI smoke
 make api              # FastAPI: http://localhost:8000
 make verify           # test + benchmark + import 检查
-make release          # 打包 Vencertia_Decision_Runtime_v1.1.zip
+make release          # 打包 Vencertia_Intelligence_Lab_v1.1.1.zip
 ```
+
+> 测试数字为 v1.1.1 RC 最后一次干净回归；历史数字对照见
+> `docs/BASELINE_V1_0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345，三状态不混数字）。
 
 CLI 也可直接使用：
 
 ```bash
 PYTHONPATH=src python -m vencertia.cli demo
 PYTHONPATH=src python -m vencertia.cli benchmark run --level L0
+PYTHONPATH=src python -m vencertia.cli benchmark run --level CLAIM_BINDING
 PYTHONPATH=src python -m vencertia.cli research plan <decision_id>
 PYTHONPATH=src python -m vencertia.cli evidence bind <evidence_id>
 PYTHONPATH=src python -m vencertia.cli decision sensitivity <decision_id>

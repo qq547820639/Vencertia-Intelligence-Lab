@@ -886,16 +886,35 @@ class SolveOrchestrator:
         candidates: list[Evidence] = []
         queries_executed = 0
         results_retrieved = 0
+        trace_notes: list[str] = []
 
         if self.search is not None:
+            from vencertia.providers.errors import ProviderError
             from vencertia.providers.search import SearchAdapter
 
             adapter = SearchAdapter(self.search)
             for query in queries[: self.settings.research_queries_per_round]:
                 queries_executed += 1
-                evidence_list = adapter.to_candidate_evidence(
-                    query, claim_ids=[], direction=Direction.SUPPORTS.value, k=2
-                )
+                try:
+                    evidence_list = adapter.to_candidate_evidence(
+                        query, claim_ids=[], direction=Direction.SUPPORTS.value, k=2
+                    )
+                except ProviderError as exc:
+                    # GAP-02: a failed search provider must NOT fabricate
+                    # evidence and must NOT silently fall back to mock. Record
+                    # the failure, degrade gracefully (no candidates from this
+                    # query → the stop rule will declare SEARCH_EXHAUSTED).
+                    provider_name = getattr(self.search, "name", "search")
+                    self._emit(
+                        EventType.PROVIDER_FAILED,
+                        "search_provider",
+                        provider_name,
+                        {"query": query, "error_type": exc.error_type, "message": str(exc)},
+                    )
+                    trace_notes.append(
+                        f"search provider failed ({provider_name}): {exc.error_type}"
+                    )
+                    continue
                 candidates.extend(evidence_list)
                 results_retrieved += len(evidence_list)
 
@@ -919,6 +938,7 @@ class SolveOrchestrator:
             provider=provider,
             model=model,
             request_id="req_" + uuid4().hex,
+            notes=trace_notes,
         )
         return trace, candidates
 

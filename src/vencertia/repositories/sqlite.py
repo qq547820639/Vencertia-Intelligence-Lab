@@ -29,7 +29,13 @@ def parse_sqlite_dsn(dsn: str) -> str:
 
 
 class SQLiteRepository(EntityStoreMixin):
-    """SQLite-backed repository (stdlib sqlite3, full feature set)."""
+    """SQLite-backed repository (stdlib sqlite3, full feature set).
+
+    ``check_same_thread=False`` allows the FastAPI/uvicorn worker threads to
+    share the connection created at startup (BLOCKER-API-001). The repository
+    is used synchronously per request; no concurrent write from two threads
+    happens inside a single request handler.
+    """
 
     def __init__(self, dsn: str | None = None, path: str | Path | None = None) -> None:
         if path is not None:
@@ -40,7 +46,7 @@ class SQLiteRepository(EntityStoreMixin):
         if db_path != ":memory:":
             parent = os.path.dirname(os.path.abspath(db_path))
             os.makedirs(parent, exist_ok=True)
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         run_migrations(self.conn, "sqlite")

@@ -68,6 +68,12 @@ class Settings:
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
 
+    # Search gateway (GAP-02): mock | http
+    search_provider: str = "mock"
+    search_url: str | None = None
+    search_api_key: str | None = None
+    search_timeout_seconds: float = 15.0
+
     # Policy
     # NOTE: the default stays "1.0" for backward compatibility with the v1.0
     # prediction ledger contract (test_register_creates_snapshot asserts
@@ -98,6 +104,16 @@ class Settings:
     binding_confidence_threshold: float = 0.6
     binding_auto_retry: bool = False
 
+    # -- v1.1.1 binding four-state thresholds (GAP-01) -------------------------
+    # Minimum match score for a candidate claim to be considered reliable
+    # (below this → UNBOUND_EVIDENCE, not silently bound).
+    binding_min_score: float = 0.7
+    # Top-1/top-2 gap below which the binding is AMBIGUOUS (never force top-1).
+    binding_ambiguity_margin: float = 0.1
+    # Match scores below this are treated as noise (not even recorded as
+    # candidates). REJECTED is reserved for rule violations on real candidates.
+    binding_reject_threshold: float = 0.4
+
     # -- v1.1 context / ranking ------------------------------------------------
     semantic_rank_provider: str = "deterministic"
     context_rank_weights: dict[str, float] = field(
@@ -110,7 +126,13 @@ class Settings:
 
     # -- v1.1 decision sensitivity ---------------------------------------------
     sensitivity_step: float = 0.01
-    robustness_margin_threshold: float = 0.05
+    robustness_margin_threshold: float = 0.05  # deprecated (pre-GAP-03)
+
+    # -- v1.1.1 three-level robustness thresholds (GAP-03) ----------------------
+    fragile_flip_threshold: float = 0.10
+    fragile_margin: float = 0.05
+    moderate_flip_threshold: float = 0.25
+    moderate_margin: float = 0.12
 
     # -- v1.1 provider resilience / observability ------------------------------
     provider_max_retries: int = 2
@@ -139,6 +161,10 @@ class Settings:
             openai_base_url=os.environ.get("VENCERTIA_OPENAI_BASE_URL") or None,
             openai_api_key=os.environ.get("VENCERTIA_OPENAI_API_KEY") or None,
             openai_model=os.environ.get("VENCERTIA_OPENAI_MODEL", "gpt-4o-mini"),
+            search_provider=os.environ.get("VENCERTIA_SEARCH_PROVIDER", "mock"),
+            search_url=os.environ.get("VENCERTIA_SEARCH_URL") or None,
+            search_api_key=os.environ.get("VENCERTIA_SEARCH_API_KEY") or None,
+            search_timeout_seconds=_env_float("VENCERTIA_SEARCH_TIMEOUT", 15.0),
             policy_version=os.environ.get("VENCERTIA_POLICY_VERSION", "1.0"),
             log_level=os.environ.get("VENCERTIA_LOG_LEVEL", "INFO"),
             max_pseudo_observations=_env_float("VENCERTIA_MAX_PSEUDO_OBSERVATIONS", 3.0),
@@ -162,6 +188,13 @@ class Settings:
                 "VENCERTIA_BINDING_CONFIDENCE_THRESHOLD", 0.6
             ),
             binding_auto_retry=_env_bool("VENCERTIA_BINDING_AUTO_RETRY", False),
+            binding_min_score=_env_float("VENCERTIA_BINDING_MIN_SCORE", 0.7),
+            binding_ambiguity_margin=_env_float(
+                "VENCERTIA_BINDING_AMBIGUITY_MARGIN", 0.1
+            ),
+            binding_reject_threshold=_env_float(
+                "VENCERTIA_BINDING_REJECT_THRESHOLD", 0.4
+            ),
             semantic_rank_provider=os.environ.get(
                 "VENCERTIA_SEMANTIC_RANK_PROVIDER", "deterministic"
             ),
@@ -172,6 +205,10 @@ class Settings:
             robustness_margin_threshold=_env_float(
                 "VENCERTIA_ROBUSTNESS_MARGIN_THRESHOLD", 0.05
             ),
+            fragile_flip_threshold=_env_float("VENCERTIA_FRAGILE_FLIP_THRESHOLD", 0.10),
+            fragile_margin=_env_float("VENCERTIA_FRAGILE_MARGIN", 0.05),
+            moderate_flip_threshold=_env_float("VENCERTIA_MODERATE_FLIP_THRESHOLD", 0.25),
+            moderate_margin=_env_float("VENCERTIA_MODERATE_MARGIN", 0.12),
             provider_max_retries=_env_int("VENCERTIA_PROVIDER_MAX_RETRIES", 2),
             provider_timeout_seconds=_env_float("VENCERTIA_PROVIDER_TIMEOUT_SECONDS", 30.0),
             provider_retry_backoff_base=_env_float(

@@ -3,6 +3,13 @@
 Each case carries only T0 information plus a future outcome. The harness never
 injects hindsight into the decision; cases whose ``leakage_audit_passed`` is
 not true are rejected outright (ADR-006).
+
+Documented boundary (MINOR-L1-004): the leakage gate is a **flag-based,
+authoring-time audit** — the flag is set by the case author/reviewer after a
+manual audit. It is NOT a runtime content scan: a case whose flag is true but
+whose T0 envelope accidentally contains future-looking data will run. This is
+the documented contract (audit happens at case-authoring time), not a runtime
+guard.
 """
 
 from __future__ import annotations
@@ -12,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from vencertia.benchmark.harness import BenchmarkCaseResult, BenchmarkReport
 from vencertia.benchmark.metrics import compute_all
@@ -33,21 +40,70 @@ from vencertia.runtime.uncertainty_engine import UncertaintyEngine
 
 
 class L1Case(VencertiaBaseModel):
-    """A time-sliced historical case."""
+    """A time-sliced historical case (canonical L1 contract, GAP-05).
+
+    Canonical contract: this model, ``schemas/historical_decision_case.schema.json``,
+    ``data/templates/historical_case_template.json`` and
+    ``data/benchmarks/l1_cases.jsonl`` agree field-for-field.
+
+    Backward compatibility: old cases that omit the T0 three fields
+    (``claims_at_t0`` / ``beliefs_at_t0`` / ``evidence_at_t0``) default to ``[]``.
+    They are NEVER backfilled from ``future_outcome`` / ``hindsight_data`` —
+    that would be leakage (ADR-006).
+    """
 
     id: str
     domain: str = "general"
     decision_time: datetime
-    information_available_at_t0: dict[str, Any]  # only this is injected
-    hindsight_data: dict[str, Any] = Field(default_factory=dict)  # never injected
-    future_outcome: str | None = None
-    leakage_audit_passed: bool = False
-    reviewer_ids: list[str] = Field(default_factory=list)
+    information_available_at_t0: dict[str, Any]  # full envelope (decision/beliefs/evidence/experiments)
+    # Canonical T0 slices (v1.1+). Default [] for backward compatibility.
+    claims_at_t0: list[dict[str, Any]] = Field(default_factory=list)
+    beliefs_at_t0: list[dict[str, Any]] = Field(default_factory=list)
+    evidence_at_t0: list[dict[str, Any]] = Field(default_factory=list)
+    # Convenience mirrors of the envelope (populated from information_available_at_t0).
+    decision: dict[str, Any] | None = None
+    options: list[dict[str, Any]] | None = None
+    # Gold reference: canonical names plus existing-naming compatibility.
+    gold_decision: str | None = None
+    actual_decision: str | None = None
     reference_option_id: str | None = None
     reference_experiment_id: str | None = None
     reference_critical_belief_id: str | None = None
     reference_convergence: str | None = None
+    future_outcome: str | None = None
+    hindsight_data: dict[str, Any] = Field(default_factory=dict)
+    leakage_audit_passed: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    reviewer_ids: list[str] = Field(default_factory=list)
     notes: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_gold_naming(cls, data: Any) -> Any:
+        """Map canonical ``gold_decision`` onto existing ``reference_option_id``."""
+        if not isinstance(data, dict):
+            return data
+        gold = data.get("gold_decision")
+        existing = data.get("reference_option_id")
+        if gold is not None and existing is not None and gold != existing:
+            raise ValueError(
+                f"gold_decision ({gold!r}) conflicts with reference_option_id ({existing!r})"
+            )
+        if gold is not None and existing is None:
+            data["reference_option_id"] = gold
+        return data
+
+    @model_validator(mode="after")
+    def _mirror_envelope(self) -> L1Case:
+        """Expose decision/options mirrors from the T0 envelope when absent."""
+        envelope = self.information_available_at_t0 or {}
+        if self.decision is None and isinstance(envelope.get("decision"), dict):
+            self.decision = envelope["decision"]
+        if self.options is None:
+            decision = self.decision or {}
+            if isinstance(decision.get("options"), list):
+                self.options = decision["options"]
+        return self
 
 
 class L1Runner:

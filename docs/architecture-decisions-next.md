@@ -95,6 +95,39 @@
 
 ---
 
+## ADR-013 — Research Evidence and Project Outcome Evidence Have Different Authority（v1.1.1）
+
+**Context**：v1.1 的 EvidencePolicy 已有 authority 层级（`PROJECT_REALITY`
+权重最高），但文档与实现未把"**外部研究证据**"与"**本项目结果证据**"的
+权威性差异讲透，导致集成方容易把二手研究当成本项目事实。GAP-08 明确该纪律。
+
+**Decision**：外部研究证据与本项目结果证据**权威性不同**，且这种差异是
+**结构性**的，不是打分参数可抹平的：
+
+- **Secondary research** 估计的是**外部现实**（市场容量、竞品、行业增速）——
+  它是关于"世界其他地方"的估计；
+- **Company cases** 提供的是**可迁移先验**（另一家公司发生了什么，可迁移到
+  本公司的力度受 transferability gate 约束，ADR-004）；
+- **Founder statements** 是**报告性信息**（创始人声称什么，不是直接行为）；
+- **Project experiments** 观察的是**本项目自己的世界**（本项目的客户、
+  本项目的转化、本项目的成本）；
+- **Customer payment** 是**直接行为证据**（客户真实付钱，最接近本项目现实）。
+
+因此项目结果证据（project experiments / direct customer payment /
+observed behavior inside this venture）携带**根本不同**的权威等级：
+**External research cannot directly produce PROJECT_REALITY authority.**
+外部研究最多被提升到 `REVIEWED_EXTERNAL_RESEARCH` / `ELIGIBLE_EXTERNAL_CASE_FACT`，
+永远不能因为"很多来源都这么说"而自动变成本项目的 `PROJECT_REALITY`。
+要获得 `PROJECT_REALITY`，必须有本项目内的直接观察/实验/支付行为。
+
+**Consequences**：
+- 决策引擎不会把"行业报告说 80% 客户愿意付"直接当作"本 ICP 会付"；
+- 公司案例只能作为先验（transferable prior），不能直接替代本项目实验；
+- 需要在 `docs/evidence-policy.md`、API 文档与示例中把该差异讲清楚；
+- 代价：外部研究在信念更新中的权重被结构性压低，必须靠项目内实验补足。
+
+---
+
 ## 附录：ADR 索引（v1.0 + v1.1）
 
 | ADR | 主题 | 版本 |
@@ -111,3 +144,4 @@
 | 010 | **Context is decision-relevant, not generic memory retrieval** | v1.1 |
 | 011 | **Research requires an explicit stopping rule** | v1.1 |
 | 012 | **External intelligence cannot directly mutate canonical state** | v1.1 |
+| 013 | **Research Evidence and Project Outcome Evidence Have Different Authority** | v1.1.1 |

@@ -39,6 +39,84 @@
   judgment labels that the deterministic engine (v0.1 or v1.0) does not
   reproduce; kept as reference, not hard gate.
 
+## v1.1.1 — Release Candidate Hardening (2026-08-12)
+
+> GAP-01~10 全部闭合；数字以最后一次干净回归为准（`docs/BASELINE_V1_0.md` 三状态表）。
+
+### Added
+- **BindingStatus 四态**（GAP-01）：`BOUND / AMBIGUOUS / REJECTED /
+  UNBOUND_EVIDENCE`（`UNBOUND` 兼容别名）；绑定 trace 扩展
+  （candidate_claim_ids / candidate_scores / selected_claim_ids / reason）；
+  阈值进 Settings（binding_min_score / binding_ambiguity_margin /
+  binding_reject_threshold）。
+- **HttpSearchProvider**（GAP-02）：通用 HTTP 搜索 adapter（httpx），
+  外部响应 normalize 为内部 `SearchResult`；`search_provider=mock|http`，
+  `http` 无 URL 时启动 fail loud；10 种失败模式结构化分类；
+  运行期失败记录 `PROVIDER_FAILED` 事件 + graceful degradation。
+- **三档 Robustness**（GAP-03）：`ROBUST_DECISION / MODERATE_DECISION /
+  FRAGILE_DECISION`（旧 `STRONG_DECISION` 兼容映射）；结合 margin +
+  flip distance + critical uncertainty；阈值进 Settings。
+- **Synthetic Claim Binding Benchmark**（GAP-04）：
+  `benchmark/claim_binding.py` + `data/benchmarks/claim_binding_cases.json`
+  （34 cases，14 类）；8 指标 + Coverage；零分母 → N/A；
+  `make benchmark-binding` + `make benchmark-all`。
+- **L1 三层协议统一**（GAP-05，P0）：`L1Case` / JSON Schema / template /
+  `l1_cases.jsonl` 唯一 canonical contract；T0 三字段默认 `[]`（严禁从
+  hindsight 回填）；leakage gate 拒绝未过审计 case。
+- **docs/OPERATIONS.md**（GAP-06，18 节）；**docs/BASELINE_V1_0.md**
+  （GAP-07，三状态不混数字）；**ADR-013**（GAP-08，外部研究 vs
+  项目结果证据权威性不同）。
+
+### Changed
+- `DeterministicClaimMatcher` 阈值改用 `settings.binding_min_score`；
+  `ClaimBindingInput` 支持 per-call GAP-01 覆盖。
+- `create_search_provider` 改按 `settings.search_provider` 选择（不再依赖
+  `model_provider`）；`Settings` 增加 search gateway 配置。
+- `EventType.PROVIDER_FAILED`；`ResearchTrace.notes`。
+- 文档数字统一（GAP-09）：README / DELIVERY / IMPLEMENTATION_REPORT 等以
+  最后一次干净回归为准。
+
+### Fixed
+- 旧命名断言按规格更新（STRONG_DECISION→ROBUST_DECISION 等，规格驱动，
+  非 benchmark 欺骗，见 `docs/ITERATION_V1_1_RC_1.md`）。
+- 阈值边界浮点噪声（flip 恰在阈值上被误判 fragile → round(6dp) 稳定）。
+- **BLOCKER-API-001**：`SQLiteRepository` connect 增加 `check_same_thread=False`，
+  修复 `make api`（uvicorn）下默认 SQLite DSN 的跨线程
+  `sqlite3.ProgrammingError` → 所有碰 DB 端点 HTTP 500 的问题；新增
+  `tests/test_default_container_api_smoke.py` 默认容器 + TestClient 防回归。
+- **MAJOR-CB-001**：`claim_binding` 的 top1/top2 歧义分差比较前 round(...,7)，
+  修复 0.90-0.80=0.09999…98 < 0.10 浮点噪声误判 AMBIGUOUS（与 F6 同源）；
+  QA xfail(strict) 测试转为正常通过。
+- **MAJOR-DEP-005**：`pyproject.toml` dev deps 增加 `jsonschema>=4`，干净
+  venv `pip install -e ".[dev]"` 后 pytest collection 不再因缺 jsonschema 失败。
+- **MINOR-CB-002**：`BindingStatus.UNBOUND` 别名注释修正（code-level name
+  alias，非 literal-value alias）。
+- **MINOR-PR-003**：`http_search` 非 dict 数组 → EMPTY_RESULT 的行为在
+  docstring 明确记录（非 SCHEMA_MISMATCH，非数据丢失）。
+- **MINOR-L1-004**：leakage gate 为 authoring-time 标记制在
+  `docs/BENCHMARK.md` 与 `l1.py` docstring 明确。
+
+### Tests
+- 新增 `tests/test_l1_contract.py`（12）、`tests/test_binding_status_v111.py`
+  （10）、`tests/test_http_search_provider.py`（23）、
+  `tests/test_sensitivity_robustness_v111.py`（9）、
+  `tests/test_claim_binding_benchmark.py`（8）、
+  `tests/test_default_container_api_smoke.py`（2，BLOCKER-API-001 防回归）。
+- QA 轮新增 `tests/qa_v111/` 对抗套件（binding/benchmark/provider/sensitivity/
+  decision/l1 edges）。
+- 全量 pytest：见 `docs/BASELINE_V1_1_RC.md` 最终数字。
+
+### Benchmarks
+- L0：36/36（不退化）；L1：6/6 + leakage 拒绝；Synthetic Claim Binding：
+  33/34 PASS + 1 KNOWN-LIMIT（CB-034 文档化局限）。
+
+### Limitations
+- CB-034：`the founder is reachable` 对 `Founder can reach enough ICPs for
+  validation` 的 lexical recall 低于 extractor 阈值（0.6）→ 引擎欠绑定；
+  已作为已知局限标记（BenchmarkCaseReview）。
+- 确定性基线语义匹配仅词法近似；真实语义匹配需 ADR-006 准入的语义 adapter。
+- 三 Provider adapter PASS 以 mock 基 + httpx MockTransport 测试为准。
+
 ## v1.1.0 — Intelligence Ingestion (2026-08-12)
 
 ### Added

@@ -289,6 +289,7 @@ class L0Runner:
                 context={"claims": claims},
                 existing_claims=claims,
                 binding_confidence_threshold=0.5,
+                binding_ambiguity_margin=params.get("binding_ambiguity_margin"),
             )
         )
         multi = len(output.bindings) >= 2
@@ -429,7 +430,9 @@ class L0Runner:
         )
         engine = DecisionSensitivityEngine(self.settings)
         sensitivity = engine.compute(decision, [belief], result)
-        ok = sensitivity.robustness in ("STRONG_DECISION", "FRAGILE_DECISION")
+        ok = sensitivity.robustness in (
+            "ROBUST_DECISION", "MODERATE_DECISION", "FRAGILE_DECISION"
+        )
         return ok, (
             f"robustness={sensitivity.robustness} flips={[(f.direction, round(f.threshold_value, 2), f.would_become) for f in sensitivity.flips]}"
         )

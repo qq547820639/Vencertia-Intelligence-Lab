@@ -3701,14 +3701,15 @@
     },
     {
       "id": "l0_multiple_binding",
-      "description": "v1.1 capability: one evidence may bind to multiple claims",
+      "description": "v1.1.1 capability: one evidence may bind to multiple claims (GAP-01: explicit zero ambiguity margin)",
       "capability": "multiple_binding",
       "params": {
         "claim_statements": [
           "ICP has a severe recurring problem",
           "The recurring problem is severe for ICPs"
         ],
-        "evidence_source": "ICP has a severe recurring problem"
+        "evidence_source": "ICP has a severe recurring problem",
+        "binding_ambiguity_margin": 0.0
       }
     },
     {

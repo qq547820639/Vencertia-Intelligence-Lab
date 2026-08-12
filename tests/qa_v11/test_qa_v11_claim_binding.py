@@ -158,7 +158,12 @@ def test_qa_unbound_evidence_is_explicit_and_not_silently_bound():
 
 
 def test_qa_one_evidence_binds_multiple_claims():
-    """MULTIPLE_MATCH -> one evidence bound to >=2 claims."""
+    """GAP-01: an evidence may bind >=2 DISTINCT claims (gap >= ambiguity margin).
+
+    The two claims share a strong token overlap but are not near-duplicates,
+    so top-1/top-2 scores keep a gap >= binding_ambiguity_margin → BOUND
+    to multiple claims (not AMBIGUOUS).
+    """
     claim_a = Claim(id="CLM_A", statement="ICP has a severe recurring problem", scope=Scope.PROJECT)
     claim_b = Claim(id="CLM_B", statement="The recurring problem is severe for ICPs", scope=Scope.PROJECT)
     repo = InMemoryRepository()
@@ -179,6 +184,7 @@ def test_qa_one_evidence_binds_multiple_claims():
             existing_claims=[claim_a, claim_b],
             auto_extract=True,
             binding_confidence_threshold=0.5,
+            binding_ambiguity_margin=0.0,  # GAP-01: zero margin ⇒ no ambiguity
         )
     )
     bound_ids = {b.claim_id for b in output.bindings}
