@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "CaseDepth": {
+      "enum": [
+        "CASE_UNIT",
+        "FULL_CASE"
+      ],
+      "title": "CaseDepth",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "GET_COMPANY_CASE",
+      "default": "GET_COMPANY_CASE",
+      "title": "Operation",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "anyOf": [
+        {
+          "pattern": "^BM[0-9A-Za-z_-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Snapshot Id"
+    },
+    "depth": {
+      "$ref": "#/$defs/CaseDepth",
+      "default": "FULL_CASE"
+    },
+    "include_founders": {
+      "default": true,
+      "title": "Include Founders",
+      "type": "boolean"
+    },
+    "include_funding_rounds": {
+      "default": true,
+      "title": "Include Funding Rounds",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "company_id"
+  ],
+  "title": "GetCaseRequest",
+  "type": "object"
+}

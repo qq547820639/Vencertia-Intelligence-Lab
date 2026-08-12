@@ -1,0 +1,542 @@
+{
+  "$defs": {
+    "CaseDataQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "fact_status": {
+          "$ref": "#/$defs/FactStatus"
+        },
+        "intelligence_status": {
+          "$ref": "#/$defs/IntelligenceStatus"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "completeness": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "last_verified_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Verified At"
+        }
+      },
+      "required": [
+        "fact_status",
+        "intelligence_status",
+        "confidence",
+        "completeness"
+      ],
+      "title": "CaseDataQuality",
+      "type": "object"
+    },
+    "CaseUnitRef": {
+      "additionalProperties": false,
+      "description": "The canonical comparison unit: company x snapshot x scope.",
+      "properties": {
+        "company_id": {
+          "pattern": "^CMP[0-9A-Za-z_-]+$",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "pattern": "^BM[0-9A-Za-z_-]+$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "operating_segment_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Operating Segment Ids",
+          "type": "array"
+        },
+        "business_unit_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Business Unit Id"
+        },
+        "offer_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Offer Ids",
+          "type": "array"
+        },
+        "revenue_stream_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Revenue Stream Ids",
+          "type": "array"
+        },
+        "customer_segment_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Customer Segment Ids",
+          "type": "array"
+        },
+        "geography": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Geography",
+          "type": "array"
+        },
+        "valid_period": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Period"
+        }
+      },
+      "required": [
+        "company_id",
+        "snapshot_id"
+      ],
+      "title": "CaseUnitRef",
+      "type": "object"
+    },
+    "Confidence": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "FactStatus": {
+      "enum": [
+        "NOT_READY",
+        "FACT_READY",
+        "FACT_VERIFIED"
+      ],
+      "title": "FactStatus",
+      "type": "string"
+    },
+    "FounderRecord": {
+      "additionalProperties": false,
+      "description": "Public company-case founder intelligence restored from the V9 contract.\n\nThis is NOT user Founder Memory and must only contain case-intelligence data\nwhose provenance can be traced through Claim/Evidence/Source.",
+      "properties": {
+        "founder_id": {
+          "pattern": "^FDR[0-9A-Za-z_-]+$",
+          "title": "Founder Id",
+          "type": "string"
+        },
+        "company_id": {
+          "pattern": "^CMP[0-9A-Za-z_-]+$",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "education": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Education",
+          "type": "array"
+        },
+        "previous_companies": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Previous Companies",
+          "type": "array"
+        },
+        "previous_industries": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Previous Industries",
+          "type": "array"
+        },
+        "previous_startups": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Previous Startups",
+          "type": "array"
+        },
+        "technical_background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Technical Background"
+        },
+        "sales_background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sales Background"
+        },
+        "industry_background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Industry Background"
+        },
+        "capital_background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capital Background"
+        },
+        "special_resources": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Special Resources",
+          "type": "array"
+        },
+        "founder_market_fit_notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Founder Market Fit Notes"
+        },
+        "claim_ids": {
+          "items": {
+            "pattern": "^C[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "last_verified_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Verified At"
+        },
+        "record_scope": {
+          "const": "PUBLIC_CASE_INTELLIGENCE",
+          "default": "PUBLIC_CASE_INTELLIGENCE",
+          "title": "Record Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "founder_id",
+        "company_id",
+        "name"
+      ],
+      "title": "FounderRecord",
+      "type": "object"
+    },
+    "FundingRound": {
+      "additionalProperties": false,
+      "description": "Structured funding event. Funding is context, never proof of demand.",
+      "properties": {
+        "funding_round_id": {
+          "pattern": "^FR[0-9A-Za-z_-]+$",
+          "title": "Funding Round Id",
+          "type": "string"
+        },
+        "company_id": {
+          "pattern": "^CMP[0-9A-Za-z_-]+$",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "round_name": {
+          "minLength": 1,
+          "title": "Round Name",
+          "type": "string"
+        },
+        "announced_at": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Announced At"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "investors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Investors",
+          "type": "array"
+        },
+        "lead_investors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Lead Investors",
+          "type": "array"
+        },
+        "pre_money_valuation": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pre Money Valuation"
+        },
+        "post_money_valuation": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Post Money Valuation"
+        },
+        "total_funding_after_round": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Funding After Round"
+        },
+        "claim_ids": {
+          "items": {
+            "pattern": "^C[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "source_ids": {
+          "items": {
+            "pattern": "^S[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "last_verified_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Verified At"
+        }
+      },
+      "required": [
+        "funding_round_id",
+        "company_id",
+        "round_name"
+      ],
+      "title": "FundingRound",
+      "type": "object"
+    },
+    "IntelligenceStatus": {
+      "enum": [
+        "NOT_REVIEWED",
+        "GENERATED",
+        "INTELLIGENCE_REVIEWED"
+      ],
+      "title": "IntelligenceStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "canonical_case": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Canonical Case"
+    },
+    "case_unit_refs": {
+      "items": {
+        "$ref": "#/$defs/CaseUnitRef"
+      },
+      "title": "Case Unit Refs",
+      "type": "array"
+    },
+    "founders": {
+      "items": {
+        "$ref": "#/$defs/FounderRecord"
+      },
+      "title": "Founders",
+      "type": "array"
+    },
+    "funding_rounds": {
+      "items": {
+        "$ref": "#/$defs/FundingRound"
+      },
+      "title": "Funding Rounds",
+      "type": "array"
+    },
+    "data_quality": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CaseDataQuality"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "warnings": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "company_id"
+  ],
+  "title": "GetCaseResult",
+  "type": "object"
+}

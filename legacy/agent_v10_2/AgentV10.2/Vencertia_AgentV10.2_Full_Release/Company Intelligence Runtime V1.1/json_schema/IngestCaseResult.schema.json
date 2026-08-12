@@ -1,0 +1,365 @@
+{
+  "$defs": {
+    "Confidence": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "ConflictItem": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "existing_value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Existing Value"
+        },
+        "incoming_value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Incoming Value"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "claim_ids": {
+          "items": {
+            "pattern": "^C[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "resolution_required": {
+          "default": true,
+          "title": "Resolution Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "severity"
+      ],
+      "title": "ConflictItem",
+      "type": "object"
+    },
+    "DiffSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "added": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Added",
+          "type": "integer"
+        },
+        "changed": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Changed",
+          "type": "integer"
+        },
+        "removed": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Removed",
+          "type": "integer"
+        },
+        "unchanged": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Unchanged",
+          "type": "integer"
+        }
+      },
+      "title": "DiffSummary",
+      "type": "object"
+    },
+    "EntityResolutionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/EntityResolutionStatus"
+        },
+        "company_id": {
+          "anyOf": [
+            {
+              "pattern": "^CMP[0-9A-Za-z_-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Company Id"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "candidate_company_ids": {
+          "items": {
+            "pattern": "^CMP[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Candidate Company Ids",
+          "type": "array"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rationale"
+        }
+      },
+      "required": [
+        "status",
+        "confidence"
+      ],
+      "title": "EntityResolutionResult",
+      "type": "object"
+    },
+    "EntityResolutionStatus": {
+      "enum": [
+        "NEW_ENTITY",
+        "MATCHED",
+        "POSSIBLE_MATCH",
+        "AMBIGUOUS",
+        "CONFLICT"
+      ],
+      "title": "EntityResolutionStatus",
+      "type": "string"
+    },
+    "IngestionStatus": {
+      "enum": [
+        "RECEIVED",
+        "PARSED",
+        "SCHEMA_VALIDATED",
+        "ENTITY_RESOLVED",
+        "DIFF_READY",
+        "READY_TO_COMMIT",
+        "REVIEW_REQUIRED",
+        "COMMITTED",
+        "INDEX_GENERATED",
+        "ELIGIBILITY_EVALUATED",
+        "AVAILABLE",
+        "PARSE_FAILED",
+        "SCHEMA_INVALID",
+        "ENTITY_AMBIGUOUS",
+        "CONFLICT_BLOCKED",
+        "QUARANTINED",
+        "REJECTED"
+      ],
+      "title": "IngestionStatus",
+      "type": "string"
+    },
+    "MutationType": {
+      "enum": [
+        "ADD",
+        "UPDATE",
+        "SUPERSEDE",
+        "DEPRECATE",
+        "CONFLICT",
+        "NO_CHANGE"
+      ],
+      "title": "MutationType",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "ValidationIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        }
+      },
+      "required": [
+        "path",
+        "message",
+        "severity"
+      ],
+      "title": "ValidationIssue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "ingestion_id": {
+      "minLength": 1,
+      "title": "Ingestion Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/IngestionStatus"
+    },
+    "detected_schema_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Detected Schema Version"
+    },
+    "entity_resolution": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EntityResolutionResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema_valid": {
+      "default": false,
+      "title": "Schema Valid",
+      "type": "boolean"
+    },
+    "errors": {
+      "items": {
+        "$ref": "#/$defs/ValidationIssue"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/ValidationIssue"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "diff": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DiffSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/ConflictItem"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "proposed_action": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MutationType"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "company_id": {
+      "anyOf": [
+        {
+          "pattern": "^CMP[0-9A-Za-z_-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Company Id"
+    },
+    "revision_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revision Id"
+    },
+    "output_state_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output State Version"
+    }
+  },
+  "required": [
+    "ingestion_id",
+    "status"
+  ],
+  "title": "IngestCaseResult",
+  "type": "object"
+}

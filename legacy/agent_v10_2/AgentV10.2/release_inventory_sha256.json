@@ -1,0 +1,626 @@
+{
+  "release": "AgentV10.2",
+  "file_count": 124,
+  "files": [
+    {
+      "path": "README.md",
+      "size": 325,
+      "sha256": "36765e176602ca252854f75f3ab5861914bfb464575307c0499306bab42a6daf"
+    },
+    {
+      "path": "V10.1_Original_Source/AgentV10.1_original.zip",
+      "size": 1482367,
+      "sha256": "091e3f65f442b3653355abe51ee9fd6fbb2f40d3f355e558dffda92a5ce6f6c2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/AgentV10.2_validation_summary.json",
+      "size": 602,
+      "sha256": "bfffe19957d9972449d01db9e9f27b9bd484004db1be2dc6538e68646192bd82"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/README.md",
+      "size": 1358,
+      "sha256": "5ee49ce023d58a5bd9ee98e5114b23380189b263cd6c1ec53f361b078ed667d7"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/agent_patch_manifest_v10.md",
+      "size": 5541,
+      "sha256": "dcc8fbabc60c97b6d853363c73eb9db2c423525a69a4964ad0e2934015e48dc4"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/agent_patch_manifest_v10_1.md",
+      "size": 1203,
+      "sha256": "e029cdf58821454cc7ab1e94c66cf450d3b12ce83ddf971864419bd38bb84b84"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/agent_protocol_v1.md",
+      "size": 6460,
+      "sha256": "a4ee7e05c502c8ab68efab405e9cd012562f14169dd2c13ac1d51725e7e0cb8d"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/agent_protocol_v1_1.md",
+      "size": 2799,
+      "sha256": "f136cddcc0d7b3bef4bab738d2b651aca743c12bf11365934dd1f47612bec895"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/company_case_v1_4_compatibility_extension_v1_1.md",
+      "size": 2883,
+      "sha256": "7286130c051ebe458431c42cb9bd025054ad1ff6703d8e6d9c3468b0ead64b9f"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/company_intelligence_runtime.py",
+      "size": 30203,
+      "sha256": "9ad22d8bf5ee2ba9d5066cab1ae876459e229c793e661cb2367c691107728ac5"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/examples.json",
+      "size": 3291,
+      "sha256": "3065c25c00db2cb7589e0073ef03b15c5b6728f41d9bb113975a7e01079a8943"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/generate_json_schema.py",
+      "size": 1545,
+      "sha256": "7047687531855b19f03c80748e22ee7d2cb2878cab4653c5cdc0b154536f57d0"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/CaseContextPack.schema.json",
+      "size": 9638,
+      "sha256": "db79825e560d0ca0e9818a25a2aa283f3762c4567f54a9af6cad82954831277c"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/CaseUnitRef.schema.json",
+      "size": 1707,
+      "sha256": "a1dd348c883054fec517d9c5fbfa8e7738f8727dba19084e5cf63c4a83ebb3a2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/ClaimTraceRequest.schema.json",
+      "size": 542,
+      "sha256": "f2facbcc95dc3fd27b04f916d30b455a69806ac0f9336521090dbafb52ea913d"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/ClaimTraceResult.schema.json",
+      "size": 3557,
+      "sha256": "7026941f911e36f6dabb395e43005a8dd094b4166d09d205252acaf0cc1f758e"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/CompareCaseRequest.schema.json",
+      "size": 3344,
+      "sha256": "591e72b57145e2f1b94c662bd81b81003aef86023ec9d3b0e3e0eb557833e6e2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/CompareCaseSetRequest.schema.json",
+      "size": 3474,
+      "sha256": "df2ade5e65182a5244783af9271198fb2ad4c50397a27e7b1af78a2c09bbb88f"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/CompareCaseSetResult.schema.json",
+      "size": 10026,
+      "sha256": "729c7caf3ac53cae4ed5bd2dfd91e3d1c665469652fbcbf337355a7e075e77fb"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/ComparisonResult.schema.json",
+      "size": 8191,
+      "sha256": "7bb3babee591ae049ae8726717cb00c25e8db615142a0382078d5066d49353dc"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/FounderRecord.schema.json",
+      "size": 3219,
+      "sha256": "dfd7f810a5a6962f7bb4fe18cab307f975043d8074896252ef56d792128c0401"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/FundingRound.schema.json",
+      "size": 3311,
+      "sha256": "d3ac00f210bf7aa42acc3596dd87e306cf1994db1da7c2a66b547c040b3bb6ea"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/GetCaseRequest.schema.json",
+      "size": 1142,
+      "sha256": "9bd8a24b3114057b3c0a78297f058a7d18993db06d604fccab1c84b61e32fbd2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/GetCaseResult.schema.json",
+      "size": 12634,
+      "sha256": "0549020a767a9e24e366c86050d52999c0e86576602d8506fe78669e174d026b"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/IngestCaseRequest.schema.json",
+      "size": 2719,
+      "sha256": "d0c716ad1a26c7c06cdb4d2e1f621985cc5ba4a3b10fd03e2ce6db9281adc149"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/IngestCaseResult.schema.json",
+      "size": 7425,
+      "sha256": "1bcc2daddb247fd803668763a67aafb8cca338a0a2d53d221f8e883f9f5383c5"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/ProposeCaseUpdateRequest.schema.json",
+      "size": 3314,
+      "sha256": "8ac01ac0a82a36495f0d4301154ed83eaf316dc97597fe876e05f385b6771bee"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/ProposeCaseUpdateResult.schema.json",
+      "size": 2917,
+      "sha256": "56e5596644956e989a80bda113acf498551da4eb7b34693be9113518e116d5d3"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/RefreshCaseRequest.schema.json",
+      "size": 1524,
+      "sha256": "819b82947d1b6dfc383ec17e0b0a85d0931f99b66c6fa3c3561ac83b60b5cb34"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/RefreshCaseResult.schema.json",
+      "size": 1067,
+      "sha256": "6b14d9323198985edcf14e05831c2ac191a5f0066f2dde601bb5f5fbbaec1695"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/ResolveCaseConflictRequest.schema.json",
+      "size": 2084,
+      "sha256": "f5cb06f5931f42e4c7d716881739fc741e5855cec7bf461f13a687b367eaf146"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/ResolveCaseConflictResult.schema.json",
+      "size": 1195,
+      "sha256": "4aac6396e0a2402abb084f1b38e05abf20eb14207717c31348d3c8885aa39119"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/SearchCasesRequest.schema.json",
+      "size": 6117,
+      "sha256": "353dc62a4186f116ade9e054b28856dfd606c650868540d7ab7546ff70fdc09f"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/SearchCasesResult.schema.json",
+      "size": 8131,
+      "sha256": "888ff00037f0463ac31c5fb22dfed4f0f40fc9161dbabce96ac0be7462a7c129"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/SubmitEvidenceRequest.schema.json",
+      "size": 3788,
+      "sha256": "d4ba37d6aa9c65fe614b1e0c1d477b2955adbb9eba07f50b81eff19fb8cc60cc"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/SubmitEvidenceResult.schema.json",
+      "size": 1617,
+      "sha256": "99822bdea37cf57c9fae27a63e08defbc6c3374003ab5abfdf257da4493bd880"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/json_schema/index.json",
+      "size": 1386,
+      "sha256": "eaff542a64b728228daea920b03ef1ae027a13ebf5d829277c6591cf988b8bcf"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/test_runtime_schema.py",
+      "size": 4292,
+      "sha256": "b7670b3389e1645bde00e1f2ac0075252bd51b6bf5b35809406b96564cbc8693"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Company Intelligence Runtime V1.1/v3_runtime_mapping.md",
+      "size": 2536,
+      "sha256": "cb6645e0bdff0298eddd692f9238d626d76e497f1f0ccb5cc71d3fa92329a65f"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/Memory Write__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 5081,
+      "sha256": "aad88f27348029b398400d21ea2e60b65b268e149c5ae817f19b8e44cb75fbc9"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/Pydantic JSON Schema__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 4127,
+      "sha256": "5e8b882252ae90ae7feb78c7f2eb13ff0640b1b86ba7ac0b0b8c578cdbc25c5a"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/Routing__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 2091,
+      "sha256": "5337202782dab75e42f72af9ccb5b32a89422156ce9302c85da6d5c5e3b948c3"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/V10.2_Additive_Prompt_Patch.docx",
+      "size": 44864,
+      "sha256": "6af4142a9f14ef0ffae1509ff9a227922c4919e2b2671e8e45482be65dbf0ff8"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/V10.2_Additive_Prompt_Patch_Combined.md",
+      "size": 17637,
+      "sha256": "ce8cd0e3fe28d92d09d4fcc278e0708938a464b676c20fc2c1dcee15dec2b0b1"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/Vencertia Financial & Business Model__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 2165,
+      "sha256": "fcca7be56596f09cd8786741c0b7bbfc5e8297d2b17c8d6bb99dc140cea531d8"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/Vencertia Orchestrator__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 2268,
+      "sha256": "bc0b43c45475412eebdf4dbba6a4a8e2cffb445bc79f5df7f24530c7915bdec5"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompt Addenda V10.2/_V10.2_Patch_Manifest.md",
+      "size": 1875,
+      "sha256": "c2c9b6711e4d0c6b35f76d96d8bce3243fa6c15b892d03cfece1adad4511596c"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Memory Write.docx",
+      "size": 99440,
+      "sha256": "f15098f6ce55941df9260e2d8074fc97a6ad235a7d18b6d260a77daa0ecd9703"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Pydantic  JSON Schema.docx",
+      "size": 114682,
+      "sha256": "0a56cfd9d2ceaf4009c4020667e20863ae4ff8555bcf6c3029f00c3d09d82266"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Routing.docx",
+      "size": 98167,
+      "sha256": "0753e047c696893a36b0779d098fa1659e5beecfe7524df92e53283eaff5e16a"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/State Transition.docx",
+      "size": 101074,
+      "sha256": "8cc4a053f65ef7f7f65d769f8fd50127630a5ca57f849ce0e9950c4d3b3032f0"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Business Plan Architect.docx",
+      "size": 111401,
+      "sha256": "ae5c12a2245d0cd7fd60b6b5787e9bf45fda2e1db6dba9f274905ea5f64a456c"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Execution Strategy.docx",
+      "size": 79397,
+      "sha256": "ccca0f2e4b1b9106f2eda9925268eb599948420b08eb44d9b509e15e67b63ec7"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Financial & Business Model.docx",
+      "size": 89900,
+      "sha256": "6655412144cb32de6ef62f03ea42702052588049ffd428435632c0b576d9d01b"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Founder Diagnosis.docx",
+      "size": 61250,
+      "sha256": "3d6c0e9585a746b9999f28b7379613ea3ec7fbcfdff3add9231cff35e0ccfbfc"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Founder Matchmaking.docx",
+      "size": 86753,
+      "sha256": "5a56350abc73b368169b033f55c63cc8a64db36c44f0cc143789f3fabd80cf33"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Market Opportunity.docx",
+      "size": 72300,
+      "sha256": "e427cbf78edfe3f77fd1c122c6c27bff49665bfa0e823e522c29ee5129fe587e"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Next Action Planner.docx",
+      "size": 90633,
+      "sha256": "9971c18f6b8a9293b18c7579b7ac0fe3322b85ac3389ecd141cf6ac73c4e0d22"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Orchestrator .docx",
+      "size": 89579,
+      "sha256": "1d52267826648241cb57a81c99f3ece09cca0cf48e9046689b9078c45e6b2d41"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Project Prosecutor.docx",
+      "size": 78646,
+      "sha256": "f446582d55f1d67bfec62a4dec443197aa29549647ff88066a4da4676aad33d8"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Startup Case Intelligence .docx",
+      "size": 92881,
+      "sha256": "afe9b604b1f6d5935fdd454ae97d6678d1913ec9b3e5ae4bb17552146294ccb0"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/Vencertia Venture Design.docx",
+      "size": 83601,
+      "sha256": "67dbb899a26c8d00dc1f54378b59d6afa1df5814be68860610847f3f4f23320b"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/_AgentV10.1 Upgrade Manifest.md",
+      "size": 1774,
+      "sha256": "c93219b0760256fe4024567865d044cc5aaa20c68ed8e5c2dd4df29dbc5b6866"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/Prompts/_AgentV10.2 Upgrade Manifest.md",
+      "size": 2342,
+      "sha256": "a9978e8783dcc4f7a4e5a5a174345aa171412f64be7074c633eb22ce5c2f2097"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/QA V10.2/compatibility_audit.json",
+      "size": 7495,
+      "sha256": "8bb46ebdfc461187a557a787a20040c4af021d933732da0d1bdb3c98a93bd7a2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/QA V10.2/validation_report.json",
+      "size": 991,
+      "sha256": "ccdc2f30511630c43c554b7d451d46c7ea5770774fe60b3016720a37a65ddc5a"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/QA V10.2/zero_conflict_audit_result.json",
+      "size": 437,
+      "sha256": "05c3c80257a062e950bd4cc8e03c3050ed49b2fbcf68a0f28aa0041d9c7473ce"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/README.md",
+      "size": 1277,
+      "sha256": "517b816900b0b374c179ec3a26e5118f510e93ca749790c4ce92b39fa512bb82"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/README_V10.1_ORIGINAL.md",
+      "size": 668,
+      "sha256": "6509fb62d423f6840404b36fe7be5f591b6490b4559f20343cd3a4b40d089dfe"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/README.md",
+      "size": 3368,
+      "sha256": "ce3ceb4daf0769ff4b0c8c6b9410dde17d9cf4c042a7cc5b96b95c33ea4d1805"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/_V1.0_Release_Manifest.md",
+      "size": 1608,
+      "sha256": "984001f3e1fd0d0a889cc12bdff6807bc56f04eeb3cd4ae3c6e3da8bff760157"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/agent_context_policy.md",
+      "size": 2787,
+      "sha256": "63161f996a4c3248e3a58a16b9b638c915f1bc0ba444904b3918a4938ceea2ce"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/compatibility_audit.json",
+      "size": 7495,
+      "sha256": "8bb46ebdfc461187a557a787a20040c4af021d933732da0d1bdb3c98a93bd7a2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/examples/a1_to_a3_memory_flow.py",
+      "size": 2796,
+      "sha256": "024fc93bc833d63109be39965f22befdd13f9f8cf05c3dadbeda01b4f5aea2b5"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/examples/a1_to_a3_memory_flow_output.json",
+      "size": 5618,
+      "sha256": "c3530444e7cfc848e27b540d50cea0e7a4a587d851e1c6082493998948fea974"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/generate_json_schema.py",
+      "size": 1100,
+      "sha256": "545c1454deec84a775c77998bd52fdabd710ac6c74950aa7390383e4213c0f6f"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/ContextBuildRequest.schema.json",
+      "size": 1733,
+      "sha256": "af22fe8686fde5d0a27ea1960b82c393536184ec8f4c8ebca57b823c16d31f2f"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/ContextBundle.schema.json",
+      "size": 9974,
+      "sha256": "170edff3c7705a8d370dea75c355e01e86312b3b7fbaebe4450c8df15973b4a7"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryCandidate.schema.json",
+      "size": 3369,
+      "sha256": "dee596bbb4d58e42391037948566f765b588efda698a37696b77268eee7ee5ba"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryCandidateEnvelope.schema.json",
+      "size": 6472,
+      "sha256": "1ced2b5fb5ee9b10365df3ecb10866321c5493b4cf24385ee7bfa3baa147215b"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryConflict.schema.json",
+      "size": 1721,
+      "sha256": "aeca4e00021e943bcc891deea12953c7828a2a7a96a722f667b58de0aece2bfb"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryPermission.schema.json",
+      "size": 774,
+      "sha256": "dc2ed4b6513edf87dc94c4a46eac898bdc6d2b5c9ee569d97e0562e4d27133c7"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryRecord.schema.json",
+      "size": 4574,
+      "sha256": "d42bf99d6fe26411b5c86fab91114000300297e4ce5fb843c0369af2a10c5dc6"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryRetrievalQuery.schema.json",
+      "size": 2699,
+      "sha256": "8cef4c8c868b3b2bc7f5773043b5e3b7cfafb69b420a03bdb5ed7a85d0f80a02"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryWriteEvaluation.schema.json",
+      "size": 10566,
+      "sha256": "72761ebe93bac3f414d7e8159342cb5632be8718a534a79185e9c0cb6fee2190"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryWriteRequest.schema.json",
+      "size": 7737,
+      "sha256": "46b22718cf3e27f8e35dd56352fc25fca5eddf97dac65aa56f6d267f5bf7f68e"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/MemoryWriteResult.schema.json",
+      "size": 7364,
+      "sha256": "a87aca5f5d55afb96284726d5b6b99d384ce2b1058cba5679cf6fd0c359babcb"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/UserKnowledgeProjection.schema.json",
+      "size": 9154,
+      "sha256": "990c9e8192daf70eba739d1d8c0ae95c71da6e24698e0d558ff640c1bbf93186"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/json_schema/index.json",
+      "size": 689,
+      "sha256": "da6af2597f9e3d849dd3bc8d6480ef15f913ff73572792f1b682798e8f4e6ffe"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/Memory Write__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 5081,
+      "sha256": "aad88f27348029b398400d21ea2e60b65b268e149c5ae817f19b8e44cb75fbc9"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/Pydantic JSON Schema__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 4127,
+      "sha256": "5e8b882252ae90ae7feb78c7f2eb13ff0640b1b86ba7ac0b0b8c578cdbc25c5a"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/Routing__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 2091,
+      "sha256": "5337202782dab75e42f72af9ccb5b32a89422156ce9302c85da6d5c5e3b948c3"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/V10.2_Additive_Prompt_Patch.docx",
+      "size": 44864,
+      "sha256": "6af4142a9f14ef0ffae1509ff9a227922c4919e2b2671e8e45482be65dbf0ff8"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/V10.2_Additive_Prompt_Patch_Combined.md",
+      "size": 17637,
+      "sha256": "ce8cd0e3fe28d92d09d4fcc278e0708938a464b676c20fc2c1dcee15dec2b0b1"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/Vencertia Financial & Business Model__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 2165,
+      "sha256": "fcca7be56596f09cd8786741c0b7bbfc5e8297d2b17c8d6bb99dc140cea531d8"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/Vencertia Orchestrator__V10.2_User_Knowledge_Runtime_Addendum.md",
+      "size": 2268,
+      "sha256": "bc0b43c45475412eebdf4dbba6a4a8e2cffb445bc79f5df7f24530c7915bdec5"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/prompt_patches/_V10.2_Patch_Manifest.md",
+      "size": 1875,
+      "sha256": "c2c9b6711e4d0c6b35f76d96d8bce3243fa6c15b892d03cfece1adad4511596c"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/pytest.ini",
+      "size": 42,
+      "sha256": "b160d82f7811555051f8966d8e02750a985227c1d022208c784e606946f2eada"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/requirements.txt",
+      "size": 32,
+      "sha256": "27c337a6a931df721bec0f148c65199c847e6c5df9dc2aef35736afc67d7cfc2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/__init__.py",
+      "size": 45,
+      "sha256": "73aeff759ddfaed9b1403a305e5fcf9959d4b485808702d633feec8919665220"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/context_builder.py",
+      "size": 8480,
+      "sha256": "c633259de5a2edb2b0a6e547c769addde4d4f0c220493267eaef72cdd38d5de4"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/founder_profile_sync.py",
+      "size": 1175,
+      "sha256": "aa1ede62119b6bc646424800f03e746eeca1f44da40404a7b7ae31f2119d1e00"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/memory_conflict_resolver.py",
+      "size": 1820,
+      "sha256": "31c6dbad2cb6a44eca972f24885412126008919ec11b6191ca6f1546c5d4d38a"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/memory_deduplicator.py",
+      "size": 782,
+      "sha256": "aafa2c874b281a3c6d67c197792504f16884c0ec1d50e6bf7d6d1c70ec46de65"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/memory_manager.py",
+      "size": 14493,
+      "sha256": "2e78831aa31e994f5fc6d6a799c3eb046cb31e24c637bae051742df533194a91"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/memory_permissions.py",
+      "size": 1557,
+      "sha256": "93578e3ba0f74ad97a4f6457f702476ef9ffd0fa923ca54671dce1d5cb595a38"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/memory_repository.py",
+      "size": 3898,
+      "sha256": "35bb09d044e023ab83cdaffe750f075ec9bb434d76deeac2d873d5772fe2cd95"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/memory_retrieval_policy.py",
+      "size": 2988,
+      "sha256": "8f3d02cee1ff85df1f4ec2fa8dfdbc62c1dc3f056ccc5c48d0adab4cc9bdeee0"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/memory_write_policy.py",
+      "size": 1721,
+      "sha256": "4214af5b422c89e09deb1e57c19d5c52193efd4f0e41e349299e3c49be0269ec"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/models.py",
+      "size": 12347,
+      "sha256": "4bc8eaa14c40b81f2d33fe10176aa228e4a466241e402915efa7c2a372e9855c"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/runtime/user_knowledge_service.py",
+      "size": 2636,
+      "sha256": "dcf96b987c8790d709478294ff082d2d74330638b8a27adfd1e16302222d06ca"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/schema.sql",
+      "size": 5952,
+      "sha256": "91acdc566392ea6506a025ae5b485e81be11541e9bfd4bcc542cccdde6cde377"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/tests/test_runtime.py",
+      "size": 8538,
+      "sha256": "856452ee26509b2678cd406a78ca24b90221747bbb3e5944f1c79e41f993fd3c"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/validation_report.json",
+      "size": 991,
+      "sha256": "ccdc2f30511630c43c554b7d451d46c7ea5770774fe60b3016720a37a65ddc5a"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/zero_conflict_audit.py",
+      "size": 1874,
+      "sha256": "a4adc4839ecd6e6e04be04798958588e6dc1f36bdf823f17b1d953db12a047e2"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/User Knowledge Runtime V1.0/zero_conflict_audit_result.json",
+      "size": 437,
+      "sha256": "05c3c80257a062e950bd4cc8e03c3050ed49b2fbcf68a0f28aa0041d9c7473ce"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/render_counts.json",
+      "size": 618,
+      "sha256": "6a0782560cf01bb38ab14eb5d4e2f9ffb53c89c913ca886762eac1f801b80250"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/render_counts_v10_2.json",
+      "size": 1663,
+      "sha256": "2cdf1c6cd7d05ba3e4ac4b342c869ba8deefec35270959fccee6fe92333f13e8"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/v10_1_to_v10_2_preservation_audit.json",
+      "size": 12056,
+      "sha256": "aca5c8eaf2208d8228a0c094e68f629a807ef0da5b88d7977c2a614477cb58a4"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/v9_preservation_audit.json",
+      "size": 2974,
+      "sha256": "5a5c5afd6ac15dc7555d0b9cd99b708dffa239cbad8c0b1243a7c6e410adf17c"
+    },
+    {
+      "path": "Vencertia_AgentV10.2_Full_Release/数据库范式文件V3.md",
+      "size": 56834,
+      "sha256": "919fdec6b26c11bdbb3a741831436936cec040ae4ac4dc26c9050d40d0bc0a06"
+    },
+    {
+      "path": "数据库文件/Vencertia Company Intelligence Runtime Protocol.docx",
+      "size": 37936,
+      "sha256": "f06779ca644a5e9bf672bc967b44828160d9e6d9529bcfcb53be375e9dd99daf"
+    },
+    {
+      "path": "数据库文件/vencertia_company_intelligence_runtime_v1.zip",
+      "size": 48186,
+      "sha256": "95c6876f374fa7fb44b8a94a1277406e6dc1d6677400b378707a130949aa3afa"
+    },
+    {
+      "path": "数据库文件/数据库/数据库范式文件V3.md",
+      "size": 56834,
+      "sha256": "919fdec6b26c11bdbb3a741831436936cec040ae4ac4dc26c9050d40d0bc0a06"
+    }
+  ]
+}

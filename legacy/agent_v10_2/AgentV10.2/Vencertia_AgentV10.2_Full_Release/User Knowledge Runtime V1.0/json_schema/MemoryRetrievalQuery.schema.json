@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "AccessClass": {
+      "enum": [
+        "PRIVATE",
+        "INTERNAL",
+        "MATCHABLE",
+        "PUBLIC"
+      ],
+      "title": "AccessClass",
+      "type": "string"
+    },
+    "MemoryType": {
+      "enum": [
+        "FOUNDER_FACT",
+        "RESOURCE",
+        "CAPABILITY",
+        "CONSTRAINT",
+        "RED_LINE",
+        "PREFERENCE",
+        "PROJECT_FACT",
+        "PROJECT_DECISION",
+        "ASSUMPTION",
+        "EVIDENCE",
+        "CUSTOMER_FEEDBACK",
+        "EXPERIMENT_RESULT",
+        "FINANCIAL_DATA",
+        "RISK",
+        "ACTION",
+        "ACTION_RESULT",
+        "MILESTONE",
+        "OPEN_QUESTION",
+        "EXCLUSION_RULE",
+        "PIVOT_REASON",
+        "LESSON"
+      ],
+      "title": "MemoryType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "semantic_query": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Semantic Query"
+    },
+    "memory_types": {
+      "items": {
+        "$ref": "#/$defs/MemoryType"
+      },
+      "title": "Memory Types",
+      "type": "array"
+    },
+    "include_user_global": {
+      "default": true,
+      "title": "Include User Global",
+      "type": "boolean"
+    },
+    "include_project_specific": {
+      "default": true,
+      "title": "Include Project Specific",
+      "type": "boolean"
+    },
+    "include_conflicted": {
+      "default": true,
+      "title": "Include Conflicted",
+      "type": "boolean"
+    },
+    "include_historical": {
+      "default": false,
+      "title": "Include Historical",
+      "type": "boolean"
+    },
+    "access_classes": {
+      "items": {
+        "$ref": "#/$defs/AccessClass"
+      },
+      "title": "Access Classes",
+      "type": "array"
+    },
+    "max_results": {
+      "default": 30,
+      "maximum": 200,
+      "minimum": 1,
+      "title": "Max Results",
+      "type": "integer"
+    },
+    "as_of": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "As Of"
+    }
+  },
+  "required": [
+    "request_id",
+    "user_id"
+  ],
+  "title": "MemoryRetrievalQuery",
+  "type": "object"
+}

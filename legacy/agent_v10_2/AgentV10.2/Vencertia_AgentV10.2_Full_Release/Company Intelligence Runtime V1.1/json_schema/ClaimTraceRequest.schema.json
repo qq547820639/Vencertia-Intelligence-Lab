@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "GET_CLAIM_TRACE",
+      "default": "GET_CLAIM_TRACE",
+      "title": "Operation",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "claim_id": {
+      "pattern": "^C[0-9A-Za-z_-]+$",
+      "title": "Claim Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "claim_id"
+  ],
+  "title": "ClaimTraceRequest",
+  "type": "object"
+}

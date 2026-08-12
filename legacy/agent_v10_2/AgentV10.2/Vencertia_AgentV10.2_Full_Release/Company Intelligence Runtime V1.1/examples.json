@@ -1,0 +1,138 @@
+{
+  "ingest_case_request": {
+    "operation": "INGEST_COMPANY_CASE",
+    "file_ref": "file_case_hubspot_v14",
+    "template_family": "Startup Intelligence Company Case",
+    "declared_schema_version": "1.4",
+    "mode": "CREATE_OR_UPDATE",
+    "review_policy": "REVIEW_ON_CONFLICT",
+    "requested_by": {
+      "actor_type": "USER",
+      "actor_id": "USR001"
+    },
+    "access_class": "INTERNAL",
+    "idempotency_key": "sha256:example-upload-001"
+  },
+  "search_cases_request": {
+    "operation": "SEARCH_COMPANY_CASES",
+    "retrieval_objective": "EARLY_GTM",
+    "target_context": {
+      "project_id": "PRJ001",
+      "project_stage": "S6",
+      "geography": [
+        "China"
+      ],
+      "customer_model": [
+        "B2B"
+      ],
+      "customer_segment": [
+        "SMB"
+      ],
+      "payer": "BUSINESS_OWNER",
+      "offering_type": [
+        "SOFTWARE",
+        "SERVICE"
+      ],
+      "revenue_models": [
+        "SUBSCRIPTION",
+        "SERVICE_FEE"
+      ],
+      "sales_motion": [
+        "FOUNDER_LED"
+      ],
+      "capital_intensity": "LOW"
+    },
+    "case_roles": [
+      "SUCCESS",
+      "FAILURE",
+      "PIVOT",
+      "ANTI_PATTERN"
+    ],
+    "max_candidates": 20,
+    "max_context_cases": 6,
+    "include_counterexamples": true,
+    "require_current_data": false
+  },
+  "compare_case_request": {
+    "operation": "COMPARE_CASE_TO_PROJECT",
+    "project_id": "PRJ001",
+    "case_unit_ref": {
+      "company_id": "CMP001",
+      "snapshot_id": "BM001",
+      "operating_segment_ids": [
+        "OS001"
+      ],
+      "business_unit_id": "BU001",
+      "offer_ids": [
+        "OF001"
+      ],
+      "revenue_stream_ids": [
+        "RS001"
+      ],
+      "customer_segment_ids": [
+        "CS001"
+      ],
+      "geography": [
+        "US"
+      ],
+      "valid_period": "2014-01-01/2016-12-31"
+    },
+    "comparison_objective": "EARLY_GTM"
+  },
+  "get_case_v1_1": {
+    "operation": "GET_COMPANY_CASE",
+    "company_id": "CMP001",
+    "depth": "FULL_CASE",
+    "include_founders": true,
+    "include_funding_rounds": true
+  },
+  "compare_case_set_v1_1": {
+    "operation": "COMPARE_CASE_SET",
+    "project_id": "PRJ001",
+    "comparison_objective": "COMPETITIVE_CASE_SET",
+    "case_unit_refs": [
+      {
+        "company_id": "CMP001",
+        "snapshot_id": "BM001",
+        "operating_segment_ids": [],
+        "offer_ids": [],
+        "revenue_stream_ids": [],
+        "customer_segment_ids": [],
+        "geography": [
+          "US"
+        ]
+      },
+      {
+        "company_id": "CMP002",
+        "snapshot_id": "BM001",
+        "operating_segment_ids": [],
+        "offer_ids": [],
+        "revenue_stream_ids": [],
+        "customer_segment_ids": [],
+        "geography": [
+          "US"
+        ]
+      }
+    ]
+  },
+  "propose_case_update_v1_1": {
+    "operation": "PROPOSE_CASE_UPDATE",
+    "company_id": "CMP001",
+    "updates": [
+      {
+        "mutation_type": "UPDATE",
+        "path": "pricing.PR001.typical_realized_price",
+        "proposed_value": 12000,
+        "rationale": "New verified pricing evidence",
+        "claim_ids": [],
+        "evidence_ids": [],
+        "source_ids": []
+      }
+    ],
+    "requested_by": {
+      "actor_type": "AGENT",
+      "actor_id": "A8"
+    },
+    "idempotency_key": "upd-CMP001-20260811-001"
+  }
+}

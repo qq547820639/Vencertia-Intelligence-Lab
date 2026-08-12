@@ -1,0 +1,27 @@
+{
+  "release": "Vencertia User Knowledge Runtime V1.0",
+  "compatibility_target": "AgentV10.1",
+  "generated_at_utc": "2026-08-11T22:22:12.255630+00:00",
+  "tests": "12 passed",
+  "generated_json_schemas": 12,
+  "prompt_patch_targets": 5,
+  "patch_docx_pages": 11,
+  "docx_visual_qa": "passed; all rendered pages reviewed, no clipping/overlap observed",
+  "zero_conflict_audit": {
+    "checks": {
+      "no_knowledge_record_class": true,
+      "no_knowledge_records_table": true,
+      "memory_status_has_rejected": true,
+      "company_runtime_not_bundled_or_modified": true,
+      "patch_target_count_is_5": true,
+      "a5_financial_snapshot_boundary_present": true,
+      "monetization_distance_1_to_4_patch_present": true,
+      "original_prompt_hashes_present": true,
+      "original_zip_hash_present": true
+    },
+    "failed": []
+  },
+  "canonical_second_truth_source": "not introduced",
+  "company_intelligence_runtime_modified": false,
+  "original_prompt_bodies_modified": false
+}

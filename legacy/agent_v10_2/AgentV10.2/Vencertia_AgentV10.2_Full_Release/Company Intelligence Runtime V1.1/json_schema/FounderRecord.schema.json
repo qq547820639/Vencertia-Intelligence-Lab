@@ -1,0 +1,155 @@
+{
+  "additionalProperties": false,
+  "description": "Public company-case founder intelligence restored from the V9 contract.\n\nThis is NOT user Founder Memory and must only contain case-intelligence data\nwhose provenance can be traced through Claim/Evidence/Source.",
+  "properties": {
+    "founder_id": {
+      "pattern": "^FDR[0-9A-Za-z_-]+$",
+      "title": "Founder Id",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "education": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Education",
+      "type": "array"
+    },
+    "previous_companies": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Previous Companies",
+      "type": "array"
+    },
+    "previous_industries": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Previous Industries",
+      "type": "array"
+    },
+    "previous_startups": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Previous Startups",
+      "type": "array"
+    },
+    "technical_background": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Technical Background"
+    },
+    "sales_background": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sales Background"
+    },
+    "industry_background": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Industry Background"
+    },
+    "capital_background": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Capital Background"
+    },
+    "special_resources": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Special Resources",
+      "type": "array"
+    },
+    "founder_market_fit_notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Founder Market Fit Notes"
+    },
+    "claim_ids": {
+      "items": {
+        "pattern": "^C[0-9A-Za-z_-]+$",
+        "type": "string"
+      },
+      "title": "Claim Ids",
+      "type": "array"
+    },
+    "last_verified_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Verified At"
+    },
+    "record_scope": {
+      "const": "PUBLIC_CASE_INTELLIGENCE",
+      "default": "PUBLIC_CASE_INTELLIGENCE",
+      "title": "Record Scope",
+      "type": "string"
+    }
+  },
+  "required": [
+    "founder_id",
+    "company_id",
+    "name"
+  ],
+  "title": "FounderRecord",
+  "type": "object"
+}

@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "name": "demo_b2b_saas_v1",
+  "description": "B2B SaaS MVP 6-week decision + paid pilot experiment closed loop",
+  "scenario": {
+    "project_id": "PRJ_B2B_SAAS",
+    "user_id": "USR_FOUNDER",
+    "problem": "Should the founder commit six weeks to building the B2B SaaS MVP now?",
+    "interviews": {"count": 10, "pain_reports": 8, "paid": 0},
+    "runway_months": 7,
+    "weeks_spent": 4
+  },
+  "claims": [
+    {"id": "CLM_PROBLEM", "statement": "ICP has a severe recurring problem", "scope": "PROJECT", "claim_type": "HYPOTHESIS"},
+    {"id": "CLM_WTP", "statement": "ICP will pay for the promised outcome", "scope": "PROJECT", "claim_type": "HYPOTHESIS"},
+    {"id": "CLM_ACCESS", "statement": "Founder can reach 20 ICPs in two weeks", "scope": "PROJECT", "claim_type": "HYPOTHESIS"}
+  ],
+  "beliefs": [
+    {"id": "problem", "claim_id": "CLM_PROBLEM", "statement": "ICP has a severe recurring problem", "scope": "PROJECT", "decision_relevant": true, "decision_weight": 0.8},
+    {"id": "wtp", "claim_id": "CLM_WTP", "statement": "ICP will pay for the promised outcome", "scope": "PROJECT", "decision_relevant": true, "decision_weight": 1.0},
+    {"id": "access", "claim_id": "CLM_ACCESS", "statement": "Founder can reach 20 ICPs in two weeks", "scope": "PROJECT", "decision_relevant": true, "decision_weight": 0.7}
+  ],
+  "interview_evidence": [
+    {"id": "E_INT_PROBLEM", "claim_ids": ["CLM_PROBLEM"], "scope": "CUSTOMER", "evidence_type": "PRIMARY_RESEARCH",
+     "source": "10 ICP interviews: 8 report severe recurring problem", "directness": 0.8, "reliability": 0.8,
+     "relevance": 1.0, "strength": 0.8, "supports_or_contradicts": "SUPPORTS", "verification": "VERIFIED"},
+    {"id": "E_INT_WTP_ZERO", "claim_ids": ["CLM_WTP"], "scope": "CUSTOMER", "evidence_type": "PRIMARY_RESEARCH",
+     "source": "10 ICP interviews: 0 interviewees paid", "directness": 0.8, "reliability": 0.8,
+     "relevance": 1.0, "strength": 0.7, "supports_or_contradicts": "CONTRADICTS", "verification": "VERIFIED"}
+  ],
+  "decision": {
+    "id": "DEC_B2B_SAAS",
+    "decision_question": "Should the founder commit six weeks to building the B2B SaaS MVP now?",
+    "objective_id": "OBJ_B2B_SAAS",
+    "project_id": "PRJ_B2B_SAAS",
+    "options": [
+      {"id": "commit_mvp", "label": "Commit six weeks to build the MVP", "kind": "GO", "base_utility": 0.05,
+       "belief_coefficients": {"wtp": 0.85, "problem": 0.45, "access": 0.3}, "irreversible_cost": 0.4, "opportunity_cost": 0.1},
+      {"id": "stop_project", "label": "Stop and redeploy resources", "kind": "KILL", "base_utility": 0.65,
+       "belief_coefficients": {"wtp": -0.3, "problem": -0.2, "access": -0.1}, "irreversible_cost": 0.02, "opportunity_cost": 0.0}
+    ],
+    "relevant_belief_ids": ["wtp", "problem", "access"],
+    "horizon": "short"
+  },
+  "experiment_candidates": [
+    {"id": "EXP_PAID_PILOT", "name": "SELL PAID PILOT", "target_belief_ids": ["wtp"],
+     "hypothesis": "At least 2 of 20 ICPs will pay for a manual concierge pilot",
+     "action": "Offer the promised outcome manually to 20 ICPs within 30 days",
+     "success_criteria": ">=2 paid pilots", "failure_criteria": "0 paid pilots",
+     "ambiguity_criteria": "1 paid pilot", "expected_information_gain": 0.95,
+     "decision_impact": 1.0, "cost": 1.0, "time": 3.0, "reversibility": 1.0}
+  ],
+  "expected": {
+    "decision_status": "ABSTAIN",
+    "verdict": "DO NOT COMMIT",
+    "critical_belief": "wtp",
+    "next_experiment": "SELL PAID PILOT",
+    "pilot_success_criteria": ">=2 paid pilots"
+  },
+  "outcome": {
+    "action_id": "ACT_PILOT",
+    "result": "20 outreach / 6 replies / 3 demos / 0 paid",
+    "quantitative": {"wtp": 0.0, "outreach": 20.0, "replies": 6.0, "demos": 3.0, "paid": 0.0},
+    "outcome_type": "FAILURE"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "$defs": {
+    "AccessClass": {
+      "enum": [
+        "PRIVATE",
+        "INTERNAL",
+        "MATCHABLE",
+        "PUBLIC"
+      ],
+      "title": "AccessClass",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "memory_id": {
+      "minLength": 1,
+      "title": "Memory Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "access_class": {
+      "$ref": "#/$defs/AccessClass",
+      "default": "PRIVATE"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "memory_id",
+    "user_id",
+    "updated_at"
+  ],
+  "title": "MemoryPermission",
+  "type": "object"
+}

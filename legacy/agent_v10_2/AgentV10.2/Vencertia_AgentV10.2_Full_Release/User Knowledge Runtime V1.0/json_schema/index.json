@@ -1,0 +1,14 @@
+{
+  "MemoryCandidate": "MemoryCandidate.schema.json",
+  "MemoryCandidateEnvelope": "MemoryCandidateEnvelope.schema.json",
+  "MemoryRecord": "MemoryRecord.schema.json",
+  "MemoryPermission": "MemoryPermission.schema.json",
+  "MemoryConflict": "MemoryConflict.schema.json",
+  "MemoryWriteRequest": "MemoryWriteRequest.schema.json",
+  "MemoryWriteResult": "MemoryWriteResult.schema.json",
+  "MemoryWriteEvaluation": "MemoryWriteEvaluation.schema.json",
+  "MemoryRetrievalQuery": "MemoryRetrievalQuery.schema.json",
+  "ContextBuildRequest": "ContextBuildRequest.schema.json",
+  "ContextBundle": "ContextBundle.schema.json",
+  "UserKnowledgeProjection": "UserKnowledgeProjection.schema.json"
+}

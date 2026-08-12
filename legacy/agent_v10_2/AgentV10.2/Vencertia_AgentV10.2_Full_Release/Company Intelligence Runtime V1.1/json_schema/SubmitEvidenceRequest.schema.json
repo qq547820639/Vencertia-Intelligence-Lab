@@ -1,0 +1,181 @@
+{
+  "$defs": {
+    "ActorRef": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_type": {
+          "$ref": "#/$defs/ActorType"
+        },
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
+      "title": "ActorRef",
+      "type": "object"
+    },
+    "ActorType": {
+      "enum": [
+        "USER",
+        "AGENT",
+        "SYSTEM",
+        "RESEARCHER",
+        "ADMIN"
+      ],
+      "title": "ActorType",
+      "type": "string"
+    },
+    "SourceMetadataExtension": {
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language"
+        },
+        "publisher_country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Publisher Country"
+        },
+        "source_geography": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Geography",
+          "type": "array"
+        },
+        "canonical_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canonical Url"
+        }
+      },
+      "title": "SourceMetadataExtension",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "SUBMIT_CASE_EVIDENCE",
+      "default": "SUBMIT_CASE_EVIDENCE",
+      "title": "Operation",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "claim_id": {
+      "anyOf": [
+        {
+          "pattern": "^C[0-9A-Za-z_-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claim Id"
+    },
+    "claim_candidate": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claim Candidate"
+    },
+    "evidence_type": {
+      "minLength": 1,
+      "title": "Evidence Type",
+      "type": "string"
+    },
+    "observed_or_published_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observed Or Published Date"
+    },
+    "relevant_data_or_short_extract": {
+      "minLength": 1,
+      "title": "Relevant Data Or Short Extract",
+      "type": "string"
+    },
+    "supports_claim": {
+      "default": false,
+      "title": "Supports Claim",
+      "type": "boolean"
+    },
+    "contradicts_claim": {
+      "default": false,
+      "title": "Contradicts Claim",
+      "type": "boolean"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceMetadataExtension"
+    },
+    "requested_by": {
+      "$ref": "#/$defs/ActorRef"
+    },
+    "idempotency_key": {
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "evidence_type",
+    "relevant_data_or_short_extract",
+    "source",
+    "requested_by",
+    "idempotency_key"
+  ],
+  "title": "SubmitEvidenceRequest",
+  "type": "object"
+}

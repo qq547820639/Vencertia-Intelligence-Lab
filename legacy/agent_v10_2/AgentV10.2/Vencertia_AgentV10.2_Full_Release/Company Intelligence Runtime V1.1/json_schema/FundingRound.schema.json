@@ -1,0 +1,166 @@
+{
+  "additionalProperties": false,
+  "description": "Structured funding event. Funding is context, never proof of demand.",
+  "properties": {
+    "funding_round_id": {
+      "pattern": "^FR[0-9A-Za-z_-]+$",
+      "title": "Funding Round Id",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "round_name": {
+      "minLength": 1,
+      "title": "Round Name",
+      "type": "string"
+    },
+    "announced_at": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Announced At"
+    },
+    "amount": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Amount"
+    },
+    "currency": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Currency"
+    },
+    "investors": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Investors",
+      "type": "array"
+    },
+    "lead_investors": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Lead Investors",
+      "type": "array"
+    },
+    "pre_money_valuation": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pre Money Valuation"
+    },
+    "post_money_valuation": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Post Money Valuation"
+    },
+    "total_funding_after_round": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Total Funding After Round"
+    },
+    "claim_ids": {
+      "items": {
+        "pattern": "^C[0-9A-Za-z_-]+$",
+        "type": "string"
+      },
+      "title": "Claim Ids",
+      "type": "array"
+    },
+    "source_ids": {
+      "items": {
+        "pattern": "^S[0-9A-Za-z_-]+$",
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "last_verified_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Verified At"
+    }
+  },
+  "required": [
+    "funding_round_id",
+    "company_id",
+    "round_name"
+  ],
+  "title": "FundingRound",
+  "type": "object"
+}

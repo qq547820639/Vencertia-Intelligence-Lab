@@ -1,0 +1,143 @@
+{
+  "$defs": {
+    "CaseUnitRef": {
+      "additionalProperties": false,
+      "description": "The canonical comparison unit: company x snapshot x scope.",
+      "properties": {
+        "company_id": {
+          "pattern": "^CMP[0-9A-Za-z_-]+$",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "pattern": "^BM[0-9A-Za-z_-]+$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "operating_segment_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Operating Segment Ids",
+          "type": "array"
+        },
+        "business_unit_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Business Unit Id"
+        },
+        "offer_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Offer Ids",
+          "type": "array"
+        },
+        "revenue_stream_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Revenue Stream Ids",
+          "type": "array"
+        },
+        "customer_segment_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Customer Segment Ids",
+          "type": "array"
+        },
+        "geography": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Geography",
+          "type": "array"
+        },
+        "valid_period": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Period"
+        }
+      },
+      "required": [
+        "company_id",
+        "snapshot_id"
+      ],
+      "title": "CaseUnitRef",
+      "type": "object"
+    },
+    "RetrievalObjective": {
+      "enum": [
+        "GENERAL_RECOMMENDATION",
+        "MARKET_PATTERN",
+        "BUSINESS_MODEL",
+        "INITIAL_WEDGE",
+        "EARLY_GTM",
+        "SCALED_GTM",
+        "PRICING",
+        "FINANCIAL_BENCHMARK",
+        "CASHFLOW",
+        "CONTRACT_RISK",
+        "DELIVERY_MODEL",
+        "OPERATING_LEVERAGE",
+        "RETENTION_GROWTH",
+        "FAILURE_PATTERN",
+        "ANTI_PATTERN",
+        "PIVOT_PATTERN",
+        "RESTRUCTURING_PATTERN",
+        "COMPANY_DEEP_DIVE",
+        "COMPETITIVE_CASE_SET",
+        "FOUNDER_MARKET_FIT"
+      ],
+      "title": "RetrievalObjective",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "COMPARE_CASE_TO_PROJECT",
+      "default": "COMPARE_CASE_TO_PROJECT",
+      "title": "Operation",
+      "type": "string"
+    },
+    "project_id": {
+      "minLength": 1,
+      "title": "Project Id",
+      "type": "string"
+    },
+    "case_unit_ref": {
+      "$ref": "#/$defs/CaseUnitRef"
+    },
+    "comparison_objective": {
+      "$ref": "#/$defs/RetrievalObjective"
+    }
+  },
+  "required": [
+    "project_id",
+    "case_unit_ref",
+    "comparison_objective"
+  ],
+  "title": "CompareCaseRequest",
+  "type": "object"
+}

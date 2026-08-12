@@ -1,0 +1,249 @@
+```mermaid
+classDiagram
+    class Objective {
+        +str id
+        +str owner
+        +Scope scope
+        +str name
+        +str description
+        +str metric
+        +ObjectiveDirection direction
+        +float weight
+        +list constraints
+        +str time_horizon
+        +int priority
+        +str source
+    }
+    class Claim {
+        +str id
+        +str statement
+        +Scope scope
+        +ClaimType claim_type
+        +str project_id
+        +str company_id
+        +ClaimStatus status
+    }
+    class Evidence {
+        +str id
+        +list claim_ids
+        +Scope scope
+        +EvidenceType evidence_type
+        +Provenance provenance
+        +str source
+        +float directness
+        +float reliability
+        +float relevance
+        +float strength
+        +Direction supports_or_contradicts
+        +str independence_group
+        +ConflictStatus conflict_status
+        +AuthorityLevel authority_level
+        +float transferability
+    }
+    class Belief {
+        +str id
+        +str claim_id
+        +float prior
+        +float posterior
+        +float uncertainty
+        +float confidence
+        +list supporting_evidence_ids
+        +list contradicting_evidence_ids
+        +float alpha
+        +float beta
+        +UpdateMethod update_method
+        +str calibration_group
+    }
+    class Decision {
+        +str id
+        +str decision_question
+        +str objective_id
+        +str project_id
+        +list options
+        +DecisionType decision_type
+        +str current_recommendation
+        +float confidence
+        +ConvergenceStatus convergence_status
+        +str snapshot_hash
+    }
+    class DecisionOption {
+        +str id
+        +str label
+        +float base_utility
+        +dict belief_coefficients
+        +float irreversible_cost
+        +float opportunity_cost
+    }
+    class Experiment {
+        +str id
+        +list target_belief_ids
+        +str hypothesis
+        +str action
+        +float expected_information_gain
+        +float decision_impact
+        +float cost
+        +float time
+        +ExperimentStatus status
+    }
+    class Action {
+        +str id
+        +str kind
+        +ActionStatus status
+    }
+    class Outcome {
+        +str id
+        +str action_id
+        +OutcomeType outcome_type
+        +str outcome_evidence_id
+    }
+    class PredictionEntry {
+        +str id
+        +float predicted_probability
+        +dict belief_snapshot
+        +str context_snapshot_hash
+        +str policy_version
+        +PredictionResolution resolution
+    }
+    class Project {
+        +str id
+        +str user_id
+        +ProjectStatus status
+        +Stage stage
+        +bool is_primary
+    }
+    class FounderProfile {
+        +str user_id
+        +list skills
+        +float sales_ability
+        +float network
+        +float risk_tolerance
+        +float capital_access
+    }
+    class FounderState {
+        +str user_id
+        +float runway_months
+        +float time_available
+        +float energy
+    }
+    class CompanyCase {
+        +str company_id
+        +str canonical_name
+        +list case_roles
+        +list claim_ids
+    }
+    class MemoryRecord {
+        +str memory_id
+        +MemoryScope scope
+        +MemoryType memory_type
+        +MemoryStatus status
+    }
+    class FounderOpportunityPortfolio {
+        +str user_id
+        +list opportunities
+    }
+    class Rule {
+        +str id
+        +RuleKind kind
+        +str name
+        +dict params
+        +str version
+    }
+    class DomainEvent {
+        +str event_id
+        +EventType event_type
+        +str entity_type
+        +str entity_id
+        +dict payload
+    }
+
+    class EvidencePolicy {
+        +grade(evidence, policy) EvidenceGrade
+        +apply_authority(evidence, policy_version) Evidence
+        +check_company_case_transferability(evidence, ctx) EvidenceGrade
+        +version() str
+    }
+    class BeliefEngine {
+        +update(inp) BeliefUpdateOutput
+        +uncertainty_of(belief) float
+    }
+    class DecisionEngine {
+        +evaluate(inp) DecisionEngineOutput
+    }
+    class ConvergenceEngine {
+        +check(decision, beliefs, critical) ConvergenceReport
+    }
+    class ExperimentOptimizer {
+        +propose(inp) ExperimentProposalOutput
+        +rank(experiments, beliefs, critical) list
+    }
+    class PredictionLedger {
+        +register(decision, beliefs) list
+        +resolve(entry_id, outcome) PredictionEntry
+    }
+    class CalibrationEngine {
+        +report(inp) CalibrationProfile
+        +update(inp) CalibrationProfile
+    }
+    class UncertaintyEngine {
+        +rank(decision, beliefs) list
+    }
+    class OpportunityCostEngine {
+        +portfolio(user_id) FounderOpportunityPortfolio
+    }
+    class SolveOrchestrator {
+        +solve(request) SolveResult
+        +record_outcome(action_id, result) OutcomeRecordedResult
+    }
+    class ModelProvider {
+        <<interface>>
+        +generate_structured(task, schema, context) dict
+        +complete(prompt) str
+    }
+    class SearchProvider {
+        <<interface>>
+        +search(query, k) list
+    }
+    class Repository {
+        <<interface>>
+        +add_evidence(evidence) void
+        +get_beliefs(project_id) list
+        +save_decision(decision) void
+        +save_outcome(outcome) void
+        +save_prediction(entry) void
+        +events_since(after) list
+    }
+
+    Objective "1" --> "0..*" Decision
+    Decision "1" --> "1..*" DecisionOption
+    Claim "1" --> "0..*" Belief
+    Claim "1" --> "0..*" Evidence
+    Evidence "0..*" --> "1..*" Claim
+    Belief --> Evidence : 证据链
+    Decision --> Experiment : 未收敛派生
+    Action --> Decision
+    Action --> Experiment
+    Outcome --> Action
+    Outcome --> Evidence : 生成 outcome_evidence
+    Project --> Decision
+    Project --> Action
+    FounderProfile --> FounderState
+    FounderProfile --> FounderOpportunityPortfolio
+    Project --> FounderOpportunityPortfolio : 机会成本成员
+
+    SolveOrchestrator --> EvidencePolicy
+    SolveOrchestrator --> BeliefEngine
+    SolveOrchestrator --> DecisionEngine
+    SolveOrchestrator --> ConvergenceEngine
+    SolveOrchestrator --> ExperimentOptimizer
+    SolveOrchestrator --> PredictionLedger
+    SolveOrchestrator --> CalibrationEngine
+    SolveOrchestrator --> Repository
+    SolveOrchestrator --> ModelProvider
+    SolveOrchestrator --> SearchProvider
+    BeliefEngine --> EvidencePolicy
+    DecisionEngine --> UncertaintyEngine
+    DecisionEngine --> ConvergenceEngine
+    ExperimentOptimizer --> UncertaintyEngine
+    PredictionLedger --> Repository
+    CalibrationEngine --> Repository
+```

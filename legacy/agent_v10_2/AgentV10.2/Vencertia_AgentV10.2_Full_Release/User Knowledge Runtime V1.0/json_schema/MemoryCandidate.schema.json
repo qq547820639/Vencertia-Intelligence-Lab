@@ -1,0 +1,169 @@
+{
+  "$defs": {
+    "ConfidenceLevel": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "ConfidenceLevel",
+      "type": "string"
+    },
+    "FactStatus": {
+      "enum": [
+        "VERIFIED",
+        "ESTIMATED",
+        "ASSUMED",
+        "UNKNOWN"
+      ],
+      "title": "FactStatus",
+      "type": "string"
+    },
+    "ImportanceLevel": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "ImportanceLevel",
+      "type": "string"
+    },
+    "MemoryScope": {
+      "enum": [
+        "USER_GLOBAL",
+        "PROJECT_SPECIFIC"
+      ],
+      "title": "MemoryScope",
+      "type": "string"
+    },
+    "MemoryType": {
+      "enum": [
+        "FOUNDER_FACT",
+        "RESOURCE",
+        "CAPABILITY",
+        "CONSTRAINT",
+        "RED_LINE",
+        "PREFERENCE",
+        "PROJECT_FACT",
+        "PROJECT_DECISION",
+        "ASSUMPTION",
+        "EVIDENCE",
+        "CUSTOMER_FEEDBACK",
+        "EXPERIMENT_RESULT",
+        "FINANCIAL_DATA",
+        "RISK",
+        "ACTION",
+        "ACTION_RESULT",
+        "MILESTONE",
+        "OPEN_QUESTION",
+        "EXCLUSION_RULE",
+        "PIVOT_REASON",
+        "LESSON"
+      ],
+      "title": "MemoryType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Canonical AgentV10.1 durable-memory candidate DTO.",
+  "properties": {
+    "candidate_id": {
+      "minLength": 1,
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "proposed_scope": {
+      "$ref": "#/$defs/MemoryScope"
+    },
+    "proposed_memory_type": {
+      "$ref": "#/$defs/MemoryType"
+    },
+    "content": {
+      "minLength": 1,
+      "title": "Content",
+      "type": "string"
+    },
+    "structured_value": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Structured Value"
+    },
+    "source_message_ids": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Source Message Ids",
+      "type": "array"
+    },
+    "source_entity_ids": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Source Entity Ids",
+      "type": "array"
+    },
+    "fact_status": {
+      "$ref": "#/$defs/FactStatus",
+      "default": "UNKNOWN"
+    },
+    "confidence": {
+      "$ref": "#/$defs/ConfidenceLevel",
+      "default": "MEDIUM"
+    },
+    "importance": {
+      "$ref": "#/$defs/ImportanceLevel",
+      "default": "MEDIUM"
+    },
+    "valid_from": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Valid From"
+    },
+    "valid_to": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Valid To"
+    },
+    "reason_to_remember": {
+      "minLength": 1,
+      "title": "Reason To Remember",
+      "type": "string"
+    }
+  },
+  "required": [
+    "candidate_id",
+    "proposed_scope",
+    "proposed_memory_type",
+    "content",
+    "reason_to_remember"
+  ],
+  "title": "MemoryCandidate",
+  "type": "object"
+}

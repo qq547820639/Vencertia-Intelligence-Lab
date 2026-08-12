@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "ActorRef": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_type": {
+          "$ref": "#/$defs/ActorType"
+        },
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
+      "title": "ActorRef",
+      "type": "object"
+    },
+    "ActorType": {
+      "enum": [
+        "USER",
+        "AGENT",
+        "SYSTEM",
+        "RESEARCHER",
+        "ADMIN"
+      ],
+      "title": "ActorType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "REFRESH_COMPANY_CASE",
+      "default": "REFRESH_COMPANY_CASE",
+      "title": "Operation",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "topics": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 30,
+      "title": "Topics",
+      "type": "array"
+    },
+    "reason": {
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "requested_by": {
+      "$ref": "#/$defs/ActorRef"
+    },
+    "idempotency_key": {
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_id",
+    "reason",
+    "requested_by",
+    "idempotency_key"
+  ],
+  "title": "RefreshCaseRequest",
+  "type": "object"
+}

@@ -1,0 +1,445 @@
+{
+  "$defs": {
+    "CaseUnitRef": {
+      "additionalProperties": false,
+      "description": "The canonical comparison unit: company x snapshot x scope.",
+      "properties": {
+        "company_id": {
+          "pattern": "^CMP[0-9A-Za-z_-]+$",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "pattern": "^BM[0-9A-Za-z_-]+$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "operating_segment_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Operating Segment Ids",
+          "type": "array"
+        },
+        "business_unit_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Business Unit Id"
+        },
+        "offer_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Offer Ids",
+          "type": "array"
+        },
+        "revenue_stream_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Revenue Stream Ids",
+          "type": "array"
+        },
+        "customer_segment_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Customer Segment Ids",
+          "type": "array"
+        },
+        "geography": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Geography",
+          "type": "array"
+        },
+        "valid_period": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Period"
+        }
+      },
+      "required": [
+        "company_id",
+        "snapshot_id"
+      ],
+      "title": "CaseUnitRef",
+      "type": "object"
+    },
+    "CaseVerdict": {
+      "enum": [
+        "HIGHLY_RELEVANT",
+        "RELEVANT",
+        "ADJACENT",
+        "COUNTEREXAMPLE",
+        "WEAK_REFERENCE",
+        "DO_NOT_USE"
+      ],
+      "title": "CaseVerdict",
+      "type": "string"
+    },
+    "ComparisonResult": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison_id": {
+          "minLength": 1,
+          "title": "Comparison Id",
+          "type": "string"
+        },
+        "project_id": {
+          "minLength": 1,
+          "title": "Project Id",
+          "type": "string"
+        },
+        "case_unit_ref": {
+          "$ref": "#/$defs/CaseUnitRef"
+        },
+        "comparison_objective": {
+          "$ref": "#/$defs/RetrievalObjective"
+        },
+        "verdict": {
+          "$ref": "#/$defs/CaseVerdict"
+        },
+        "matches": {
+          "items": {
+            "$ref": "#/$defs/DimensionMatch"
+          },
+          "title": "Matches",
+          "type": "array"
+        },
+        "critical_differences": {
+          "items": {
+            "$ref": "#/$defs/CriticalDifference"
+          },
+          "title": "Critical Differences",
+          "type": "array"
+        },
+        "transferability": {
+          "$ref": "#/$defs/TransferabilityAssessment"
+        },
+        "allowed_uses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Allowed Uses",
+          "type": "array"
+        },
+        "prohibited_uses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Prohibited Uses",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        }
+      },
+      "required": [
+        "comparison_id",
+        "project_id",
+        "case_unit_ref",
+        "comparison_objective",
+        "verdict",
+        "transferability",
+        "confidence"
+      ],
+      "title": "ComparisonResult",
+      "type": "object"
+    },
+    "Confidence": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "CriticalDifference": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "minLength": 1,
+          "title": "Dimension",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "transfer_impact": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transfer Impact"
+        },
+        "claim_ids": {
+          "items": {
+            "pattern": "^C[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dimension",
+        "severity",
+        "description"
+      ],
+      "title": "CriticalDifference",
+      "type": "object"
+    },
+    "DimensionMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "minLength": 1,
+          "title": "Dimension",
+          "type": "string"
+        },
+        "strength": {
+          "$ref": "#/$defs/MatchStrength"
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Explanation"
+        },
+        "claim_ids": {
+          "items": {
+            "pattern": "^C[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dimension",
+        "strength"
+      ],
+      "title": "DimensionMatch",
+      "type": "object"
+    },
+    "MatchStrength": {
+      "enum": [
+        "HIGH",
+        "MEDIUM",
+        "LOW"
+      ],
+      "title": "MatchStrength",
+      "type": "string"
+    },
+    "RetrievalObjective": {
+      "enum": [
+        "GENERAL_RECOMMENDATION",
+        "MARKET_PATTERN",
+        "BUSINESS_MODEL",
+        "INITIAL_WEDGE",
+        "EARLY_GTM",
+        "SCALED_GTM",
+        "PRICING",
+        "FINANCIAL_BENCHMARK",
+        "CASHFLOW",
+        "CONTRACT_RISK",
+        "DELIVERY_MODEL",
+        "OPERATING_LEVERAGE",
+        "RETENTION_GROWTH",
+        "FAILURE_PATTERN",
+        "ANTI_PATTERN",
+        "PIVOT_PATTERN",
+        "RESTRUCTURING_PATTERN",
+        "COMPANY_DEEP_DIVE",
+        "COMPETITIVE_CASE_SET",
+        "FOUNDER_MARKET_FIT"
+      ],
+      "title": "RetrievalObjective",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "TransferabilityAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/TransferabilityLevel"
+        },
+        "transferable": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Transferable",
+          "type": "array"
+        },
+        "conditional": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Conditional",
+          "type": "array"
+        },
+        "do_not_transfer": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Do Not Transfer",
+          "type": "array"
+        },
+        "prerequisites": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Prerequisites",
+          "type": "array"
+        }
+      },
+      "required": [
+        "level"
+      ],
+      "title": "TransferabilityAssessment",
+      "type": "object"
+    },
+    "TransferabilityLevel": {
+      "enum": [
+        "HIGH",
+        "MEDIUM",
+        "LOW"
+      ],
+      "title": "TransferabilityLevel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "comparison_set_id": {
+      "minLength": 1,
+      "title": "Comparison Set Id",
+      "type": "string"
+    },
+    "project_id": {
+      "minLength": 1,
+      "title": "Project Id",
+      "type": "string"
+    },
+    "comparison_objective": {
+      "$ref": "#/$defs/RetrievalObjective"
+    },
+    "case_results": {
+      "items": {
+        "$ref": "#/$defs/ComparisonResult"
+      },
+      "maxItems": 12,
+      "minItems": 2,
+      "title": "Case Results",
+      "type": "array"
+    },
+    "shared_patterns": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Shared Patterns",
+      "type": "array"
+    },
+    "material_differences": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Material Differences",
+      "type": "array"
+    },
+    "cross_case_conflicts": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Cross Case Conflicts",
+      "type": "array"
+    },
+    "strongest_counterexample": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CaseUnitRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "confidence": {
+      "$ref": "#/$defs/Confidence"
+    }
+  },
+  "required": [
+    "comparison_set_id",
+    "project_id",
+    "comparison_objective",
+    "case_results",
+    "confidence"
+  ],
+  "title": "CompareCaseSetResult",
+  "type": "object"
+}

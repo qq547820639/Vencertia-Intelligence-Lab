@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "ActorRef": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_type": {
+          "$ref": "#/$defs/ActorType"
+        },
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
+      "title": "ActorRef",
+      "type": "object"
+    },
+    "ActorType": {
+      "enum": [
+        "USER",
+        "AGENT",
+        "SYSTEM",
+        "RESEARCHER",
+        "ADMIN"
+      ],
+      "title": "ActorType",
+      "type": "string"
+    },
+    "ConflictResolutionAction": {
+      "enum": [
+        "ACCEPT_EXISTING",
+        "ACCEPT_INCOMING",
+        "KEEP_CONFLICTED",
+        "SUPERSEDE_BOTH"
+      ],
+      "title": "ConflictResolutionAction",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "RESOLVE_CASE_CONFLICT",
+      "default": "RESOLVE_CASE_CONFLICT",
+      "title": "Operation",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "conflict_id": {
+      "minLength": 1,
+      "title": "Conflict Id",
+      "type": "string"
+    },
+    "action": {
+      "$ref": "#/$defs/ConflictResolutionAction"
+    },
+    "rationale": {
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "requested_by": {
+      "$ref": "#/$defs/ActorRef"
+    },
+    "idempotency_key": {
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "expected_company_state_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Company State Version"
+    }
+  },
+  "required": [
+    "company_id",
+    "conflict_id",
+    "action",
+    "rationale",
+    "requested_by",
+    "idempotency_key"
+  ],
+  "title": "ResolveCaseConflictRequest",
+  "type": "object"
+}

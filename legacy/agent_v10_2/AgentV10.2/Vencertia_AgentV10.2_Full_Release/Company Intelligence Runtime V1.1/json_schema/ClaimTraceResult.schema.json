@@ -1,0 +1,171 @@
+{
+  "$defs": {
+    "ClaimStatus": {
+      "enum": [
+        "SUPPORTED",
+        "PARTIAL",
+        "CONFLICTED",
+        "REJECTED",
+        "STALE",
+        "UNKNOWN"
+      ],
+      "title": "ClaimStatus",
+      "type": "string"
+    },
+    "Confidence": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "EvidenceTraceItem": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "pattern": "^E[0-9A-Za-z_-]+$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^S[0-9A-Za-z_-]+$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "evidence_type": {
+          "minLength": 1,
+          "title": "Evidence Type",
+          "type": "string"
+        },
+        "directness": {
+          "enum": [
+            "DIRECT",
+            "INDIRECT"
+          ],
+          "title": "Directness",
+          "type": "string"
+        },
+        "source_quality": {
+          "$ref": "#/$defs/SourceQuality"
+        },
+        "freshness": {
+          "$ref": "#/$defs/Freshness"
+        },
+        "supports_claim": {
+          "default": false,
+          "title": "Supports Claim",
+          "type": "boolean"
+        },
+        "contradicts_claim": {
+          "default": false,
+          "title": "Contradicts Claim",
+          "type": "boolean"
+        },
+        "short_extract": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Short Extract"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "source_id",
+        "evidence_type",
+        "directness",
+        "source_quality",
+        "freshness"
+      ],
+      "title": "EvidenceTraceItem",
+      "type": "object"
+    },
+    "Freshness": {
+      "enum": [
+        "CURRENT",
+        "AGING",
+        "STALE",
+        "NOT_TIME_SENSITIVE"
+      ],
+      "title": "Freshness",
+      "type": "string"
+    },
+    "SourceQuality": {
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "title": "SourceQuality",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "claim_id": {
+      "pattern": "^C[0-9A-Za-z_-]+$",
+      "title": "Claim Id",
+      "type": "string"
+    },
+    "claim_text": {
+      "minLength": 1,
+      "title": "Claim Text",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ClaimStatus"
+    },
+    "confidence": {
+      "$ref": "#/$defs/Confidence"
+    },
+    "supporting_evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceTraceItem"
+      },
+      "title": "Supporting Evidence",
+      "type": "array"
+    },
+    "contradicting_evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceTraceItem"
+      },
+      "title": "Contradicting Evidence",
+      "type": "array"
+    },
+    "last_verified_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Verified At"
+    }
+  },
+  "required": [
+    "company_id",
+    "claim_id",
+    "claim_text",
+    "status",
+    "confidence"
+  ],
+  "title": "ClaimTraceResult",
+  "type": "object"
+}

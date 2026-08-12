@@ -1,0 +1,157 @@
+{
+  "$defs": {
+    "ActorRef": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_type": {
+          "$ref": "#/$defs/ActorType"
+        },
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
+      "title": "ActorRef",
+      "type": "object"
+    },
+    "ActorType": {
+      "enum": [
+        "USER",
+        "AGENT",
+        "SYSTEM",
+        "RESEARCHER",
+        "ADMIN"
+      ],
+      "title": "ActorType",
+      "type": "string"
+    },
+    "CasePatchOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "mutation_type": {
+          "$ref": "#/$defs/MutationType"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "proposed_value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposed Value"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "claim_ids": {
+          "items": {
+            "pattern": "^C[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^E[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "source_ids": {
+          "items": {
+            "pattern": "^S[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mutation_type",
+        "path",
+        "rationale"
+      ],
+      "title": "CasePatchOperation",
+      "type": "object"
+    },
+    "MutationType": {
+      "enum": [
+        "ADD",
+        "UPDATE",
+        "SUPERSEDE",
+        "DEPRECATE",
+        "CONFLICT",
+        "NO_CHANGE"
+      ],
+      "title": "MutationType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "PROPOSE_CASE_UPDATE",
+      "default": "PROPOSE_CASE_UPDATE",
+      "title": "Operation",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "updates": {
+      "items": {
+        "$ref": "#/$defs/CasePatchOperation"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Updates",
+      "type": "array"
+    },
+    "requested_by": {
+      "$ref": "#/$defs/ActorRef"
+    },
+    "idempotency_key": {
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "expected_company_state_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Company State Version"
+    }
+  },
+  "required": [
+    "company_id",
+    "updates",
+    "requested_by",
+    "idempotency_key"
+  ],
+  "title": "ProposeCaseUpdateRequest",
+  "type": "object"
+}

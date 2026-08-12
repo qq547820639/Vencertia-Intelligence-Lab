@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "UpdateProposalStatus": {
+      "enum": [
+        "RECEIVED",
+        "VALIDATED",
+        "REVIEW_REQUIRED",
+        "READY_TO_COMMIT",
+        "COMMITTED",
+        "REJECTED"
+      ],
+      "title": "UpdateProposalStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "submission_id": {
+      "minLength": 1,
+      "title": "Submission Id",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/UpdateProposalStatus"
+    },
+    "claim_id": {
+      "anyOf": [
+        {
+          "pattern": "^C[0-9A-Za-z_-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claim Id"
+    },
+    "evidence_id": {
+      "anyOf": [
+        {
+          "pattern": "^E[0-9A-Za-z_-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Evidence Id"
+    },
+    "source_id": {
+      "anyOf": [
+        {
+          "pattern": "^S[0-9A-Za-z_-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Id"
+    },
+    "warnings": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "submission_id",
+    "company_id",
+    "status"
+  ],
+  "title": "SubmitEvidenceResult",
+  "type": "object"
+}

@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "UpdateProposalStatus": {
+      "enum": [
+        "RECEIVED",
+        "VALIDATED",
+        "REVIEW_REQUIRED",
+        "READY_TO_COMMIT",
+        "COMMITTED",
+        "REJECTED"
+      ],
+      "title": "UpdateProposalStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "refresh_job_id": {
+      "minLength": 1,
+      "title": "Refresh Job Id",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/UpdateProposalStatus"
+    },
+    "topics_accepted": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Topics Accepted",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "refresh_job_id",
+    "company_id",
+    "status"
+  ],
+  "title": "RefreshCaseResult",
+  "type": "object"
+}

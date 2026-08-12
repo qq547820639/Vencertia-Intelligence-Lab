@@ -1,0 +1,75 @@
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User/CLI/API
+    participant ORCH as SolveOrchestrator (runtime)
+    participant CMP as DecisionCompiler (capability LLM)
+    participant RET as RetrievalProvider (capability)
+    participant RES as ResearchCapability (capability)
+    participant EP as EvidencePolicy
+    participant BE as BeliefEngine
+    participant CE as ConvergenceEngine
+    participant DE as DecisionEngine
+    participant EO as ExperimentOptimizer
+    participant PL as PredictionLedger
+    participant REPO as Repository (REALITY)
+
+    U->>ORCH: solve(project_id, problem_text, options?)
+    ORCH->>CMP: compile(problem, project_state)
+    CMP-->>ORCH: Objective + Decision skeleton + Claim[] + Belief[] 候选
+    ORCH->>REPO: load project/objective/beliefs (as_of)
+    ORCH->>RET: retrieve(query, k)
+    RET-->>ORCH: documents
+    ORCH->>RES: research(question, docs)
+    RES-->>ORCH: candidate_evidence[] (REVIEWED_EXTERNAL_RESEARCH/LLM_INFERENCE)
+    loop 每条候选证据
+        ORCH->>EP: validate_and_grade(evidence)
+        EP-->>ORCH: authority_level + weight + scope_gate
+        ORCH->>REPO: add_evidence(evidence)
+        REPO-->>ORCH: EvidenceAdded 事件
+        ORCH->>BE: update_beliefs(claim_ids, evidence)
+        BE-->>ORCH: updated Belief[] (posterior)
+        REPO-->>ORCH: BeliefUpdated 事件
+    end
+    ORCH->>CE: check(decision, beliefs, critical_uncertainties)
+    CE-->>ORCH: convergence_status
+    ORCH->>DE: evaluate(decision, beliefs, policy)
+    DE-->>ORCH: DecisionResult (recommendation | ABSTAIN)
+    alt 未收敛 / ABSTAIN
+        ORCH->>EO: propose(beliefs, critical_uncertainties, experiment_catalog)
+        EO-->>ORCH: ranked_experiments[] (INSUFFICIENT_EVIDENCE + next_experiment 同时输出)
+    end
+    ORCH->>PL: register_predictions(decision, beliefs)
+    ORCH-->>U: SolveResult { decision, convergence, critical_uncertainties, next_experiment?, predictions?, rationale }
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant SVC as OutcomeService (runtime)
+    participant EP as EvidencePolicy
+    participant REPO as Repository
+    participant BE as BeliefEngine
+    participant DE as DecisionEngine
+    participant CE as ConvergenceEngine
+    participant PL as PredictionLedger
+    participant CAL as CalibrationEngine
+
+    U->>SVC: record_outcome(action_id, result, quantitative?)
+    SVC->>REPO: get_action(action_id)
+    REPO-->>SVC: Action (linked decision_id / experiment_id)
+    SVC->>SVC: 构造 outcome_evidence (scope=PROJECT, authority=PROJECT_EXPERIMENT_RESULT/PROJECT_DIRECT_BEHAVIOR)
+    SVC->>EP: validate_and_grade(outcome_evidence)
+    SVC->>REPO: add_outcome + add_evidence
+    REPO-->>SVC: OutcomeRecorded / EvidenceAdded 事件
+    SVC->>BE: update_beliefs(claim_ids_of_decision)
+    BE-->>SVC: updated Belief[]
+    REPO-->>SVC: BeliefUpdated 事件
+    SVC->>PL: resolve_due_predictions(outcome)
+    PL-->>SVC: PredictionResolved 事件
+    SVC->>CAL: update(scope=...)
+    SVC->>CE: check(decision, beliefs)
+    SVC->>DE: evaluate(decision, beliefs)
+    SVC-->>U: OutcomeRecordedResult { belief_deltas, decision_update, convergence, calibration_delta }
+```

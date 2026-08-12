@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "AgentId": {
+      "enum": [
+        "A0_ORCHESTRATOR",
+        "A1_FOUNDER_DIAGNOSIS",
+        "A2_MARKET_OPPORTUNITY",
+        "A3_VENTURE_DESIGN",
+        "A4_PROJECT_PROSECUTOR",
+        "A5_FINANCIAL_BUSINESS_MODEL",
+        "A6_EXECUTION_STRATEGY",
+        "A7_NEXT_ACTION",
+        "A8_STARTUP_CASE_INTELLIGENCE",
+        "A9_FOUNDER_MATCHMAKING",
+        "A10_BUSINESS_PLAN"
+      ],
+      "title": "AgentId",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "agent_id": {
+      "$ref": "#/$defs/AgentId"
+    },
+    "task": {
+      "minLength": 1,
+      "title": "Task",
+      "type": "string"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "max_memory_records": {
+      "default": 30,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Max Memory Records",
+      "type": "integer"
+    },
+    "token_budget": {
+      "default": 6000,
+      "maximum": 50000,
+      "minimum": 500,
+      "title": "Token Budget",
+      "type": "integer"
+    },
+    "as_of": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "As Of"
+    }
+  },
+  "required": [
+    "request_id",
+    "user_id",
+    "agent_id",
+    "task"
+  ],
+  "title": "ContextBuildRequest",
+  "type": "object"
+}

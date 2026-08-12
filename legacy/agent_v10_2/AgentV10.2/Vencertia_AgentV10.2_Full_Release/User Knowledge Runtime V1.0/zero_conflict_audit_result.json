@@ -1,0 +1,14 @@
+{
+  "checks": {
+    "no_knowledge_record_class": true,
+    "no_knowledge_records_table": true,
+    "memory_status_has_rejected": true,
+    "company_runtime_not_bundled_or_modified": true,
+    "patch_target_count_is_5": true,
+    "a5_financial_snapshot_boundary_present": true,
+    "monetization_distance_1_to_4_patch_present": true,
+    "original_prompt_hashes_present": true,
+    "original_zip_hash_present": true
+  },
+  "failed": []
+}

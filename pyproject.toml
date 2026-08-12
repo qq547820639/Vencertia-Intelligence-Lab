@@ -3,19 +3,22 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vencertia-intelligence-lab"
-version = "0.1.0"
-description = "Calibration-first decision runtime for high-uncertainty venture decisions"
+name = "vencertia-decision-runtime"
+version = "1.0.0"
+description = "Calibration-first adaptive decision runtime for high-uncertainty venture decisions"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.10",
-  "typer>=0.12",
-  "rich>=13",
   "fastapi>=0.115",
   "uvicorn>=0.30",
+  "typer>=0.12",
+  "rich>=13",
+  "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
 dev = ["pytest>=8"]
 
 [project.scripts]
@@ -23,3 +26,7 @@ vencertia = "vencertia.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["legacy", "data", "examples", ".git", ".pytest_cache", "docs", "schemas"]

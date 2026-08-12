@@ -1,0 +1,64 @@
+{
+  "$defs": {
+    "UpdateProposalStatus": {
+      "enum": [
+        "RECEIVED",
+        "VALIDATED",
+        "REVIEW_REQUIRED",
+        "READY_TO_COMMIT",
+        "COMMITTED",
+        "REJECTED"
+      ],
+      "title": "UpdateProposalStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "conflict_id": {
+      "minLength": 1,
+      "title": "Conflict Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/UpdateProposalStatus"
+    },
+    "revision_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revision Id"
+    },
+    "output_state_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output State Version"
+    }
+  },
+  "required": [
+    "company_id",
+    "conflict_id",
+    "status"
+  ],
+  "title": "ResolveCaseConflictResult",
+  "type": "object"
+}

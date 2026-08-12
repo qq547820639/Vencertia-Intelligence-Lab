@@ -1,0 +1,145 @@
+{
+  "$defs": {
+    "ConflictItem": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "existing_value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Existing Value"
+        },
+        "incoming_value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Incoming Value"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "claim_ids": {
+          "items": {
+            "pattern": "^C[0-9A-Za-z_-]+$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "resolution_required": {
+          "default": true,
+          "title": "Resolution Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "severity"
+      ],
+      "title": "ConflictItem",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "UpdateProposalStatus": {
+      "enum": [
+        "RECEIVED",
+        "VALIDATED",
+        "REVIEW_REQUIRED",
+        "READY_TO_COMMIT",
+        "COMMITTED",
+        "REJECTED"
+      ],
+      "title": "UpdateProposalStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "proposal_id": {
+      "minLength": 1,
+      "title": "Proposal Id",
+      "type": "string"
+    },
+    "company_id": {
+      "pattern": "^CMP[0-9A-Za-z_-]+$",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/UpdateProposalStatus"
+    },
+    "accepted_updates": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Accepted Updates",
+      "type": "integer"
+    },
+    "rejected_updates": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Rejected Updates",
+      "type": "integer"
+    },
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/ConflictItem"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "revision_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revision Id"
+    },
+    "output_state_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output State Version"
+    }
+  },
+  "required": [
+    "proposal_id",
+    "company_id",
+    "status"
+  ],
+  "title": "ProposeCaseUpdateResult",
+  "type": "object"
+}

@@ -1,0 +1,460 @@
+{
+  "$defs": {
+    "AgentId": {
+      "enum": [
+        "A0_ORCHESTRATOR",
+        "A1_FOUNDER_DIAGNOSIS",
+        "A2_MARKET_OPPORTUNITY",
+        "A3_VENTURE_DESIGN",
+        "A4_PROJECT_PROSECUTOR",
+        "A5_FINANCIAL_BUSINESS_MODEL",
+        "A6_EXECUTION_STRATEGY",
+        "A7_NEXT_ACTION",
+        "A8_STARTUP_CASE_INTELLIGENCE",
+        "A9_FOUNDER_MATCHMAKING",
+        "A10_BUSINESS_PLAN"
+      ],
+      "title": "AgentId",
+      "type": "string"
+    },
+    "ConfidenceLevel": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "ConfidenceLevel",
+      "type": "string"
+    },
+    "ConflictAlert": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_id": {
+          "minLength": 1,
+          "title": "Conflict Id",
+          "type": "string"
+        },
+        "memory_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Memory Ids",
+          "type": "array"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "conflict_id",
+        "memory_ids",
+        "reason"
+      ],
+      "title": "ConflictAlert",
+      "type": "object"
+    },
+    "FactStatus": {
+      "enum": [
+        "VERIFIED",
+        "ESTIMATED",
+        "ASSUMED",
+        "UNKNOWN"
+      ],
+      "title": "FactStatus",
+      "type": "string"
+    },
+    "ImportanceLevel": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "ImportanceLevel",
+      "type": "string"
+    },
+    "MemoryRecord": {
+      "additionalProperties": false,
+      "description": "Canonical AgentV10.1 durable MemoryRecord.",
+      "properties": {
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "user_id": {
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
+        "scope": {
+          "$ref": "#/$defs/MemoryScope"
+        },
+        "memory_type": {
+          "$ref": "#/$defs/MemoryType"
+        },
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "structured_value": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Structured Value"
+        },
+        "source_message_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Message Ids",
+          "type": "array"
+        },
+        "source_entity_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Entity Ids",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "fact_status": {
+          "$ref": "#/$defs/FactStatus"
+        },
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceLevel"
+        },
+        "importance": {
+          "$ref": "#/$defs/ImportanceLevel"
+        },
+        "status": {
+          "$ref": "#/$defs/MemoryStatus",
+          "default": "ACTIVE"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid To"
+        },
+        "supersedes_memory_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Memory Id"
+        },
+        "conflicts_with_memory_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Conflicts With Memory Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "memory_id",
+        "user_id",
+        "scope",
+        "memory_type",
+        "content",
+        "fact_status",
+        "confidence",
+        "importance",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "MemoryRecord",
+      "type": "object"
+    },
+    "MemoryScope": {
+      "enum": [
+        "USER_GLOBAL",
+        "PROJECT_SPECIFIC"
+      ],
+      "title": "MemoryScope",
+      "type": "string"
+    },
+    "MemoryStatus": {
+      "enum": [
+        "ACTIVE",
+        "SUPERSEDED",
+        "CONFLICTED",
+        "REJECTED",
+        "EXPIRED",
+        "ARCHIVED"
+      ],
+      "title": "MemoryStatus",
+      "type": "string"
+    },
+    "MemoryType": {
+      "enum": [
+        "FOUNDER_FACT",
+        "RESOURCE",
+        "CAPABILITY",
+        "CONSTRAINT",
+        "RED_LINE",
+        "PREFERENCE",
+        "PROJECT_FACT",
+        "PROJECT_DECISION",
+        "ASSUMPTION",
+        "EVIDENCE",
+        "CUSTOMER_FEEDBACK",
+        "EXPERIMENT_RESULT",
+        "FINANCIAL_DATA",
+        "RISK",
+        "ACTION",
+        "ACTION_RESULT",
+        "MILESTONE",
+        "OPEN_QUESTION",
+        "EXCLUSION_RULE",
+        "PIVOT_REASON",
+        "LESSON"
+      ],
+      "title": "MemoryType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Token-efficient task-specific projection for A0–A10.\n\nThis is a DTO/read model, not a canonical truth store.",
+  "properties": {
+    "context_bundle_id": {
+      "minLength": 1,
+      "title": "Context Bundle Id",
+      "type": "string"
+    },
+    "request_id": {
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "agent_id": {
+      "$ref": "#/$defs/AgentId"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "founder_profile": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Founder Profile"
+    },
+    "project_snapshot": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Snapshot"
+    },
+    "founder_stable_memory": {
+      "items": {
+        "$ref": "#/$defs/MemoryRecord"
+      },
+      "title": "Founder Stable Memory",
+      "type": "array"
+    },
+    "current_stage": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Current Stage"
+    },
+    "current_bottleneck": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Current Bottleneck"
+    },
+    "critical_assumptions": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Critical Assumptions",
+      "type": "array"
+    },
+    "top_evidence": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Top Evidence",
+      "type": "array"
+    },
+    "latest_experiments": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Latest Experiments",
+      "type": "array"
+    },
+    "latest_decisions": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Latest Decisions",
+      "type": "array"
+    },
+    "relevant_memories": {
+      "items": {
+        "$ref": "#/$defs/MemoryRecord"
+      },
+      "title": "Relevant Memories",
+      "type": "array"
+    },
+    "exclusion_rules": {
+      "items": {
+        "$ref": "#/$defs/MemoryRecord"
+      },
+      "title": "Exclusion Rules",
+      "type": "array"
+    },
+    "conflict_alerts": {
+      "items": {
+        "$ref": "#/$defs/ConflictAlert"
+      },
+      "title": "Conflict Alerts",
+      "type": "array"
+    },
+    "recent_messages": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Recent Messages",
+      "type": "array"
+    },
+    "retrieval_notes": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Retrieval Notes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "context_bundle_id",
+    "request_id",
+    "user_id",
+    "agent_id",
+    "generated_at"
+  ],
+  "title": "ContextBundle",
+  "type": "object"
+}

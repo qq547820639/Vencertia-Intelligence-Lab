@@ -1,0 +1,181 @@
+{
+  "request_id": "REQ_A1_001",
+  "user_id": "U001",
+  "project_id": null,
+  "candidate_count": 2,
+  "results": [
+    {
+      "candidate_id": "C_TIME",
+      "operation": "WRITE",
+      "scope": "USER_GLOBAL",
+      "project_id": null,
+      "memory_type": "CONSTRAINT",
+      "target_memory_id": null,
+      "new_memory_record": {
+        "memory_id": "M_baefbd79b7b6421bbf01aa45c82bd9a9",
+        "user_id": "U001",
+        "project_id": null,
+        "scope": "USER_GLOBAL",
+        "memory_type": "CONSTRAINT",
+        "content": "Founder can allocate about 10 hours per week.",
+        "structured_value": {
+          "hours_per_week": 10
+        },
+        "source_message_ids": [
+          "MSG_101"
+        ],
+        "source_entity_ids": [],
+        "evidence_ids": [],
+        "fact_status": "VERIFIED",
+        "confidence": "HIGH",
+        "importance": "CRITICAL",
+        "status": "ACTIVE",
+        "created_at": "2026-08-11T22:21:16.092152Z",
+        "updated_at": "2026-08-11T22:21:16.092152Z",
+        "valid_from": null,
+        "valid_to": null,
+        "supersedes_memory_id": null,
+        "conflicts_with_memory_ids": []
+      },
+      "affected_memory_ids": [
+        "M_baefbd79b7b6421bbf01aa45c82bd9a9"
+      ],
+      "reason": "New durable Memory; no equivalent active Memory found.",
+      "fact_status": "VERIFIED",
+      "confidence": "HIGH",
+      "importance": "CRITICAL",
+      "snapshot_refresh_required": false,
+      "context_index_refresh_required": true
+    },
+    {
+      "candidate_id": "C_REDLINE",
+      "operation": "WRITE",
+      "scope": "USER_GLOBAL",
+      "project_id": null,
+      "memory_type": "RED_LINE",
+      "target_memory_id": null,
+      "new_memory_record": {
+        "memory_id": "M_d902cb2b391942c6a5c673f65b0ddc1f",
+        "user_id": "U001",
+        "project_id": null,
+        "scope": "USER_GLOBAL",
+        "memory_type": "RED_LINE",
+        "content": "Founder refuses businesses requiring personal livestreaming.",
+        "structured_value": null,
+        "source_message_ids": [
+          "MSG_102"
+        ],
+        "source_entity_ids": [],
+        "evidence_ids": [],
+        "fact_status": "VERIFIED",
+        "confidence": "HIGH",
+        "importance": "CRITICAL",
+        "status": "ACTIVE",
+        "created_at": "2026-08-11T22:21:16.092224Z",
+        "updated_at": "2026-08-11T22:21:16.092224Z",
+        "valid_from": null,
+        "valid_to": null,
+        "supersedes_memory_id": null,
+        "conflicts_with_memory_ids": []
+      },
+      "affected_memory_ids": [
+        "M_d902cb2b391942c6a5c673f65b0ddc1f"
+      ],
+      "reason": "New durable Memory; no equivalent active Memory found.",
+      "fact_status": "VERIFIED",
+      "confidence": "HIGH",
+      "importance": "CRITICAL",
+      "snapshot_refresh_required": false,
+      "context_index_refresh_required": true
+    }
+  ],
+  "conflicts_created": [],
+  "supersessions_created": [],
+  "rejected_candidates": [],
+  "snapshot_refresh_required": false,
+  "context_refresh_required": true,
+  "write_confidence": "HIGH",
+  "runtime_refresh_signals": {
+    "founder_profile_refresh_required": true,
+    "project_snapshot_refresh_required": false,
+    "context_refresh_required": true,
+    "routing_reassessment_recommended": true,
+    "state_reassessment_recommended": true
+  }
+}
+{
+  "context_bundle_id": "CTX_3e443ba26a7a45958dbead59a6a649fa",
+  "request_id": "REQ_A3_001",
+  "user_id": "U001",
+  "project_id": null,
+  "agent_id": "A3_VENTURE_DESIGN",
+  "generated_at": "2026-08-11T22:21:16.092935Z",
+  "founder_profile": null,
+  "project_snapshot": null,
+  "founder_stable_memory": [
+    {
+      "memory_id": "M_d902cb2b391942c6a5c673f65b0ddc1f",
+      "user_id": "U001",
+      "project_id": null,
+      "scope": "USER_GLOBAL",
+      "memory_type": "RED_LINE",
+      "content": "Founder refuses businesses requiring personal livestreaming.",
+      "structured_value": null,
+      "source_message_ids": [
+        "MSG_102"
+      ],
+      "source_entity_ids": [],
+      "evidence_ids": [],
+      "fact_status": "VERIFIED",
+      "confidence": "HIGH",
+      "importance": "CRITICAL",
+      "status": "ACTIVE",
+      "created_at": "2026-08-11T22:21:16.092224Z",
+      "updated_at": "2026-08-11T22:21:16.092224Z",
+      "valid_from": null,
+      "valid_to": null,
+      "supersedes_memory_id": null,
+      "conflicts_with_memory_ids": []
+    },
+    {
+      "memory_id": "M_baefbd79b7b6421bbf01aa45c82bd9a9",
+      "user_id": "U001",
+      "project_id": null,
+      "scope": "USER_GLOBAL",
+      "memory_type": "CONSTRAINT",
+      "content": "Founder can allocate about 10 hours per week.",
+      "structured_value": {
+        "hours_per_week": 10
+      },
+      "source_message_ids": [
+        "MSG_101"
+      ],
+      "source_entity_ids": [],
+      "evidence_ids": [],
+      "fact_status": "VERIFIED",
+      "confidence": "HIGH",
+      "importance": "CRITICAL",
+      "status": "ACTIVE",
+      "created_at": "2026-08-11T22:21:16.092152Z",
+      "updated_at": "2026-08-11T22:21:16.092152Z",
+      "valid_from": null,
+      "valid_to": null,
+      "supersedes_memory_id": null,
+      "conflicts_with_memory_ids": []
+    }
+  ],
+  "current_stage": null,
+  "current_bottleneck": null,
+  "critical_assumptions": [],
+  "top_evidence": [],
+  "latest_experiments": [],
+  "latest_decisions": [],
+  "relevant_memories": [],
+  "exclusion_rules": [],
+  "conflict_alerts": [],
+  "recent_messages": [],
+  "retrieval_notes": [
+    "ContextBundle is a read projection, not a canonical source of truth.",
+    "ACTIVE durable Memory is preferred; conflicts are explicit and never silently averaged."
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "AccessClass": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "LICENSED",
+        "RESTRICTED"
+      ],
+      "title": "AccessClass",
+      "type": "string"
+    },
+    "ActorRef": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_type": {
+          "$ref": "#/$defs/ActorType"
+        },
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
+      "title": "ActorRef",
+      "type": "object"
+    },
+    "ActorType": {
+      "enum": [
+        "USER",
+        "AGENT",
+        "SYSTEM",
+        "RESEARCHER",
+        "ADMIN"
+      ],
+      "title": "ActorType",
+      "type": "string"
+    },
+    "IngestionMode": {
+      "enum": [
+        "CREATE_ONLY",
+        "UPDATE_EXISTING",
+        "CREATE_OR_UPDATE",
+        "DRY_RUN"
+      ],
+      "title": "IngestionMode",
+      "type": "string"
+    },
+    "ReviewPolicy": {
+      "enum": [
+        "ALWAYS_REVIEW",
+        "REVIEW_ON_CONFLICT",
+        "AUTO_COMMIT_IF_VALID"
+      ],
+      "title": "ReviewPolicy",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "INGEST_COMPANY_CASE",
+      "default": "INGEST_COMPANY_CASE",
+      "title": "Operation",
+      "type": "string"
+    },
+    "file_ref": {
+      "minLength": 1,
+      "title": "File Ref",
+      "type": "string"
+    },
+    "template_family": {
+      "const": "Startup Intelligence Company Case",
+      "default": "Startup Intelligence Company Case",
+      "title": "Template Family",
+      "type": "string"
+    },
+    "declared_schema_version": {
+      "minLength": 1,
+      "title": "Declared Schema Version",
+      "type": "string"
+    },
+    "mode": {
+      "$ref": "#/$defs/IngestionMode",
+      "default": "CREATE_OR_UPDATE"
+    },
+    "review_policy": {
+      "$ref": "#/$defs/ReviewPolicy",
+      "default": "REVIEW_ON_CONFLICT"
+    },
+    "requested_by": {
+      "$ref": "#/$defs/ActorRef"
+    },
+    "access_class": {
+      "$ref": "#/$defs/AccessClass",
+      "default": "INTERNAL"
+    },
+    "idempotency_key": {
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "expected_company_state_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Company State Version"
+    }
+  },
+  "required": [
+    "file_ref",
+    "declared_schema_version",
+    "requested_by",
+    "idempotency_key"
+  ],
+  "title": "IngestCaseRequest",
+  "type": "object"
+}

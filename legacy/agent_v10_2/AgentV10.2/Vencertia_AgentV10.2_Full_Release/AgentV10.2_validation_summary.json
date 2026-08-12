@@ -1,0 +1,12 @@
+{
+  "release": "AgentV10.2",
+  "generated_at": "2026-08-11T22:38:06.838092+00:00",
+  "user_knowledge_runtime_tests": "12 passed",
+  "company_intelligence_runtime_tests": "11 passed",
+  "prompt_preservation": "PASS: 10 untouched prompts byte-identical; 5 patched prompts preserve V10.1 visible text and append V10.2 appendix",
+  "inherited_nonprompt_files": "PASS: byte-identical except intentionally versioned release README",
+  "v10_1_original_zip_embedded": "PASS",
+  "docx_render_qa": "PASS for all five modified prompt documents",
+  "canonical_boundary_audit": "PASS",
+  "package_version": "10.2"
+}

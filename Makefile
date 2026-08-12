@@ -1,15 +1,23 @@
-.PHONY: test benchmark demo api verify
+PYTHON ?= /Users/panhao/.workbuddy/binaries/python/envs/default/bin/python
+export PYTHONPATH := src
+
+.PHONY: install test benchmark demo api verify
+
+install:
+	$(PYTHON) -m pip install -e ".[dev]"
 
 test:
-	PYTHONPATH=src pytest -q
+	$(PYTHON) -m pytest -q
 
 benchmark:
-	PYTHONPATH=src python -m vencertia.cli benchmark --path data/benchmarks/v0.2.jsonl
+	$(PYTHON) -m vencertia.cli benchmark run --level L0
 
 demo:
-	PYTHONPATH=src python -m vencertia.cli demo
+	$(PYTHON) examples/demo_b2b_saas_mvp.py
 
 api:
-	PYTHONPATH=src uvicorn vencertia.api:app --host 0.0.0.0 --port 8000
+	$(PYTHON) -m uvicorn vencertia.api:app --host 0.0.0.0 --port 8000
 
 verify: test benchmark
+	$(PYTHON) -c "from vencertia.cli import app; print('CLI import OK')"
+	$(PYTHON) -c "from vencertia.api import app; print('API import OK')"

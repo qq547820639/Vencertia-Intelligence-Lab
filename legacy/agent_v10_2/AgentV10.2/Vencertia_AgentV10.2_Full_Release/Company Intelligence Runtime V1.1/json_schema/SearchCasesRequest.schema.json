@@ -1,0 +1,268 @@
+{
+  "$defs": {
+    "CaseRole": {
+      "enum": [
+        "SUCCESS",
+        "DURABLE_PROFIT",
+        "FAILURE",
+        "PIVOT",
+        "RESTRUCTURING",
+        "BENCHMARK",
+        "ADJACENT",
+        "ANTI_PATTERN"
+      ],
+      "title": "CaseRole",
+      "type": "string"
+    },
+    "ProjectRetrievalContext": {
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {
+          "minLength": 1,
+          "title": "Project Id",
+          "type": "string"
+        },
+        "project_stage": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Stage"
+        },
+        "geography": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Geography",
+          "type": "array"
+        },
+        "customer_model": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Customer Model",
+          "type": "array"
+        },
+        "customer_segment": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Customer Segment",
+          "type": "array"
+        },
+        "payer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payer"
+        },
+        "problem_tags": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Problem Tags",
+          "type": "array"
+        },
+        "purchase_trigger_tags": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Purchase Trigger Tags",
+          "type": "array"
+        },
+        "offering_type": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Offering Type",
+          "type": "array"
+        },
+        "revenue_models": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Revenue Models",
+          "type": "array"
+        },
+        "pricing_models": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Pricing Models",
+          "type": "array"
+        },
+        "sales_motion": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Sales Motion",
+          "type": "array"
+        },
+        "delivery_model": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Delivery Model",
+          "type": "array"
+        },
+        "capital_intensity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capital Intensity"
+        },
+        "working_capital_intensity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Working Capital Intensity"
+        },
+        "regulation_intensity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Regulation Intensity"
+        },
+        "founder_advantages": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Founder Advantages",
+          "type": "array"
+        },
+        "known_constraints": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Known Constraints",
+          "type": "array"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "title": "ProjectRetrievalContext",
+      "type": "object"
+    },
+    "RetrievalObjective": {
+      "enum": [
+        "GENERAL_RECOMMENDATION",
+        "MARKET_PATTERN",
+        "BUSINESS_MODEL",
+        "INITIAL_WEDGE",
+        "EARLY_GTM",
+        "SCALED_GTM",
+        "PRICING",
+        "FINANCIAL_BENCHMARK",
+        "CASHFLOW",
+        "CONTRACT_RISK",
+        "DELIVERY_MODEL",
+        "OPERATING_LEVERAGE",
+        "RETENTION_GROWTH",
+        "FAILURE_PATTERN",
+        "ANTI_PATTERN",
+        "PIVOT_PATTERN",
+        "RESTRUCTURING_PATTERN",
+        "COMPANY_DEEP_DIVE",
+        "COMPETITIVE_CASE_SET",
+        "FOUNDER_MARKET_FIT"
+      ],
+      "title": "RetrievalObjective",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "const": "SEARCH_COMPANY_CASES",
+      "default": "SEARCH_COMPANY_CASES",
+      "title": "Operation",
+      "type": "string"
+    },
+    "retrieval_objective": {
+      "$ref": "#/$defs/RetrievalObjective"
+    },
+    "target_context": {
+      "$ref": "#/$defs/ProjectRetrievalContext"
+    },
+    "case_roles": {
+      "items": {
+        "$ref": "#/$defs/CaseRole"
+      },
+      "title": "Case Roles",
+      "type": "array"
+    },
+    "max_candidates": {
+      "default": 20,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Max Candidates",
+      "type": "integer"
+    },
+    "max_context_cases": {
+      "default": 6,
+      "maximum": 12,
+      "minimum": 1,
+      "title": "Max Context Cases",
+      "type": "integer"
+    },
+    "include_counterexamples": {
+      "default": true,
+      "title": "Include Counterexamples",
+      "type": "boolean"
+    },
+    "require_current_data": {
+      "default": false,
+      "title": "Require Current Data",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "retrieval_objective",
+    "target_context"
+  ],
+  "title": "SearchCasesRequest",
+  "type": "object"
+}

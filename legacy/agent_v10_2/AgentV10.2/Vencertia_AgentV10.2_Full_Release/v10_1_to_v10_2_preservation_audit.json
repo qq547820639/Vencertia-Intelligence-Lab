@@ -1,0 +1,342 @@
+{
+  "release": "AgentV10.2",
+  "generated_at": "2026-08-11T22:33:51.206506+00:00",
+  "base_zip_sha256": "091e3f65f442b3653355abe51ee9fd6fbb2f40d3f355e558dffda92a5ce6f6c2",
+  "exact_v10_1_source_embedded": true,
+  "prompt_audit": [
+    {
+      "file": "Memory Write.docx",
+      "v10_1_sha256": "e6f32aaacbf26c62b3d196b858931063bcbc10a9b4821a800792825f54f3c51d",
+      "v10_2_sha256": "f15098f6ce55941df9260e2d8074fc97a6ad235a7d18b6d260a77daa0ecd9703",
+      "patch_expected": true,
+      "byte_identical": false,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": true
+    },
+    {
+      "file": "Pydantic  JSON Schema.docx",
+      "v10_1_sha256": "418b3c74994df936fa3eca81deb381637f5a10d9ca2ede408d7792dd15ae8522",
+      "v10_2_sha256": "0a56cfd9d2ceaf4009c4020667e20863ae4ff8555bcf6c3029f00c3d09d82266",
+      "patch_expected": true,
+      "byte_identical": false,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": true
+    },
+    {
+      "file": "Routing.docx",
+      "v10_1_sha256": "cf5ff96bb012712de49b08b785063ecaa99c328c6d3f6bef6e0be08a161d8e01",
+      "v10_2_sha256": "0753e047c696893a36b0779d098fa1659e5beecfe7524df92e53283eaff5e16a",
+      "patch_expected": true,
+      "byte_identical": false,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": true
+    },
+    {
+      "file": "State Transition.docx",
+      "v10_1_sha256": "8cc4a053f65ef7f7f65d769f8fd50127630a5ca57f849ce0e9950c4d3b3032f0",
+      "v10_2_sha256": "8cc4a053f65ef7f7f65d769f8fd50127630a5ca57f849ce0e9950c4d3b3032f0",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Business Plan Architect.docx",
+      "v10_1_sha256": "ae5c12a2245d0cd7fd60b6b5787e9bf45fda2e1db6dba9f274905ea5f64a456c",
+      "v10_2_sha256": "ae5c12a2245d0cd7fd60b6b5787e9bf45fda2e1db6dba9f274905ea5f64a456c",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Execution Strategy.docx",
+      "v10_1_sha256": "ccca0f2e4b1b9106f2eda9925268eb599948420b08eb44d9b509e15e67b63ec7",
+      "v10_2_sha256": "ccca0f2e4b1b9106f2eda9925268eb599948420b08eb44d9b509e15e67b63ec7",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Financial & Business Model.docx",
+      "v10_1_sha256": "397738a960e3245f15706f5a9ad2d2bc3394e75a6408d93d9442f591445eb827",
+      "v10_2_sha256": "6655412144cb32de6ef62f03ea42702052588049ffd428435632c0b576d9d01b",
+      "patch_expected": true,
+      "byte_identical": false,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": true
+    },
+    {
+      "file": "Vencertia Founder Diagnosis.docx",
+      "v10_1_sha256": "3d6c0e9585a746b9999f28b7379613ea3ec7fbcfdff3add9231cff35e0ccfbfc",
+      "v10_2_sha256": "3d6c0e9585a746b9999f28b7379613ea3ec7fbcfdff3add9231cff35e0ccfbfc",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Founder Matchmaking.docx",
+      "v10_1_sha256": "5a56350abc73b368169b033f55c63cc8a64db36c44f0cc143789f3fabd80cf33",
+      "v10_2_sha256": "5a56350abc73b368169b033f55c63cc8a64db36c44f0cc143789f3fabd80cf33",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Market Opportunity.docx",
+      "v10_1_sha256": "e427cbf78edfe3f77fd1c122c6c27bff49665bfa0e823e522c29ee5129fe587e",
+      "v10_2_sha256": "e427cbf78edfe3f77fd1c122c6c27bff49665bfa0e823e522c29ee5129fe587e",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Next Action Planner.docx",
+      "v10_1_sha256": "9971c18f6b8a9293b18c7579b7ac0fe3322b85ac3389ecd141cf6ac73c4e0d22",
+      "v10_2_sha256": "9971c18f6b8a9293b18c7579b7ac0fe3322b85ac3389ecd141cf6ac73c4e0d22",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Orchestrator .docx",
+      "v10_1_sha256": "65cce0320410b7507cea4eb6177583bbb362b6ad227e4b656ab7dbe83a5d63fa",
+      "v10_2_sha256": "1d52267826648241cb57a81c99f3ece09cca0cf48e9046689b9078c45e6b2d41",
+      "patch_expected": true,
+      "byte_identical": false,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": true
+    },
+    {
+      "file": "Vencertia Project Prosecutor.docx",
+      "v10_1_sha256": "f446582d55f1d67bfec62a4dec443197aa29549647ff88066a4da4676aad33d8",
+      "v10_2_sha256": "f446582d55f1d67bfec62a4dec443197aa29549647ff88066a4da4676aad33d8",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Startup Case Intelligence .docx",
+      "v10_1_sha256": "afe9b604b1f6d5935fdd454ae97d6678d1913ec9b3e5ae4bb17552146294ccb0",
+      "v10_2_sha256": "afe9b604b1f6d5935fdd454ae97d6678d1913ec9b3e5ae4bb17552146294ccb0",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    },
+    {
+      "file": "Vencertia Venture Design.docx",
+      "v10_1_sha256": "67dbb899a26c8d00dc1f54378b59d6afa1df5814be68860610847f3f4f23320b",
+      "v10_2_sha256": "67dbb899a26c8d00dc1f54378b59d6afa1df5814be68860610847f3f4f23320b",
+      "patch_expected": false,
+      "byte_identical": true,
+      "v10_1_visible_text_preserved_in_v10_2": true,
+      "appendix_marker_present": false
+    }
+  ],
+  "inherited_nonprompt_audit": [
+    {
+      "file": "v9_preservation_audit.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "render_counts.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "数据库范式文件V3.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/test_runtime_schema.py",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/company_case_v1_4_compatibility_extension_v1_1.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/agent_patch_manifest_v10_1.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/examples.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/agent_patch_manifest_v10.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/agent_protocol_v1_1.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/generate_json_schema.py",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/v3_runtime_mapping.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/company_intelligence_runtime.py",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/agent_protocol_v1.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/README.md",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/RefreshCaseResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/SearchCasesResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/SubmitEvidenceRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/IngestCaseResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/index.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/CaseContextPack.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/CompareCaseSetResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/IngestCaseRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/ProposeCaseUpdateRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/SubmitEvidenceResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/GetCaseRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/CaseUnitRef.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/FounderRecord.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/CompareCaseRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/ComparisonResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/RefreshCaseRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/FundingRound.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/ResolveCaseConflictResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/CompareCaseSetRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/GetCaseResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/SearchCasesRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/ClaimTraceResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/ClaimTraceRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/ResolveCaseConflictRequest.schema.json",
+      "present": true,
+      "byte_identical": true
+    },
+    {
+      "file": "Company Intelligence Runtime V1.1/json_schema/ProposeCaseUpdateResult.schema.json",
+      "present": true,
+      "byte_identical": true
+    }
+  ],
+  "runtime_present": true,
+  "addenda_present": true
+}
