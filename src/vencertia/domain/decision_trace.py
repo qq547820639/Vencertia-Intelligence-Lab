@@ -28,6 +28,8 @@ class DecisionTrace(VencertiaBaseModel):
     penalties: dict = Field(default_factory=dict)
     margin: float = 0.0
     critical_uncertainty: float = 0.0
+    # v1.1.2 (P0-6): free-form notes (e.g. rejected experiment reasons).
+    notes: list[str] = Field(default_factory=list)
     computed_at: datetime = Field(default_factory=utcnow)
     version: int = 1
 

@@ -1,5 +1,7 @@
 # Baseline — Vencertia v1.1 Release Candidate
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 > 本轮（v1.1 RC Hardening）唯一基线记录。
 > 创建时间：2026-08-12 · 执行人：主理人（齐活林）团队
 
@@ -27,7 +29,7 @@ PYTHONPATH  = src
 |---|---|
 | pytest collected | 284 |
 | pytest passed | 283 |
-| pytest skipped | 1（PG 门控） |
+| pytest skipped | 1（`tests/test_api_v11.py:113` — no candidate claims generated in this scenario，非 PG 门控） |
 | pytest failed | 0 |
 | L0 total | 36 |
 | L0 passed | 36 |

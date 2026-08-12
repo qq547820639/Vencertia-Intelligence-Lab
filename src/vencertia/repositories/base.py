@@ -38,6 +38,7 @@ from vencertia.domain import (
     ResearchTrace,
     Rule,
     RuleKind,
+    Scope,
     VencertiaBaseModel,
     utcnow,
 )
@@ -76,9 +77,14 @@ class Repository(Protocol):
     """Persistence interface used by the runtime and engines."""
 
     # Evidence / Claim
-    def add_evidence(self, evidence: Evidence) -> None: ...
+    def add_evidence(self, evidence: Evidence, *, allow_missing_project: bool = False) -> None: ...
     def get_evidence(self, evidence_id: str) -> Evidence | None: ...
-    def list_evidence(self, claim_ids: list[str] | None = None) -> list[Evidence]: ...
+    def list_evidence(
+        self,
+        claim_ids: list[str] | None = None,
+        project_id: str | None = None,
+        include_shared: bool = True,
+    ) -> list[Evidence]: ...
     def add_claim(self, claim: Claim) -> None: ...
     def get_claim(self, claim_id: str) -> Claim | None: ...
     def list_claims(self, project_id: str | None = None) -> list[Claim]: ...
@@ -101,8 +107,19 @@ class Repository(Protocol):
     # Action / Outcome
     def save_action(self, action: Action, expected_version: int | None = None) -> None: ...
     def get_action(self, action_id: str) -> Action | None: ...
+    def list_actions(
+        self,
+        project_id: str | None = None,
+        decision_id: str | None = None,
+        experiment_id: str | None = None,
+    ) -> list[Action]: ...
     def save_outcome(self, outcome: Outcome, expected_version: int | None = None) -> None: ...
     def get_outcome(self, outcome_id: str) -> Outcome | None: ...
+    def list_outcomes(
+        self,
+        project_id: str | None = None,
+        action_id: str | None = None,
+    ) -> list[Outcome]: ...
 
     # Prediction
     def save_prediction(self, entry: PredictionEntry, expected_version: int | None = None) -> None: ...
@@ -271,18 +288,64 @@ class EntityStoreMixin:
 
     # -- domain methods ------------------------------------------------------
 
-    def add_evidence(self, evidence: Evidence) -> None:
+    def add_evidence(
+        self, evidence: Evidence, *, allow_missing_project: bool = False
+    ) -> None:
+        """Persist evidence with the v1.1.2 tenant-isolation write boundary.
+
+        PROJECT/CUSTOMER-scoped evidence MUST carry ``project_id`` unless
+        ``allow_missing_project=True`` (migration/import path only, ADR-014).
+        MARKET/WORLD/COMPANY_CASE evidence may be shared with ``project_id=None``.
+        """
+        scope = evidence.scope.value if hasattr(evidence.scope, "value") else str(evidence.scope)
+        if (
+            not allow_missing_project
+            and scope in (Scope.PROJECT.value, Scope.CUSTOMER.value)
+            and not evidence.project_id
+        ):
+            raise ValueError(
+                f"project-scoped evidence requires project_id (scope={scope}, id={evidence.id}) "
+                f"— v1.1.2 integrity rule"
+            )
         self._save(evidence)
 
     def get_evidence(self, evidence_id: str) -> Evidence | None:
         return self._get("evidence", evidence_id)
 
-    def list_evidence(self, claim_ids: list[str] | None = None) -> list[Evidence]:
+    def list_evidence(
+        self,
+        claim_ids: list[str] | None = None,
+        project_id: str | None = None,
+        include_shared: bool = True,
+    ) -> list[Evidence]:
+        """List evidence with the v1.1.2 tenant-isolation read boundary.
+
+        When ``project_id`` is given, only evidence owned by that project plus
+        shared external evidence (WORLD/MARKET/COMPANY_CASE with
+        ``project_id=None``) is returned. COMPANY_CASE sharing remains subject
+        to the ADR-004 transferability gate at the policy layer. When
+        ``project_id`` is None the full store is returned (technical queries,
+        e.g. fingerprint de-dup).
+        """
         rows = self._list("evidence")
-        if claim_ids is None:
-            return rows
-        wanted = set(claim_ids)
-        return [e for e in rows if wanted.intersection(e.claim_ids)]
+        if project_id is not None:
+            out: list[Evidence] = []
+            for e in rows:
+                if e.project_id == project_id:
+                    out.append(e)
+                elif include_shared and e.project_id is None:
+                    scope = e.scope.value if hasattr(e.scope, "value") else str(e.scope)
+                    if scope in (
+                        Scope.WORLD.value,
+                        Scope.MARKET.value,
+                        Scope.COMPANY_CASE.value,
+                    ):
+                        out.append(e)
+            rows = out
+        if claim_ids is not None:
+            wanted = set(claim_ids)
+            rows = [e for e in rows if wanted.intersection(e.claim_ids)]
+        return rows
 
     def add_claim(self, claim: Claim) -> None:
         self._save(claim)
@@ -340,11 +403,43 @@ class EntityStoreMixin:
     def get_action(self, action_id: str) -> Action | None:
         return self._get("action", action_id)
 
+    def list_actions(
+        self,
+        project_id: str | None = None,
+        decision_id: str | None = None,
+        experiment_id: str | None = None,
+    ) -> list[Action]:
+        """Public action query (P0-4). Outcomes link to actions via action_id."""
+        rows = self._list("action")
+        if project_id is not None:
+            rows = [a for a in rows if a.project_id == project_id]
+        if decision_id is not None:
+            rows = [a for a in rows if a.decision_id == decision_id]
+        if experiment_id is not None:
+            rows = [a for a in rows if a.experiment_id == experiment_id]
+        return rows
+
     def save_outcome(self, outcome: Outcome, expected_version: int | None = None) -> None:
         self._save(outcome, expected_version)
 
     def get_outcome(self, outcome_id: str) -> Outcome | None:
         return self._get("outcome", outcome_id)
+
+    def list_outcomes(
+        self,
+        project_id: str | None = None,
+        action_id: str | None = None,
+    ) -> list[Outcome]:
+        """Public outcome query (P0-4). Outcomes are keyed by ``id`` (OUT_*)
+        and reference actions by ``action_id`` (ACT_*); never assume
+        Outcome.id == Action.id."""
+        rows = self._list("outcome")
+        if action_id is not None:
+            rows = [o for o in rows if o.action_id == action_id]
+        if project_id is not None:
+            action_ids = {a.id for a in self._list("action") if a.project_id == project_id}
+            rows = [o for o in rows if o.action_id in action_ids]
+        return rows
 
     def save_prediction(self, entry: PredictionEntry, expected_version: int | None = None) -> None:
         self._save(entry, expected_version)
@@ -453,7 +548,23 @@ class EntityStoreMixin:
         return self._events_since(after_seq)
 
     def in_transaction(self, fn: Callable[[], None]) -> None:
-        self._txn(fn)
+        """Run ``fn`` inside a transaction with depth counting (P2-17).
+
+        Nested ``in_transaction`` calls share the outermost backend
+        transaction: only depth==0 delegates to the backend ``_txn`` (which
+        owns BEGIN/COMMIT/ROLLBACK); inner frames just execute ``fn`` so the
+        backend ``_store``/``_append_event`` do NOT commit early inside the
+        batch.
+        """
+        depth = getattr(self, "_txn_depth", 0)
+        self._txn_depth = depth + 1
+        try:
+            if depth == 0:
+                self._txn(fn)
+            else:
+                fn()
+        finally:
+            self._txn_depth = depth
 
     # -- v1.1 claim binding -----------------------------------------------------
 

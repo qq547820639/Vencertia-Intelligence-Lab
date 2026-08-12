@@ -1,5 +1,7 @@
 # Changelog
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 ## v1.0.0 — Vencertia Adaptive Decision System v1.0 (2026-08-12)
 
 ### Added (relative to v0.1 prototype)

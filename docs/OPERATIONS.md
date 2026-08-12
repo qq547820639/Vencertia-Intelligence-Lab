@@ -1,5 +1,7 @@
 # Operations（v1.1.1）
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 > 面向部署/运维的实操手册（GAP-06）。开发细节见 `docs/ARCHITECTURE.md`、
 > `docs/OVERVIEW.md`；Provider 详见 `docs/PROVIDERS.md`。
 
@@ -69,7 +71,7 @@ export PYTHONPATH=src   # 运行前必须
 
 - 设置 `VENCERTIA_PG_DSN`（如 `postgresql://user:pass@host:5432/vencertia`）。
 - 迁移脚本：`src/vencertia/repositories/migrations/0002_pg.sql`。
-- PG 相关测试在未配置 DSN 时自动 skip（pytest 中 1 skipped 即 PG 门控）。
+- PG 相关测试在未配置 DSN 时自动 skip（v1.1.1 的 1 skipped 真实原因 = `tests/test_api_v11.py:113` 无 candidate，非 PG 门控；v1.1.2 已修复为确定性 fixture，0 skipped）。
 
 ## 5. Mock Provider（默认）
 
@@ -202,7 +204,7 @@ make release   # scripts/make_release.py → Vencertia_Intelligence_Lab_v1.1.1.z
 | 症状 | 原因 | 处理 |
 |---|---|---|
 | `search_provider=http requires VENCERTIA_SEARCH_URL` | 配了 http 未配 URL | 设置 `VENCERTIA_SEARCH_URL` 或改回 `mock` |
-| 1 test skipped | PG 门控未配 DSN | 不需要 PG 则忽略；需要则设 `VENCERTIA_PG_DSN` |
+| 1 test skipped | `tests/test_api_v11.py:113` 无 candidate（非 PG 门控） | v1.1.2 改为确定性 fixture → 0 skipped |
 | `ModuleNotFoundError: vencertia` | 未设 PYTHONPATH | `export PYTHONPATH=src` |
 | `Unknown model_provider` | 拼写错误 | 检查 `VENCERTIA_MODEL_PROVIDER` |
 | Provider 超时/限流 | 网络/配额 | 检查 `VENCERTIA_PROVIDER_*` 重试与超时设置 |

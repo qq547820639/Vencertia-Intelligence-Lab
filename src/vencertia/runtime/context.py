@@ -2,40 +2,17 @@
 
 Context is a DTO; it is never persisted. Capabilities receive ContextBundle and
 return candidates only.
+
+v1.1.2 (P2-15): the ContextBundle DTOs live in :mod:`vencertia.domain.context`
+so capabilities depend on domain (no layer cycle). This module keeps the
+ContextBuilder and re-exports the DTOs for backward compatibility.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime
-
-from vencertia.domain import (
-    Belief,
-    ConflictAlert,
-    Decision,
-    Evidence,
-    Experiment,
-    FounderProfile,
-    Project,
-    utcnow,
-)
+from vencertia.domain import Evidence
+from vencertia.domain.context import ContextBundle, ContextBundleV11  # noqa: F401  (re-export)
 from vencertia.repositories.base import Repository
-
-
-@dataclass
-class ContextBundle:
-    """Read projection of REALITY state for capability consumption."""
-
-    user_id: str
-    project: Project | None = None
-    project_snapshot: dict = field(default_factory=dict)
-    founder_profile: FounderProfile | None = None
-    critical_assumptions: list[Belief] = field(default_factory=list)
-    top_evidence: list[Evidence] = field(default_factory=list)
-    latest_decisions: list[Decision] = field(default_factory=list)
-    latest_experiments: list[Experiment] = field(default_factory=list)
-    conflict_alerts: list[ConflictAlert] = field(default_factory=list)
-    as_of: datetime = field(default_factory=utcnow)
 
 
 class ContextBuilder:
@@ -53,7 +30,8 @@ class ContextBuilder:
         project = self.repo.get_project(project_id)
         owner = user_id or (project.user_id if project else "unknown")
         beliefs = self.repo.get_beliefs(project_id)
-        evidence = self.repo.list_evidence()
+        # P0-3: read boundary — only project-owned + explicitly shared evidence.
+        evidence = self.repo.list_evidence(project_id=project_id)
         decisions = self.repo.list_decisions(project_id)
         experiments = self.repo.list_experiments(project_id)
 

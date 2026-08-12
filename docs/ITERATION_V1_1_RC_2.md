@@ -1,5 +1,7 @@
 # ITERATION — v1.1 RC Hardening Round 2（QA 对抗 edge-case）
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 > 执行人：严过关（QA）· 日期：2026-08-12 · 版本：1.1.1（工作区）
 > 基线：docs/ITERATION_V1_1_RC_1.md（工程师实现完成）· 本轮为独立对抗验证，非盖章。
 

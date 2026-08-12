@@ -140,6 +140,13 @@ class Settings:
     provider_retry_backoff_base: float = 0.5
     call_log_enabled: bool = True
 
+    # -- v1.1.2 integrity / optional engines ------------------------------------
+    # OpportunityCostEngine verdict (P1-9): AVAILABLE ENGINE / NOT ACTIVE BY
+    # DEFAULT. solve() updates option.opportunity_cost from the founder
+    # portfolio ONLY when this flag is enabled; default False = zero behavior
+    # change.
+    opportunity_cost_enabled: bool = False
+
     @classmethod
     def from_env(cls) -> Settings:
         """Build Settings from the process environment (VENCERTIA_* variables)."""
@@ -215,6 +222,7 @@ class Settings:
                 "VENCERTIA_PROVIDER_RETRY_BACKOFF_BASE", 0.5
             ),
             call_log_enabled=_env_bool("VENCERTIA_CALL_LOG_ENABLED", True),
+            opportunity_cost_enabled=_env_bool("VENCERTIA_OPPORTUNITY_COST_ENABLED", False),
         )
 
 

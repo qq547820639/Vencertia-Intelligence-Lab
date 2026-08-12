@@ -312,10 +312,15 @@ def test_runtime_provider_failure_degrades_gracefully():
     # Provider failure was recorded (not swallowed silently).
     event_types = [e.event_type for e in repo._events_since(0)]
     assert EventType.PROVIDER_FAILED.value in event_types
-    # No evidence was fabricated by the failed provider.
-    assert result.evidence_used == [] or all(
-        eid.startswith("E_") is False or True for eid in result.evidence_used
-    )
+    # No evidence was fabricated by the failed provider: every evidence the
+    # decision used is a PERSISTED record with traceable provenance (the
+    # retrieval adapter's real corpus) — no phantom E_ entries.
+    for eid in result.evidence_used:
+        ev = repo.get_evidence(eid)
+        assert ev is not None, f"evidence {eid} must be persisted (not fabricated)"
+        assert (ev.provenance.raw_extract or "").strip(), (
+            f"evidence {eid} must carry traceable provenance"
+        )
     # The run still completes and degrades to a research-stopped state.
     assert result.stop_condition in ("SEARCH_EXHAUSTED", "RESEARCH_MORE", "EXPERIMENT_REQUIRED")
     # Traces carry the failure note.

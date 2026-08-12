@@ -42,7 +42,9 @@ def test_cli_decision_compile(tmp_path):
 
 def test_cli_evidence_add(tmp_path):
     evidence = {"id": "E_CLI1", "scope": "PROJECT", "evidence_type": "REAL_PAYMENT",
-                "source": "paid 100", "claim_ids": ["CLM_WTP"]}
+                "source": "paid 100", "claim_ids": ["CLM_WTP"],
+                # v1.1.2 (P0-3): PROJECT evidence must carry project_id.
+                "project_id": "PRJ_CLI"}
     p = tmp_path / "evidence.json"
     p.write_text(json.dumps(evidence))
     r = runner.invoke(app, ["evidence", "add", str(p), "--db", _tmp_db(tmp_path)])

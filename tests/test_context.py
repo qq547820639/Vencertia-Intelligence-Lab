@@ -14,7 +14,9 @@ def test_context_bundle_projection(repo):
     )
     repo.add_evidence(
         Evidence(id="E_1", claim_ids=["CLM_1"], scope=Scope.PROJECT,
-                 evidence_type="REAL_PAYMENT", source="paid", authority_level="PROJECT_REALITY")
+                 evidence_type="REAL_PAYMENT", source="paid", authority_level="PROJECT_REALITY",
+                 # v1.1.2 (P0-3): PROJECT evidence must carry project_id.
+                 project_id="PRJ_1")
     )
     bundle = ContextBuilder(repo).build("PRJ_1")
     assert bundle.project is not None

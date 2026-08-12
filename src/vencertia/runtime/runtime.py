@@ -34,7 +34,6 @@ from vencertia.domain import (
     Direction,
     Evidence,
     EvidenceConflict,
-    EvidenceType,
     Experiment,
     Outcome,
     OutcomeType,
@@ -45,7 +44,6 @@ from vencertia.domain import (
     ResearchPlan,
     ResearchStopReport,
     ResearchTrace,
-    Scope,
     Stage,
     VencertiaBaseModel,
     utcnow,
@@ -82,6 +80,12 @@ from vencertia.runtime.observability import CallRecorder
 from vencertia.runtime.opportunity_cost import OpportunityCostEngine
 from vencertia.runtime.prediction_ledger import PredictionLedger
 from vencertia.runtime.research_planner import ResearchPlanner
+from vencertia.runtime.research_service import (
+    ResearchExecutionService,
+)
+from vencertia.runtime.research_service import (
+    evidence_to_result as _research_evidence_to_result,
+)
 from vencertia.runtime.research_stop import ResearchStopRule
 from vencertia.runtime.uncertainty_engine import UncertaintyEngine
 
@@ -161,6 +165,11 @@ class EngineBundle:
     decision_sensitivity_engine: DecisionSensitivityEngine | None = None
     confidence_calibrator: ConfidenceCalibrator | None = None
     call_recorder: CallRecorder | None = None
+    research_execution: Any | None = None  # ResearchExecutionService (P0-5)
+    # v1.1.2 extracted services (P2-16; additive, set by default_engine_bundle)
+    compilation_service: Any | None = None
+    decision_evaluation_service: Any | None = None
+    outcome_settlement_service: Any | None = None
 
 
 def default_engine_bundle(
@@ -200,7 +209,7 @@ def default_engine_bundle(
         calibration_engine=calibration_engine, repo=repo, settings=cfg
     )
     call_recorder = CallRecorder(repo, enabled=cfg.call_log_enabled, settings=cfg)
-    return EngineBundle(
+    bundle = EngineBundle(
         evidence_policy=policy,
         belief_engine=belief_engine,
         uncertainty_engine=uncertainty_engine,
@@ -221,6 +230,28 @@ def default_engine_bundle(
         confidence_calibrator=confidence_calibrator,
         call_recorder=call_recorder,
     )
+    bundle.research_execution = ResearchExecutionService(
+        repo=repo,
+        engines=bundle,
+        policy=policy,
+        settings=cfg,
+        bus=bus,
+    )
+    # v1.1.2 (P2-16): extracted services (additive; facade delegates).
+    from vencertia.runtime.compilation_service import CompilationService
+    from vencertia.runtime.decision_evaluation_service import DecisionEvaluationService
+    from vencertia.runtime.outcome_settlement_service import OutcomeSettlementService
+
+    bundle.compilation_service = CompilationService(
+        repo=repo, engines=bundle, settings=cfg, bus=bus
+    )
+    bundle.decision_evaluation_service = DecisionEvaluationService(
+        repo=repo, engines=bundle, settings=cfg, bus=bus
+    )
+    bundle.outcome_settlement_service = OutcomeSettlementService(
+        repo=repo, engines=bundle, policy=policy, settings=cfg, bus=bus
+    )
+    return bundle
 
 
 class SolveOrchestrator:
@@ -246,6 +277,25 @@ class SolveOrchestrator:
         self.model = model
         self.search = search
         self.retrieval = retrieval
+        # P0-5: keep the shared ResearchExecutionService in sync with the
+        # providers this orchestrator was wired with.
+        if self.engines.research_execution is not None:
+            self.engines.research_execution.model = self.model
+            self.engines.research_execution.search = self.search
+            self.engines.research_execution.retrieval = self.retrieval
+        elif model is not None or search is not None or retrieval is not None:
+            from vencertia.runtime.research_service import ResearchExecutionService
+
+            self.engines.research_execution = ResearchExecutionService(
+                repo=self.repo,
+                engines=self.engines,
+                policy=self.policy,
+                settings=self.settings,
+                bus=self.bus,
+                model=self.model,
+                search=self.search,
+                retrieval=self.retrieval,
+            )
         if compiler is not None:
             self.compiler = compiler
         elif model is not None:
@@ -276,8 +326,10 @@ class SolveOrchestrator:
         decision = compiled.decision
 
         # Rebuild context after persisting compiled claims/beliefs so the
-        # research pipeline sees real claims to bind against.
-        context = self._build_context(project, request)
+        # research pipeline sees real claims to bind against. P0-1: pass the
+        # CURRENT decision so decision-relevance ranking is not decision-blind
+        # before the decision row is persisted.
+        context = self._build_context(project, request, decision=compiled.decision)
 
         beliefs = self.repo.get_beliefs(project.id)
         traces: list[ResearchTrace] = []
@@ -310,101 +362,158 @@ class SolveOrchestrator:
                     {"round": round_no},
                 )
                 beliefs_before = self.repo.get_beliefs(project.id)
-                trace, candidates = self._run_research_round(
-                    request, project, decision, research_plan, round_no
-                )
+                if self.engines.research_execution is not None:
+                    trace, candidates = self.engines.research_execution.run_solve_round(
+                        request, project, decision, research_plan, round_no
+                    )
+                else:
+                    trace, candidates = self._run_research_round(
+                        request, project, decision, research_plan, round_no
+                    )
                 traces.append(trace)
 
-                kept = candidates
-                if self.engines.dedup_engine is not None:
-                    dedup = self.engines.dedup_engine.group(candidates)
-                    trace.duplicate_dropped = len(dedup.dropped_ids)
-                    kept_ids = set(dedup.kept_ids)
-                    kept = [c for c in candidates if c.id in kept_ids]
-                # Drop candidates whose content was already applied in an
-                # earlier round (same fingerprint) — do not re-apply twice.
-                existing_fingerprints = {
-                    e.content_fingerprint
-                    for e in self.repo.list_evidence()
-                    if e.content_fingerprint
-                }
-                kept = [
-                    c
-                    for c in kept
-                    if not c.content_fingerprint or c.content_fingerprint not in existing_fingerprints
-                ]
+                # P2-17: the per-round deterministic mutation batch is ATOMIC.
+                state: dict = {}
+                # Bind loop variables as default args: the closure runs
+                # synchronously inside in_transaction and must capture THIS
+                # iteration's values (ruff B023).
+                def _round_batch(
+                    _state=state,
+                    _trace=trace,
+                    _candidates=candidates,
+                    _round_no=round_no,
+                    _beliefs_before=beliefs_before,
+                    _beliefs=beliefs,
+                ) -> None:
+                    kept = _candidates
+                    if self.engines.dedup_engine is not None:
+                        dedup = self.engines.dedup_engine.group(_candidates)
+                        _trace.duplicate_dropped = len(dedup.dropped_ids)
+                        kept_ids = set(dedup.kept_ids)
+                        kept = [c for c in _candidates if c.id in kept_ids]
+                    # Drop candidates whose content was already applied in an
+                    # earlier round (same fingerprint) — do not re-apply twice.
+                    existing_fingerprints = {
+                        e.content_fingerprint
+                        for e in self.repo.list_evidence()
+                        if e.content_fingerprint
+                    }
+                    kept = [
+                        c
+                        for c in kept
+                        if not c.content_fingerprint or c.content_fingerprint not in existing_fingerprints
+                    ]
 
-                applied: list[Evidence] = []
-                if self.engines.claim_binding_engine is not None:
-                    binding_output = self.engines.claim_binding_engine.process(
-                        ClaimBindingInput(
-                            research_results=[self._evidence_to_result(e) for e in kept],
-                            context=context,
-                            existing_claims=self.repo.list_claims(project.id),
-                            auto_extract=True,
-                            binding_confidence_threshold=self.settings.binding_confidence_threshold,
-                        )
-                    )
-                    applied = [Evidence.model_validate(e) for e in binding_output.applied_evidence]
-                    rejected_evidence.extend(binding_output.rejected_evidence)
-                    all_applied.extend(applied)
-                    trace.new_evidence_ids = [e.id for e in applied]
-
-                # ---- conflict + belief update ----------------------------------
-                conflicts: list[EvidenceConflict] = []
-                if applied and self.engines.conflict_engine is not None:
-                    evidence_by_claim: dict[str, list[Evidence]] = {}
-                    for evidence in all_applied:
-                        for cid in evidence.claim_ids:
-                            evidence_by_claim.setdefault(cid, []).append(evidence)
-                    conflicts = self.engines.conflict_engine.detect(evidence_by_claim)
-                    for conflict in conflicts:
-                        self.repo.save_evidence_conflict(conflict)
-
-                beliefs_for_update = self.repo.get_beliefs(project.id)
-                if applied:
-                    updated_output = self.engines.belief_engine.update(
-                        BeliefUpdateInput(
-                            beliefs=beliefs_for_update,
-                            evidence=applied,
-                            policy=self.policy,
-                            max_pseudo_observations=self.settings.max_pseudo_observations,
-                            conflict_weight_threshold=self.settings.conflict_weight_threshold,
-                        )
-                    )
-                    # Apply conflict uncertainty raises.
-                    raise_by_claim: dict[str, float] = {}
-                    for conflict in conflicts:
-                        raise_by_claim[conflict.claim_id] = round(
-                            min(1.0, 0.15 * conflict.severity), 6
-                        )
-                    for belief in updated_output.beliefs:
-                        if belief.claim_id in raise_by_claim:
-                            new_uncertainty = round(
-                                min(1.0, belief.uncertainty + raise_by_claim[belief.claim_id]), 6
+                    applied_local: list[Evidence] = []
+                    round_bindings_local: list = []
+                    if self.engines.claim_binding_engine is not None:
+                        binding_output = self.engines.claim_binding_engine.process(
+                            ClaimBindingInput(
+                                research_results=[self._evidence_to_result(e) for e in kept],
+                                context=context,
+                                existing_claims=self.repo.list_claims(project.id),
+                                auto_extract=True,
+                                binding_confidence_threshold=self.settings.binding_confidence_threshold,
                             )
-                            object.__setattr__(belief, "uncertainty", new_uncertainty)
-                            object.__setattr__(
-                                belief, "confidence", max(0.0, min(1.0, 1.0 - new_uncertainty))
-                            )
-                    self._save_beliefs(updated_output.beliefs, batch_id=trace.id)
-                    self._save_belief_update_records(updated_output, conflicts)
-                    beliefs = self.repo.get_beliefs(project.id)
+                        )
+                        applied_local = [
+                            Evidence.model_validate(e) for e in binding_output.applied_evidence
+                        ]
+                        _state["rejected"] = list(binding_output.rejected_evidence)
+                        _trace.new_evidence_ids = [e.id for e in applied_local]
+                        round_bindings_local = list(binding_output.bindings) + list(
+                            binding_output.unbound
+                        )
 
-                # ---- stop check ------------------------------------------------
-                target_claims = [b.claim_id for b in beliefs]
-                if self.engines.research_stop_rule is not None:
-                    stop_report = self.engines.research_stop_rule.evaluate(
-                        traces,
-                        beliefs_before,
-                        self.repo.get_beliefs(project.id) or beliefs,
-                        target_claims,
-                        decision=decision,
-                        round_no=round_no,
-                    )
-                    trace.stop_status = stop_report.status
-                    trace.stop_reason = stop_report.reason
-                self.repo.save_research_trace(trace)
+                    # ---- conflict + belief update ----------------------------------
+                    conflicts_local: list[EvidenceConflict] = []
+                    cumulative = list(all_applied) + applied_local
+                    if applied_local and self.engines.conflict_engine is not None:
+                        evidence_by_claim: dict[str, list[Evidence]] = {}
+                        for evidence in cumulative:
+                            for cid in evidence.claim_ids:
+                                evidence_by_claim.setdefault(cid, []).append(evidence)
+                        conflicts_local = self.engines.conflict_engine.detect(evidence_by_claim)
+                        for conflict in conflicts_local:
+                            self.repo.save_evidence_conflict(conflict)
+
+                    beliefs_for_update = self.repo.get_beliefs(project.id)
+                    if applied_local:
+                        updated_output = self.engines.belief_engine.update(
+                            BeliefUpdateInput(
+                                beliefs=beliefs_for_update,
+                                evidence=applied_local,
+                                policy=self.policy,
+                                max_pseudo_observations=self.settings.max_pseudo_observations,
+                                conflict_weight_threshold=self.settings.conflict_weight_threshold,
+                            )
+                        )
+                        # Apply conflict uncertainty raises.
+                        raise_by_claim: dict[str, float] = {}
+                        for conflict in conflicts_local:
+                            raise_by_claim[conflict.claim_id] = round(
+                                min(1.0, 0.15 * conflict.severity), 6
+                            )
+                        for belief in updated_output.beliefs:
+                            if belief.claim_id in raise_by_claim:
+                                new_uncertainty = round(
+                                    min(1.0, belief.uncertainty + raise_by_claim[belief.claim_id]), 6
+                                )
+                                object.__setattr__(belief, "uncertainty", new_uncertainty)
+                                object.__setattr__(
+                                    belief, "confidence", max(0.0, min(1.0, 1.0 - new_uncertainty))
+                                )
+                        self._save_beliefs(updated_output.beliefs, batch_id=_trace.id)
+                        self._save_belief_update_records(updated_output, conflicts_local)
+                        _state["beliefs"] = self.repo.get_beliefs(project.id)
+
+                    # ---- stop check ------------------------------------------------
+                    target_claims_local = [
+                        b.claim_id for b in (_state.get("beliefs") or self.repo.get_beliefs(project.id))
+                    ]
+                    stop_local = None
+                    if self.engines.research_stop_rule is not None:
+                        from vencertia.runtime.research_stop import RoundSummary
+
+                        latency_ms = 0.0
+                        if _trace.completed_at is not None and _trace.started_at is not None:
+                            latency_ms = (
+                                _trace.completed_at - _trace.started_at
+                            ).total_seconds() * 1000.0
+                        round_summary = RoundSummary(
+                            applied_evidence=applied_local,
+                            bindings=list(round_bindings_local),
+                            target_claim_ids=target_claims_local,
+                            beliefs_before=_beliefs_before,
+                            beliefs_after=self.repo.get_beliefs(project.id) or _beliefs,
+                            queries_executed=_trace.queries_executed,
+                            latency_ms=latency_ms,
+                        )
+                        stop_local = self.engines.research_stop_rule.evaluate(
+                            traces,
+                            _beliefs_before,
+                            self.repo.get_beliefs(project.id) or _beliefs,
+                            target_claims_local,
+                            decision=decision,
+                            round_no=_round_no,
+                            round_summary=round_summary,
+                        )
+                        _trace.stop_status = stop_local.status
+                        _trace.stop_reason = stop_local.reason
+                    _state["stop_report"] = stop_local
+                    _state["applied"] = applied_local
+                    _state["conflicts"] = conflicts_local
+                    _state["round_bindings"] = round_bindings_local
+                    self.repo.save_research_trace(_trace)
+
+                self.repo.in_transaction(_round_batch)
+                applied = state.get("applied", [])
+                stop_report = state.get("stop_report")
+                if state.get("rejected"):
+                    rejected_evidence.extend(state["rejected"])
+                all_applied.extend(applied)
+                if state.get("beliefs"):
+                    beliefs = state["beliefs"]
                 self._emit(
                     EventType.RESEARCH_COMPLETED,
                     "research_trace",
@@ -425,68 +534,83 @@ class SolveOrchestrator:
         criticals = self.engines.uncertainty_engine.rank(decision, beliefs)
         experiments = compiled.experiments or request.experiment_candidates
 
-        pre_convergence = self.engines.convergence_engine.check(
-            decision,
-            beliefs,
-            criticals,
-            experiments=experiments,
-            research_stop_status=stop_report.status if stop_report else None,
-        )
-        decision_result = self.engines.decision_engine.evaluate(
-            DecisionEngineInput(
-                decision=decision,
-                beliefs=beliefs,
-                risk_aversion=request.risk_aversion or self.settings.risk_aversion,
-                minimum_margin=request.minimum_margin or self.settings.minimum_margin,
-                max_critical_uncertainty=(
-                    request.max_critical_uncertainty or self.settings.max_critical_uncertainty
-                ),
-                convergence_status=pre_convergence.status,
-                convergence_reason=pre_convergence.reason,
+        # P2-16: convergence + decision engine + trace + sensitivity delegated
+        # to DecisionEvaluationService (behavior identical to v1.1.1 inline).
+        if self.engines.decision_evaluation_service is not None:
+            decision_result, convergence, decision_trace, sensitivity = (
+                self.engines.decision_evaluation_service.evaluate(
+                    decision,
+                    beliefs,
+                    risk_aversion=request.risk_aversion,
+                    minimum_margin=request.minimum_margin,
+                    max_critical_uncertainty=request.max_critical_uncertainty,
+                    experiments=experiments,
+                    research_stop_status=stop_report.status if stop_report else None,
+                )
             )
-        )
-
-        if decision_result.status == "ABSTAIN":
-            convergence = pre_convergence
         else:
-            convergence = self.engines.convergence_engine.check(
+            pre_convergence = self.engines.convergence_engine.check(
                 decision,
                 beliefs,
                 criticals,
                 experiments=experiments,
-                decision_status=decision_result.status,
                 research_stop_status=stop_report.status if stop_report else None,
             )
+            decision_result = self.engines.decision_engine.evaluate(
+                DecisionEngineInput(
+                    decision=decision,
+                    beliefs=beliefs,
+                    risk_aversion=request.risk_aversion or self.settings.risk_aversion,
+                    minimum_margin=request.minimum_margin or self.settings.minimum_margin,
+                    max_critical_uncertainty=(
+                        request.max_critical_uncertainty or self.settings.max_critical_uncertainty
+                    ),
+                    convergence_status=pre_convergence.status,
+                    convergence_reason=pre_convergence.reason,
+                )
+            )
 
-        # ---- decision trace + sensitivity -------------------------------------
-        decision_trace = self.engines.decision_engine.build_trace(
-            DecisionEngineInput(
-                decision=decision,
-                beliefs=beliefs,
-                risk_aversion=request.risk_aversion or self.settings.risk_aversion,
-                minimum_margin=request.minimum_margin or self.settings.minimum_margin,
-                max_critical_uncertainty=(
-                    request.max_critical_uncertainty or self.settings.max_critical_uncertainty
+            if decision_result.status == "ABSTAIN":
+                convergence = pre_convergence
+            else:
+                convergence = self.engines.convergence_engine.check(
+                    decision,
+                    beliefs,
+                    criticals,
+                    experiments=experiments,
+                    decision_status=decision_result.status,
+                    research_stop_status=stop_report.status if stop_report else None,
+                )
+
+            # ---- decision trace + sensitivity -------------------------------------
+            decision_trace = self.engines.decision_engine.build_trace(
+                DecisionEngineInput(
+                    decision=decision,
+                    beliefs=beliefs,
+                    risk_aversion=request.risk_aversion or self.settings.risk_aversion,
+                    minimum_margin=request.minimum_margin or self.settings.minimum_margin,
+                    max_critical_uncertainty=(
+                        request.max_critical_uncertainty or self.settings.max_critical_uncertainty
+                    ),
+                    convergence_status=pre_convergence.status,
+                    convergence_reason=pre_convergence.reason,
                 ),
-                convergence_status=pre_convergence.status,
-                convergence_reason=pre_convergence.reason,
-            ),
-            decision_result,
-        )
-        self.repo.save_decision_trace(decision_trace)
+                decision_result,
+            )
+            self.repo.save_decision_trace(decision_trace)
 
-        sensitivity: DecisionSensitivity | None = None
-        if self.engines.decision_sensitivity_engine is not None:
-            sensitivity = self.engines.decision_sensitivity_engine.compute(
-                decision, beliefs, decision_result
-            )
-            self.repo.save_decision_sensitivity(sensitivity)
-            self._emit(
-                EventType.DECISION_SENSITIVITY_COMPUTED,
-                "decision",
-                decision.id,
-                {"robustness": sensitivity.robustness, "flips": len(sensitivity.flips)},
-            )
+            sensitivity: DecisionSensitivity | None = None
+            if self.engines.decision_sensitivity_engine is not None:
+                sensitivity = self.engines.decision_sensitivity_engine.compute(
+                    decision, beliefs, decision_result
+                )
+                self.repo.save_decision_sensitivity(sensitivity)
+                self._emit(
+                    EventType.DECISION_SENSITIVITY_COMPUTED,
+                    "decision",
+                    decision.id,
+                    {"robustness": sensitivity.robustness, "flips": len(sensitivity.flips)},
+                )
 
         next_experiment: RankedExperiment | None = None
         if decision_result.status == "ABSTAIN":
@@ -499,14 +623,36 @@ class SolveOrchestrator:
                     max_results=self.settings.experiment_max_results,
                 )
             )
+            # P0-6: rejected experiments are surfaced in the decision trace and
+            # rationale (they were validated inside propose()).
+            if proposal.rejected:
+                rejected_note = (
+                    "Rejected experiments: "
+                    + "; ".join(
+                        f"{r.get('name') or r.get('experiment_id')} "
+                        f"({', '.join(r.get('reasons') or [])})"
+                        for r in proposal.rejected
+                    )
+                )
+                decision_trace.notes.append(rejected_note)
             if proposal.ranked:
                 next_experiment = proposal.ranked[0]
             else:
                 # Invariant (ADR-007): ABSTAIN must always carry a next
-                # experiment, regardless of what the provider compiled.
+                # experiment. The default must itself pass the SAME validator
+                # (P0-6); if it somehow does not (defensive), we still emit the
+                # synthesized default so ABSTAIN never loses next_experiment,
+                # but the validator failure is recorded in the trace.
                 default = self._synthesize_default_experiment(
                     decision, decision_result.critical_belief_id
                 )
+                from vencertia.runtime.experiment_optimizer import validate_experiment
+
+                v = validate_experiment(default)
+                if not v.valid:
+                    decision_trace.notes.append(
+                        f"default experiment failed validation: {v.reasons}"
+                    )
                 next_experiment = RankedExperiment(experiment=default, priority_score=0.0)
             self.repo.save_experiment(next_experiment.experiment)
             self._emit(
@@ -526,6 +672,8 @@ class SolveOrchestrator:
                         "next_step": next_experiment.experiment.id,
                     }
                 )
+            # P0-6: persist rejected/validation notes added to the trace above.
+            self.repo.save_decision_trace(decision_trace)
 
         predictions = self._register_predictions(decision, beliefs, request)
 
@@ -545,6 +693,30 @@ class SolveOrchestrator:
             decision.id,
             {"status": decision_result.status},
         )
+
+        # P1-9: OpportunityCostEngine — AVAILABLE ENGINE / NOT ACTIVE BY
+        # DEFAULT. Only when Settings.opportunity_cost_enabled is true and the
+        # founder portfolio has an opportunity for this project do we write the
+        # portfolio opportunity cost onto the decision options. Default False =
+        # zero behavior change.
+        if (
+            self.settings.opportunity_cost_enabled
+            and self.engines.opportunity_cost is not None
+        ):
+            portfolio = self.repo.get_portfolio(project.user_id)
+            if portfolio is not None:
+                opp = next(
+                    (o for o in portfolio.opportunities if o.project_id == project.id),
+                    None,
+                )
+                if opp is not None:
+                    for option in decision.options:
+                        option.opportunity_cost = round(opp.opportunity_cost, 4)
+                    self.repo.save_decision(decision, expected_version=decision.version)
+                    decision_trace.notes.append(
+                        "opportunity_cost updated from portfolio (opt-in)"
+                    )
+                    self.repo.save_decision_trace(decision_trace)
 
         # Calibrated confidence (v1.1; UNCALIBRATED when insufficient samples).
         calibrated: CalibratedConfidence | None = None
@@ -615,148 +787,23 @@ class SolveOrchestrator:
         outcome_type: OutcomeType | str = OutcomeType.PARTIAL,
         direction: str | None = None,
     ) -> OutcomeRecordedResult:
-        action = self.repo.get_action(action_id)
-        if action is None:
-            raise EntityNotFoundError("action", action_id)
+        """P2-16: delegated to OutcomeSettlementService (behavior identical)."""
+        if self.engines.outcome_settlement_service is None:
+            from vencertia.runtime.outcome_settlement_service import OutcomeSettlementService
 
-        decision = None
-        if action.decision_id is not None:
-            decision = self.repo.get_decision(action.decision_id)
-        claim_ids: list[str] = []
-        all_beliefs: list[Belief] = []
-        if decision is not None:
-            all_beliefs = self.repo.get_beliefs(decision.project_id)
-            claim_ids = [b.claim_id for b in all_beliefs if b.id in decision.relevant_belief_ids]
-
-        # Narrow to beliefs explicitly referenced in quantitative (e.g. {"wtp": 0.0}).
-        belief_ids = {b.id for b in all_beliefs}
-        hinted = [k for k in (quantitative or {}) if k in belief_ids]
-        if hinted:
-            claim_ids = [b.claim_id for b in all_beliefs if b.id in hinted]
-
-        evidence_type = (
-            EvidenceType.EXPERIMENT_RESULT.value
-            if action.experiment_id
-            else EvidenceType.OBSERVED_BEHAVIOR.value
-        )
-        authority = (
-            "PROJECT_EXPERIMENT_RESULT" if action.experiment_id else "PROJECT_DIRECT_BEHAVIOR"
-        )
-        resolved_direction = direction or self._direction_from_outcome_type(outcome_type)
-        strength = self._strength_from_outcome_type(outcome_type)
-
-        evidence = Evidence(
-            id=f"E_{uuid4().hex}",
-            claim_ids=claim_ids,
-            scope=Scope.PROJECT,
-            evidence_type=evidence_type,
-            provenance={"tool": "OutcomeService", "actor": "system", "raw_extract": result},
-            source=result,
-            directness=1.0,
-            reliability=1.0,
-            relevance=1.0,
-            strength=strength,
-            supports_or_contradicts=resolved_direction,
-            observed_at=utcnow(),
-            authority_level=authority,
-            verification="VERIFIED",
-        )
-        graded = self.policy.apply_authority(evidence, self.settings.policy_version)
-
-        outcome = Outcome(
-            id=f"OUT_{uuid4().hex}",
-            action_id=action_id,
-            observed_at=utcnow(),
-            result=result,
-            quantitative=quantitative or {},
-            outcome_type=outcome_type.value if hasattr(outcome_type, "value") else str(outcome_type),
-            outcome_evidence_id=graded.id,
-        )
-        self.repo.save_outcome(outcome)
-        self._emit(EventType.OUTCOME_RECORDED, "outcome", outcome.id, {"action_id": action_id})
-        self.repo.add_evidence(graded)
-        self._emit(EventType.EVIDENCE_ADDED, "evidence", graded.id, {"claim_ids": claim_ids})
-
-        # Belief update on the decision's project.
-        beliefs = self.repo.get_beliefs(decision.project_id if decision else action.project_id)
-        updated_output = self.engines.belief_engine.update(
-            BeliefUpdateInput(
-                beliefs=beliefs,
-                evidence=[graded],
+            self.engines.outcome_settlement_service = OutcomeSettlementService(
+                repo=self.repo,
+                engines=self.engines,
                 policy=self.policy,
-                max_pseudo_observations=self.settings.max_pseudo_observations,
-                conflict_weight_threshold=self.settings.conflict_weight_threshold,
+                settings=self.settings,
+                bus=self.bus,
             )
-        )
-        self._save_beliefs(updated_output.beliefs, batch_id=outcome.id)
-        self._save_belief_update_records(updated_output, conflicts=[])
-        for belief in updated_output.beliefs:
-            self._emit(
-                EventType.BELIEF_UPDATED,
-                "belief",
-                belief.id,
-                {"probability": belief.probability, "uncertainty": belief.uncertainty},
-            )
-
-        # Resolve due predictions.
-        resolved_predictions: list[PredictionEntry] = []
-        if outcome.outcome_type in ("SUCCESS", "FAILURE"):
-            open_predictions = self.repo.get_open_predictions(
-                decision.project_id if decision else action.project_id
-            )
-            for prediction in open_predictions:
-                if prediction.claim_id in claim_ids or not claim_ids:
-                    try:
-                        settled = self.engines.prediction_ledger.resolve(
-                            prediction.id,
-                            outcome.outcome_type == "SUCCESS",
-                            resolution_source=outcome.id,
-                        )
-                    except ValueError:
-                        continue
-                    resolved_predictions.append(settled)
-                    self._emit(
-                        EventType.PREDICTION_RESOLVED,
-                        "prediction",
-                        settled.id,
-                        {"resolution": settled.resolution, "outcome": settled.outcome},
-                    )
-
-        # Calibration update.
-        calibration_delta = None
-        try:
-            profiles = self.engines.calibration_engine.update_all_scopes(
-                self.repo.list_predictions(decision.project_id if decision else None)
-            )
-            if profiles:
-                all_profile = next((p for p in profiles if p.scope == "ALL"), profiles[0])
-                calibration_delta = all_profile.model_dump(mode="json")
-        except Exception:  # pragma: no cover - calibration must not break outcome recording
-            calibration_delta = None
-
-        # Decision re-evaluate + convergence.
-        decision_update: DecisionResult | None = None
-        convergence: ConvergenceReport | None = None
-        if decision is not None:
-            decision_update, convergence = self.evaluate_decision(decision.id)
-            action.status = "COMPLETED"
-            action.completed_at = utcnow()
-            action.version += 1
-            self.repo.save_action(action, expected_version=action.version - 1)
-
-        return OutcomeRecordedResult(
-            outcome=outcome,
-            outcome_evidence=graded,
-            belief_deltas=updated_output.beliefs,
-            decision_update=decision_update,
-            convergence=convergence,
-            calibration_delta=calibration_delta,
-            predictions_resolved=resolved_predictions,
-            rationale=[
-                f"Recorded outcome {outcome.outcome_type} for action {action_id}.",
-                f"Generated evidence {graded.id} with authority {graded.authority_level}.",
-                f"Beliefs updated: {len(updated_output.beliefs)}; predictions resolved: {len(resolved_predictions)}.",
-            ],
+        return self.engines.outcome_settlement_service.record_outcome(
+            action_id,
+            result,
+            quantitative=quantitative,
+            outcome_type=outcome_type,
+            direction=direction,
         )
 
     def evaluate_decision(self, decision_id: str) -> tuple[DecisionResult, ConvergenceReport]:
@@ -809,10 +856,26 @@ class SolveOrchestrator:
 
     # -- internals ---------------------------------------------------------------
 
-    def _build_context(self, project: Project, request: SolveRequest) -> ContextBundle:
+    def _build_context(
+        self,
+        project: Project,
+        request: SolveRequest,
+        decision: Decision | None = None,
+    ) -> ContextBundle:
+        """Build the context projection for a solve request.
+
+        P0-1: ``decision`` is optional. pre-compile callers pass None (a
+        decision does not exist yet); post-compile callers MUST pass
+        ``compiled.decision`` so decision-relevance ranking is decision-aware.
+        P2-16: delegated to CompilationService.
+        """
+        if self.engines.compilation_service is not None:
+            return self.engines.compilation_service.build_context(
+                project, request, decision=decision
+            )
         if self.engines.context_builder_v11 is not None:
             return self.engines.context_builder_v11.build_for_decision(
-                project.id, user_id=request.user_id, limit=15
+                project.id, user_id=request.user_id, limit=15, decision=decision
             )
         return self.engines.context_builder.build(project.id, request.user_id, limit=15)
 
@@ -833,6 +896,13 @@ class SolveOrchestrator:
         return project
 
     def _compile(self, request: SolveRequest, project: Project, context: ContextBundle | None) -> CompiledDecision:
+        """P2-16: delegated to CompilationService (compiler reference shared)."""
+        if self.engines.compilation_service is not None:
+            self.engines.compilation_service.compiler = self.compiler
+            self.engines.compilation_service.model = self.model
+            compiled = self.engines.compilation_service.compile(request, project, context)
+            self.compiler = self.engines.compilation_service.compiler
+            return compiled
         compiler = self.compiler
         if compiler is None:
             from vencertia.capabilities import DecisionCompiler as DC
@@ -854,6 +924,10 @@ class SolveOrchestrator:
         )
 
     def _persist_compiled(self, compiled, request: SolveRequest) -> None:
+        """P2-16: delegated to CompilationService."""
+        if self.engines.compilation_service is not None:
+            self.engines.compilation_service.persist(compiled, request)
+            return
         # Objective
         if self.repo.get_objective(compiled.objective.id) is None:
             self.repo.save_objective(compiled.objective)
@@ -915,13 +989,16 @@ class SolveOrchestrator:
                         f"search provider failed ({provider_name}): {exc.error_type}"
                     )
                     continue
+                for ev in evidence_list:
+                    if ev.project_id is None:
+                        ev.project_id = project.id  # P0-3: "为该项目收集的"
                 candidates.extend(evidence_list)
                 results_retrieved += len(evidence_list)
 
         if self.retrieval is not None:
             docs = self.retrieval.retrieve(request.problem_text, k=3)
             for doc in docs:
-                candidates.append(self._doc_to_evidence(doc))
+                candidates.append(self._doc_to_evidence(doc, project.id))
                 results_retrieved += 1
 
         provider = getattr(self.search, "name", "search") if self.search else "retrieval"
@@ -943,71 +1020,18 @@ class SolveOrchestrator:
         return trace, candidates
 
     @staticmethod
-    def _doc_to_evidence(doc) -> Evidence:
-        content = str(doc.content or "")
-        lowered = content.lower()
-        direction = Direction.SUPPORTS.value
-        if "0 of" in lowered or "0/4" in lowered or "no " in lowered and "paid" in lowered:
-            direction = Direction.CONTRADICTS.value
-        source_text = content
-        from vencertia.providers.search import canonical_source, content_fingerprint, source_family
+    def _doc_to_evidence(doc, project_id: str | None = None) -> Evidence:
+        """Legacy shim — the canonical implementation lives in
+        :mod:`vencertia.runtime.research_service` (P0-5 single pipeline)."""
+        from vencertia.runtime.research_service import ResearchExecutionService
 
-        return Evidence(
-            id=f"E_{uuid4().hex}",
-            claim_ids=[],
-            scope=Scope.MARKET,
-            evidence_type="REVIEWED_EXTERNAL_RESEARCH",
-            provenance={"tool": "RetrievalProvider", "source_id": doc.id, "raw_extract": content},
-            source=source_text,
-            directness=0.5,
-            reliability=0.6,
-            relevance=0.6,
-            strength=0.5,
-            supports_or_contradicts=direction,
-            independence_group=f"retrieval:{doc.id}",
-            observed_at=utcnow(),
-            authority_level="REVIEWED_EXTERNAL_RESEARCH",
-            verification="ESTIMATED",
-            content_fingerprint=content_fingerprint(source_text),
-            canonical_source_id=canonical_source("", str(doc.metadata.get("source", "retrieval"))),
-            source_family=source_family("", str(doc.metadata.get("source", "retrieval"))),
-        )
+        return ResearchExecutionService._doc_to_evidence(doc, project_id)
 
     @staticmethod
     def _evidence_to_result(evidence: Evidence) -> dict:
-        return {
-            "evidence_id": evidence.id,
-            "id": evidence.id,
-            "scope": evidence.scope.value if hasattr(evidence.scope, "value") else evidence.scope,
-            "evidence_type": (
-                evidence.evidence_type.value
-                if hasattr(evidence.evidence_type, "value")
-                else evidence.evidence_type
-            ),
-            "source": evidence.source,
-            "url": (evidence.provenance.source_url or "") if evidence.provenance else "",
-            "supports_or_contradicts": (
-                evidence.supports_or_contradicts.value
-                if hasattr(evidence.supports_or_contradicts, "value")
-                else evidence.supports_or_contradicts
-            ),
-            "directness": evidence.directness,
-            "reliability": evidence.reliability,
-            "relevance": evidence.relevance,
-            "strength": evidence.strength,
-            "independence_group": evidence.independence_group,
-            "authority_level": (
-                evidence.authority_level.value
-                if hasattr(evidence.authority_level, "value")
-                else evidence.authority_level
-            ),
-            "verification": (
-                evidence.verification.value if hasattr(evidence.verification, "value") else evidence.verification
-            ),
-            "content_fingerprint": evidence.content_fingerprint,
-            "canonical_source_id": evidence.canonical_source_id,
-            "source_family": evidence.source_family,
-        }
+        """Legacy shim — the canonical implementation lives in
+        :mod:`vencertia.runtime.research_service` (P0-5 single pipeline)."""
+        return _research_evidence_to_result(evidence)
 
     def _ingest_evidence(self, candidates: list[Evidence]) -> list[Evidence]:
         """Gate + persist candidate evidence (candidate → validation → persist).
@@ -1087,31 +1111,11 @@ class SolveOrchestrator:
     def _synthesize_default_experiment(
         decision: Decision, critical_belief_id: str | None
     ) -> Experiment:
-        """Create a default decision-relevant experiment when the provider
-        compiled no candidates (ADR-007: ABSTAIN must carry next_experiment)."""
-        target = (
-            [critical_belief_id]
-            if critical_belief_id
-            else list(decision.relevant_belief_ids)
-        )
-        target_label = critical_belief_id or ", ".join(decision.relevant_belief_ids) or "key assumption"
-        return Experiment(
-            id="EXP_" + uuid4().hex,
-            decision_id=decision.id,
-            name=f"Design and run a decision-relevant experiment for {target_label}",
-            target_belief_ids=target,
-            hypothesis=f"Resolve uncertainty about {target_label} enough to change the decision",
-            action=f"Design and run the cheapest decisive experiment targeting {target_label}",
-            predicted_observation="Outcome that materially updates the belief",
-            success_criteria="Posterior uncertainty drops below the decision threshold",
-            failure_criteria="No decision-relevant signal obtained",
-            ambiguity_criteria="Ambiguous or mixed signal",
-            expected_information_gain=0.6,
-            decision_impact=0.9,
-            cost=1.0,
-            time=1.0,
-            reversibility=1.0,
-        )
+        """Legacy shim — the canonical implementation lives in
+        :mod:`vencertia.runtime.experiment_optimizer` (P0-6 single validator)."""
+        from vencertia.runtime.experiment_optimizer import synthesize_default_experiment
+
+        return synthesize_default_experiment(decision, critical_belief_id)
 
     @staticmethod
     def _direction_from_outcome_type(outcome_type: OutcomeType | str) -> str:

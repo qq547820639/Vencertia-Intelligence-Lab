@@ -101,12 +101,16 @@ class L0Runner:
                 {
                     "predicted_option": r.predicted_option,
                     "gold_option": r.gold_option,
+                    "predicted_status": r.status,
+                    "gold_status": r.gold_status,
                     "decided": r.decided,
                     "correct": r.correct,
                     "predicted_experiment": r.predicted_experiment,
                     "gold_experiment": r.gold_experiment,
                     "predicted_critical": r.predicted_critical,
                     "gold_critical": r.gold_critical,
+                    # L0 utilities are INTERNAL engine utilities (口径: engine
+                    # adjusted utility), always present for decision cases.
                     "chosen_utility": r.chosen_utility,
                     "best_utility": r.best_utility,
                 }
@@ -572,6 +576,7 @@ class L0Runner:
             decided=decided,
             correct=correct,
             status=result.status,
+            gold_status=case.gold_status,
             confidence=result.confidence,
             margin=result.decision_margin,
             predicted_experiment=next_experiment_id,

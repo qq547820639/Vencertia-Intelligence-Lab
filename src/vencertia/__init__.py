@@ -1,4 +1,4 @@
-"""Vencertia Adaptive Decision System v1.0.
+"""Vencertia Adaptive Decision System v1.1.2.
 
 A calibration-first decision runtime for high-uncertainty venture decisions.
 
@@ -10,4 +10,9 @@ Three layers:
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+# v1.1.2 (P1-12): single source of truth for the runtime version. pyproject.toml
+# and importlib.metadata must agree (enforced by tests/test_integrity_v112.py).
+__version__ = "1.1.2"
+# API contract version (minor-level). The FastAPI app and /health expose it
+# dynamically; legacy "version"/"api_version" health keys are derived aliases.
+__api_contract_version__ = "1.1"

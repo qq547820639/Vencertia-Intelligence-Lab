@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from vencertia.capabilities.base import CapabilityResult
 from vencertia.domain import Direction, Evidence, EvidenceType, Scope
-from vencertia.runtime.context import ContextBundle
+from vencertia.domain.context import ContextBundle
 
 
 class MarketCapability:

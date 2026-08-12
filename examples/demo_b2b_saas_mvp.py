@@ -1,4 +1,4 @@
-"""Vencertia v1.0 — B2B SaaS MVP 6-week decision demo (full closed loop).
+"""Vencertia v1.1.2 — B2B SaaS MVP 6-week decision demo (full closed loop).
 
 Scenario:
 - 10 ICP interviews: 8 report severe pain, 0 paid anything yet
@@ -86,6 +86,8 @@ def _add_interview_evidence(repo) -> None:
             supports_or_contradicts=Direction.SUPPORTS,
             authority_level="REVIEWED_EXTERNAL_RESEARCH",
             verification=Verification.VERIFIED,
+            # v1.1.2 (P0-3): CUSTOMER evidence must carry project_id.
+            project_id=PROJECT_ID,
         )
     )
     repo.add_evidence(
@@ -100,6 +102,8 @@ def _add_interview_evidence(repo) -> None:
             supports_or_contradicts=Direction.CONTRADICTS,
             authority_level="REVIEWED_EXTERNAL_RESEARCH",
             verification=Verification.VERIFIED,
+            # v1.1.2 (P0-3): CUSTOMER evidence must carry project_id.
+            project_id=PROJECT_ID,
         )
     )
 
@@ -152,7 +156,7 @@ def run_demo(console=None) -> dict[str, Any]:
 
         console = Console()
 
-    console.rule("[bold cyan]Vencertia v1.0 — B2B SaaS MVP 6-Week Decision (closed loop)[/bold cyan]")
+    console.rule("[bold cyan]Vencertia v1.1.2 — B2B SaaS MVP 6-Week Decision (closed loop)[/bold cyan]")
     console.print(
         "Scenario: 10 ICP interviews (8 pain, 0 paid) | runway 7 months | "
         "4 weeks already spent | decision: commit 6 weeks to MVP or stop?"

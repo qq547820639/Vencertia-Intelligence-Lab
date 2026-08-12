@@ -22,6 +22,13 @@ def _exp(eid, targets, eig, impact, cost=1.0, time=1.0, rev=1.0) -> Experiment:
         id=eid, name=eid, target_belief_ids=targets,
         expected_information_gain=eig, decision_impact=impact,
         cost=cost, time=time, reversibility=rev,
+        # v1.1.2 (P0-6): candidates must satisfy validate_experiment (criteria
+        # are mandatory; vague actions are rejected) — the fixture now emits
+        # valid experiments so the 6 existing cases keep their semantics.
+        action="Run a concrete pricing test with 20 ICPs and record the outcome",
+        success_criteria="Clear majority willingness signal",
+        failure_criteria="No clear signal observed",
+        ambiguity_criteria="Mixed or inconclusive responses",
     )
 
 

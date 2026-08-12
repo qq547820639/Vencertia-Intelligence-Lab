@@ -75,26 +75,66 @@ def classify_provider_error(exc: Exception) -> ProviderError:
 
 
 # ---------------------------------------------------------------------------
-# Resilience wrapper (ADR-012)
+# Resilience wrapper (ADR-012) + recording (P1-7)
 # ---------------------------------------------------------------------------
 
 
 class _ResilientModelProvider:
-    """Wraps a ModelProvider with retry + structured error mapping."""
+    """Wraps a ModelProvider with retry + structured error mapping.
+
+    v1.1.2 (P1-7): when a ``recorder`` is provided every call is recorded via
+    CallRecorder (kind="model"); the actual retry count is captured.
+    """
 
     name = "resilient"
 
-    def __init__(self, inner: ModelProvider, settings: Settings) -> None:
+    def __init__(self, inner: ModelProvider, settings: Settings, recorder=None) -> None:
         self._inner = inner
         self.settings = settings
         self.name = getattr(inner, "name", "provider")
+        self.recorder = recorder
+        self._model_name = getattr(inner, "model", "") or ""
 
-    def generate_structured(self, task: str, schema: dict, context: dict) -> dict:
+    def _generate_structured_with_retries(
+        self, task: str, schema: dict, context: dict
+    ) -> tuple[dict, int]:
         last_error: Exception | None = None
         attempts = self.settings.provider_max_retries + 1
         for attempt in range(attempts):
             try:
-                return self._inner.generate_structured(task, schema, context)
+                return self._inner.generate_structured(task, schema, context), attempt + 1
+            except Exception as exc:  # noqa: BLE001 - provider boundary
+                last_error = exc
+                if attempt < attempts - 1:
+                    delay = self.settings.provider_retry_backoff_base * (2**attempt)
+                    time.sleep(delay)
+        raise classify_provider_error(cast(Exception, last_error))
+
+    def generate_structured(self, task: str, schema: dict, context: dict) -> dict:
+        if self.recorder is None:
+            return self._generate_structured_with_retries(task, schema, context)[0]
+        holder: dict[str, int] = {"retry_count": 0}
+
+        def _do() -> dict:
+            result, used = self._generate_structured_with_retries(task, schema, context)
+            holder["retry_count"] = used - 1
+            return result
+
+        return self.recorder.record(
+            kind="model",
+            provider=self.name,
+            model=self._model_name,
+            task_kind="compile",
+            fn=_do,
+            retry_count=lambda: holder.get("retry_count", 0),
+        )
+
+    def _complete_with_retries(self, prompt: str) -> tuple[str, int]:
+        last_error: Exception | None = None
+        attempts = self.settings.provider_max_retries + 1
+        for attempt in range(attempts):
+            try:
+                return self._inner.complete(prompt), attempt + 1
             except Exception as exc:  # noqa: BLE001 - provider boundary
                 last_error = exc
                 if attempt < attempts - 1:
@@ -103,69 +143,117 @@ class _ResilientModelProvider:
         raise classify_provider_error(cast(Exception, last_error))
 
     def complete(self, prompt: str) -> str:
-        last_error: Exception | None = None
-        attempts = self.settings.provider_max_retries + 1
-        for attempt in range(attempts):
-            try:
-                return self._inner.complete(prompt)
-            except Exception as exc:  # noqa: BLE001 - provider boundary
-                last_error = exc
-                if attempt < attempts - 1:
-                    delay = self.settings.provider_retry_backoff_base * (2**attempt)
-                    time.sleep(delay)
-        raise classify_provider_error(cast(Exception, last_error))
+        if self.recorder is None:
+            return self._complete_with_retries(prompt)[0]
+        holder: dict[str, int] = {"retry_count": 0}
+
+        def _do() -> str:
+            result, used = self._complete_with_retries(prompt)
+            holder["retry_count"] = used - 1
+            return result
+
+        return self.recorder.record(
+            kind="model",
+            provider=self.name,
+            model=self._model_name,
+            task_kind="complete",
+            fn=_do,
+            retry_count=lambda: holder.get("retry_count", 0),
+        )
 
 
 class _ResilientSearchProvider:
     name = "resilient_search"
 
-    def __init__(self, inner: SearchProvider, settings: Settings) -> None:
+    def __init__(self, inner: SearchProvider, settings: Settings, recorder=None) -> None:
         self._inner = inner
         self.settings = settings
         self.name = getattr(inner, "name", "provider")
+        self.recorder = recorder
+        self._model_name = getattr(inner, "model", "") or ""
 
-    def search(self, query: str, k: int = 5):
+    def _search_with_retries(self, query: str, k: int) -> tuple[Any, int]:
         last_error: Exception | None = None
         attempts = self.settings.provider_max_retries + 1
         for attempt in range(attempts):
             try:
-                return self._inner.search(query, k=k)
+                return self._inner.search(query, k=k), attempt + 1
             except Exception as exc:  # noqa: BLE001 - provider boundary
                 last_error = exc
                 if attempt < attempts - 1:
                     time.sleep(self.settings.provider_retry_backoff_base * (2**attempt))
         raise classify_provider_error(cast(Exception, last_error))
+
+    def search(self, query: str, k: int = 5):
+        if self.recorder is None:
+            return self._search_with_retries(query, k)[0]
+        holder: dict[str, int] = {"retry_count": 0}
+
+        def _do():
+            result, used = self._search_with_retries(query, k)
+            holder["retry_count"] = used - 1
+            return result
+
+        return self.recorder.record(
+            kind="search",
+            provider=self.name,
+            model=self._model_name,
+            task_kind="research_run",
+            fn=_do,
+            retry_count=lambda: holder.get("retry_count", 0),
+        )
 
 
 class _ResilientRetrievalProvider:
     name = "resilient_retrieval"
 
-    def __init__(self, inner: RetrievalProvider, settings: Settings) -> None:
+    def __init__(self, inner: RetrievalProvider, settings: Settings, recorder=None) -> None:
         self._inner = inner
         self.settings = settings
         self.name = getattr(inner, "name", "provider")
+        self.recorder = recorder
+        self._model_name = getattr(inner, "model", "") or ""
 
-    def retrieve(self, query: str, k: int = 5):
+    def _retrieve_with_retries(self, query: str, k: int) -> tuple[Any, int]:
         last_error: Exception | None = None
         attempts = self.settings.provider_max_retries + 1
         for attempt in range(attempts):
             try:
-                return self._inner.retrieve(query, k=k)
+                return self._inner.retrieve(query, k=k), attempt + 1
             except Exception as exc:  # noqa: BLE001 - provider boundary
                 last_error = exc
                 if attempt < attempts - 1:
                     time.sleep(self.settings.provider_retry_backoff_base * (2**attempt))
         raise classify_provider_error(cast(Exception, last_error))
 
+    def retrieve(self, query: str, k: int = 5):
+        if self.recorder is None:
+            return self._retrieve_with_retries(query, k)[0]
+        holder: dict[str, int] = {"retry_count": 0}
 
-def with_resilience(provider: Any, settings: Settings) -> Any:
-    """Wrap any provider with retry + structured error mapping."""
+        def _do():
+            result, used = self._retrieve_with_retries(query, k)
+            holder["retry_count"] = used - 1
+            return result
+
+        return self.recorder.record(
+            kind="retrieval",
+            provider=self.name,
+            model=self._model_name,
+            task_kind="research_run",
+            fn=_do,
+            retry_count=lambda: holder.get("retry_count", 0),
+        )
+
+
+def with_resilience(provider: Any, settings: Settings, recorder=None) -> Any:
+    """Wrap any provider with retry + structured error mapping (+ recording)."""
     if isinstance(provider, (ModelProvider,)) and not isinstance(provider, _ResilientModelProvider):
-        return _ResilientModelProvider(provider, settings)
+        return _ResilientModelProvider(provider, settings, recorder)
     if isinstance(provider, SearchProvider) and not isinstance(provider, _ResilientSearchProvider):
-        return _ResilientSearchProvider(provider, settings)
+        return _ResilientSearchProvider(provider, settings, recorder)
     if isinstance(provider, RetrievalProvider) and not isinstance(provider, _ResilientRetrievalProvider):
-        return _ResilientRetrievalProvider(provider, settings)
+        return _ResilientRetrievalProvider(provider, settings, recorder)
     return provider
 
 
@@ -246,15 +334,20 @@ def create_retrieval_provider(settings: Settings) -> RetrievalProvider | None:
     return None
 
 
-def create_provider_bundle(settings: Settings) -> ProviderBundle:
-    """Build the full provider bundle and wrap it with resilience."""
-    model = with_resilience(create_model_provider(settings), settings)
+def create_provider_bundle(settings: Settings, recorder=None) -> ProviderBundle:
+    """Build the full provider bundle and wrap it with resilience.
+
+    v1.1.2 (P1-7): when ``recorder`` (a CallRecorder) is provided, every
+    model/search/retrieval call is recorded with metadata (never prompts or
+    API keys).
+    """
+    model = with_resilience(create_model_provider(settings), settings, recorder)
     search = create_search_provider(settings)
     if search is not None:
-        search = with_resilience(search, settings)
+        search = with_resilience(search, settings, recorder)
     retrieval = create_retrieval_provider(settings)
     if retrieval is not None:
-        retrieval = with_resilience(retrieval, settings)
+        retrieval = with_resilience(retrieval, settings, recorder)
     return ProviderBundle(model=model, search=search, retrieval=retrieval)
 
 

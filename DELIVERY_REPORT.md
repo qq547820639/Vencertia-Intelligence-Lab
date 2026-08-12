@@ -89,7 +89,7 @@ v1.1 closes the v1.0 gap where research evidence never reached the judgment loop
 
 ## Verification at delivery (v1.1.1 RC hardening)
 
-- pytest: **390 passed / 1 skipped**（v1.0 174 / v1.1-pre-RC 283 零回归）.
+- pytest: **417 passed / 0 skipped**（v1.1.2 Runtime Integrity Hardening 最终回归；v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 391 零回归）。
 - L0: **36/36**; legacy reference 20/24 (unchanged, honestly reported).
 - L1: **6/6**（l1-07-leak 被 leakage gate 拒绝）.
 - Synthetic Claim Binding Benchmark（GAP-04，34 cases / 14 类）:
@@ -101,7 +101,7 @@ v1.1 closes the v1.0 gap where research evidence never reached the judgment loop
 - 三 Provider adapter PASS：mock / openai_compatible（构造）/ http
   （httpx MockTransport 10 种失败模式）。
 - legacy V10.2 compat PASS；API/CLI smoke PASS；ruff 0 error。
-- 版本：1.1.1（禁止 1.2.0）。
+- 版本：1.1.2（禁止 1.2.0）。
 
 ## What is intentionally not claimed (v1.1)
 

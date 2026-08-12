@@ -39,14 +39,22 @@ class CallRecorder:
         task_kind: str,
         fn: Callable[[], Any],
         request_id: str = "",
+        retry_count: int | Callable[[], int] = 0,
+        tokens: dict | None = None,
+        cost: float = 0.0,
     ) -> Any:
-        """Execute ``fn`` and record the outcome (structured errors included)."""
+        """Execute ``fn`` and record the outcome (structured errors included).
+
+        ``retry_count`` may be a callable so wrappers can report the ACTUAL
+        number of attempts after the call completes (resilience wrappers).
+        ``tokens``/``cost`` are metadata only; the record NEVER contains
+        prompts or API keys (ADR-012 red line).
+        """
         if not self.enabled:
             return fn()
         started = time.monotonic()
         started_at = utcnow()
         success = True
-        retry_count = 0
         error_type: str | None = None
         result: Any = None
         try:
@@ -57,6 +65,7 @@ class CallRecorder:
             raise
         finally:
             latency_ms = round((time.monotonic() - started) * 1000.0, 3)
+            retries = retry_count() if callable(retry_count) else retry_count
             record = ProviderCallRecord(
                 id="PCR_" + uuid4().hex,
                 kind=kind,
@@ -66,10 +75,10 @@ class CallRecorder:
                 task_kind=task_kind,
                 started_at=started_at,
                 latency_ms=latency_ms,
-                tokens={},
-                cost=0.0,
+                tokens=tokens or {},
+                cost=round(float(cost), 6),
                 success=success,
-                retry_count=retry_count,
+                retry_count=retries,
                 error_type=error_type,
             )
             with __import__("contextlib").suppress(Exception):  # pragma: no cover

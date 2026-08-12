@@ -72,9 +72,22 @@ class ApplicationContainer:
         return self._bus
 
     @property
+    def call_recorder(self):
+        """Shared CallRecorder for provider observability (P1-7)."""
+        from vencertia.runtime.observability import CallRecorder
+
+        return CallRecorder(
+            self.repository,
+            enabled=self.settings.call_log_enabled,
+            settings=self.settings,
+        )
+
+    @property
     def providers(self) -> ProviderBundle:
         if self._providers is None:
-            self._providers = create_provider_bundle(self._settings)
+            self._providers = create_provider_bundle(
+                self._settings, recorder=self.call_recorder
+            )
             self.bus.publish(
                 make_event(
                     EventType.PROVIDER_SELECTED,

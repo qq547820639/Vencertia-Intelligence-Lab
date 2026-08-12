@@ -1,5 +1,7 @@
 # IMPLEMENTATION REPORT — v1.1 Release Candidate（GAP-01~10 全部闭合）
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 > 版本：1.1.1 · 作者：寇豆码（工程师）· 状态：RC 完成
 > 日期：2026-08-12 · 基线：docs/BASELINE_V1_1_RC.md
 
@@ -38,7 +40,7 @@ Package    = vencertia-decision-runtime 1.1.0 → 1.1.1（禁止 1.2.0）
 ```text
 pytest collected : 391
 pytest passed    : 390
-pytest skipped   : 1（PG 门控，未配置 VENCERTIA_PG_DSN）
+pytest skipped   : 1（`tests/test_api_v11.py:113` — no candidate claims generated in this scenario；非 PostgreSQL 门控）
 pytest failed    : 0
 ```
 
@@ -125,7 +127,7 @@ leakage  : l1-07-leak（leakage_audit_passed=false）被拒绝执行正式 L1 be
 
 | # | Gate | 结果 |
 |---|---|---|
-| 1 | 全量 pytest 0 failed | ✅ 390 passed / 1 skipped（skip=PG 门控，已解释） |
+| 1 | 全量 pytest 0 failed | ✅ 390 passed / 1 skipped（skip 真实原因=`tests/test_api_v11.py:113` 无 candidate，非 PG 门控） |
 | 2 | L0 ≥36/36 不退化 | ✅ 36/36 |
 | 3 | binding benchmark 8 指标可输出 | ✅ 8 指标 + Coverage（Synthetic 标注） |
 | 4 | L1 三层契约全过 + leakage 拒绝 | ✅ 6/6 + l1-07-leak 拒绝 |

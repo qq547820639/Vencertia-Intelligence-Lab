@@ -557,7 +557,12 @@ class ClaimBindingEngine:
         return all(self.matcher.normalize(claim.statement) != cand_norm for claim in existing)
 
     def _to_evidence(self, result: dict) -> Evidence:
-        """Normalize a research-result dict into a candidate Evidence record."""
+        """Normalize a research-result dict into a candidate Evidence record.
+
+        ``project_id`` is carried through from the research pipeline (P0-3):
+        research-produced evidence is owned by the project it was collected
+        for ("为该项目收集的").
+        """
         source_text = (
             str(result.get("source") or result.get("content") or result.get("snippet") or result.get("title") or "")
         )
@@ -584,4 +589,5 @@ class ClaimBindingEngine:
             content_fingerprint=result.get("content_fingerprint"),
             canonical_source_id=result.get("canonical_source_id"),
             source_family=result.get("source_family"),
+            project_id=result.get("project_id"),
         )

@@ -16,6 +16,7 @@ class BenchmarkCaseResult(VencertiaBaseModel):
     decided: bool
     correct: bool
     status: str = ""
+    gold_status: str | None = None  # v1.1.2: gold decision status label
     confidence: float | None = None
     margin: float | None = None
     predicted_experiment: str | None = None
@@ -24,8 +25,10 @@ class BenchmarkCaseResult(VencertiaBaseModel):
     predicted_critical: str | None = None
     gold_critical: str | None = None
     critical_correct: bool | None = None
-    chosen_utility: float = 0.0
-    best_utility: float = 0.0
+    # v1.1.2 (P1-10): float|None — None means "no utility label" (L1) so
+    # regret is N/A instead of a fake 0.
+    chosen_utility: float | None = None
+    best_utility: float | None = None
     notes: str = ""
 
 

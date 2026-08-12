@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from vencertia.capabilities.base import CapabilityResult
 from vencertia.domain import Evidence, Scope, utcnow
+from vencertia.domain.context import ContextBundle
 from vencertia.repositories.base import Repository
-from vencertia.runtime.context import ContextBundle
 
 
 class CompanyIntelligenceCapability:

@@ -99,11 +99,21 @@ def compute_evidence_precision_recall(hits: int, predicted: int, relevant: int) 
     }
 
 
-def compute_decision_regret(chosen: list[float], best: list[float]) -> float:
-    """Average utility loss of the chosen option vs the best option."""
-    if not chosen:
-        return 0.0
-    regrets = [max(b - c, 0.0) for c, b in zip(chosen, best)]
+def compute_decision_regret(chosen: list[float | None], best: list[float | None]) -> float | None:
+    """Average utility loss of the chosen option vs the best option.
+
+    v1.1.2 (P1-10): ``None`` utilities are treated as "no utility label" and
+    excluded from the average. When NO usable pair exists the function returns
+    ``None`` (N/A) — it never fabricates a fake 0 regret.
+    """
+    pairs = [
+        (c, b)
+        for c, b in zip(chosen, best)
+        if c is not None and b is not None
+    ]
+    if not pairs:
+        return None
+    regrets = [max(b - c, 0.0) for c, b in pairs]
     return round(sum(regrets) / len(regrets), 6)
 
 
@@ -189,6 +199,17 @@ def compute_all(
     correct, predicted_experiment, gold_experiment, predicted_critical,
     gold_critical, evidence_hits, evidence_predicted, evidence_relevant,
     chosen_utility, best_utility. Predictions (for Brier/ECE) are separate.
+
+    v1.1.2 (P1-10) metric semantics:
+    - ``policy_regression_pass_rate`` = full-case pass rate (existing gate
+      metric; computed over ALL cases).
+    - ``decision_option_accuracy`` = option accuracy over cases whose
+      ``gold_option`` is a real option id (``gold_option_id=None`` /
+      "NO_DECISION" cases are EXCLUDED from the denominator).
+    - ``decision_status_accuracy`` = status accuracy over cases with a
+      ``gold_status``.
+    - ``decision_accuracy`` is kept as a backward-compatible alias of
+      ``decision_option_accuracy``.
     """
     predicted = [c.get("predicted_option", "NO_DECISION") for c in cases]
     gold = [c.get("gold_option", "NO_DECISION") for c in cases]
@@ -208,15 +229,58 @@ def compute_all(
             relevant=sum(c.get("evidence_relevant", 0) for c in cases),
         )
 
-    chosen = [c.get("chosen_utility", 0.0) for c in cases]
-    best = [c.get("best_utility", 0.0) for c in cases]
+    chosen = [c.get("chosen_utility") for c in cases]
+    best = [c.get("best_utility") for c in cases]
 
     preds = [p["probability"] for p in (predictions or []) if p.get("settled")]
     outcomes = [1 if p.get("outcome") else 0 for p in (predictions or []) if p.get("settled")]
 
+    # v1.1.2 (P1-10): split option/status accuracy — unlabeled cases are
+    # excluded from the option-accuracy denominator.
+    option_cases = [
+        (p, g)
+        for p, g in zip(predicted, gold)
+        if g not in (None, "", "NO_DECISION")
+    ]
+    option_accuracy = (
+        round(
+            compute_decision_accuracy(
+                [p for p, _ in option_cases], [g for _, g in option_cases]
+            ),
+            6,
+        )
+        if option_cases
+        else None
+    )
+    status_cases = [
+        (c.get("predicted_status"), c.get("gold_status"))
+        for c in cases
+        if c.get("gold_status")
+    ]
+    status_accuracy = (
+        round(
+            compute_decision_accuracy(
+                [p for p, _ in status_cases], [g for _, g in status_cases]
+            ),
+            6,
+        )
+        if status_cases
+        else None
+    )
+
+    regret = compute_decision_regret(chosen, best)
+
     return {
         "n_cases": len(cases),
-        "decision_accuracy": round(compute_decision_accuracy(predicted, gold), 6),
+        "policy_regression_pass_rate": round(
+            sum(1 for c in correct if c) / len(correct), 6
+        )
+        if correct
+        else 0.0,
+        "decision_option_accuracy": option_accuracy,
+        "decision_status_accuracy": status_accuracy,
+        # Backward-compatible alias (v1.1.2 semantic: option accuracy only).
+        "decision_accuracy": option_accuracy,
         "abstention_quality": compute_abstention_quality(decided, correct),
         "experiment_selection_accuracy": round(
             compute_experiment_selection_accuracy(exp_pred, exp_gold), 6
@@ -229,7 +293,7 @@ def compute_all(
         if crit_gold
         else None,
         "evidence_precision_recall": evidence_metric,
-        "decision_regret": compute_decision_regret(chosen, best),
+        "decision_regret": regret,
         "brier": round(compute_brier(preds, outcomes), 6) if preds else None,
         "ece": round(compute_ece(preds, outcomes), 6) if preds else None,
     }

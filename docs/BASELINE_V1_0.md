@@ -1,5 +1,7 @@
 # Baseline — Vencertia v1.0（历史基线，仅作对照）
 
+> HISTORICAL SNAPSHOT — 记录 v1.0 交付时点事实，不作为 v1.1/v1.1.2 的 authority。
+
 > 本文件**区分三个 Baseline 状态**，数字不混用（GAP-07）。
 > 唯一现行基线是 `docs/BASELINE_V1_1_RC.md`；本文档只做历史对照。
 

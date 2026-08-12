@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from uuid import uuid4
 
 from pydantic import Field
 
@@ -42,6 +43,42 @@ class ExperimentProposalOutput:
     ranked: list[RankedExperiment]
     decision_insufficient: bool
     reason: str
+    # v1.1.2 (P0-6): experiments rejected by validate_experiment (additive).
+    rejected: list[dict] = field(default_factory=list)
+
+
+def synthesize_default_experiment(
+    decision: Decision, critical_belief_id: str | None
+) -> Experiment:
+    """Create a default decision-relevant experiment when the provider
+    compiled no candidates (ADR-007: ABSTAIN must carry next_experiment).
+
+    Moved here from SolveOrchestrator (v1.1.2) so propose() can enforce the
+    SAME validator on the default without a circular import.
+    """
+    target = (
+        [critical_belief_id]
+        if critical_belief_id
+        else list(decision.relevant_belief_ids)
+    )
+    target_label = critical_belief_id or ", ".join(decision.relevant_belief_ids) or "key assumption"
+    return Experiment(
+        id="EXP_" + uuid4().hex,
+        decision_id=decision.id,
+        name=f"Design and run a decision-relevant experiment for {target_label}",
+        target_belief_ids=target,
+        hypothesis=f"Resolve uncertainty about {target_label} enough to change the decision",
+        action=f"Design and run the cheapest decisive experiment targeting {target_label}",
+        predicted_observation="Outcome that materially updates the belief",
+        success_criteria="Posterior uncertainty drops below the decision threshold",
+        failure_criteria="No decision-relevant signal obtained",
+        ambiguity_criteria="Ambiguous or mixed signal",
+        expected_information_gain=0.6,
+        decision_impact=0.9,
+        cost=1.0,
+        time=1.0,
+        reversibility=1.0,
+    )
 
 
 def validate_experiment(experiment: Experiment) -> ExperimentValidationResult:
@@ -116,14 +153,50 @@ class ExperimentOptimizer:
         return ranked
 
     def propose(self, inp: ExperimentProposalInput) -> ExperimentProposalOutput:
-        # NOTE: v1.0 behavior keeps ALL candidates rankable here. Criteria
-        # enforcement (v1.1/ADR-012) is applied by the orchestrator/API before
-        # state mutation: invalid experiments (vague action / missing criteria)
-        # are rejected there via validate_experiment().
-        ranked = self.rank(
-            inp.candidates, inp.beliefs, critical_belief_id=inp.critical_belief_id
-        )
+        """Rank candidates AFTER deterministic validation (P0-6 enforce).
+
+        Every experiment — provider-compiled, API-supplied, CLI-supplied or
+        the synthesized default — passes the SAME ``validate_experiment``.
+        INVALID experiments are rejected and reported in ``output.rejected``;
+        they never reach the ranked list and never get persisted by callers.
+        If every candidate is invalid, the default experiment is synthesized
+        and itself validated; an INVALID default (defensive, the template has
+        all three criteria) is reported and NOT returned.
+        """
+        valid: list[Experiment] = []
+        rejected: list[dict] = []
+        for exp in inp.candidates:
+            result = validate_experiment(exp)
+            if result.valid:
+                valid.append(exp)
+            else:
+                rejected.append(
+                    {
+                        "experiment_id": exp.id,
+                        "name": exp.name,
+                        "reasons": result.reasons,
+                    }
+                )
+        ranked = self.rank(valid, inp.beliefs, critical_belief_id=inp.critical_belief_id)
         truncated = ranked[: max(1, inp.max_results)]
+
+        # All-invalid: the default experiment must pass the same validator.
+        default: Experiment | None = None
+        if not truncated and inp.candidates and not valid:
+            default = synthesize_default_experiment(inp.decision, inp.critical_belief_id)
+            v = validate_experiment(default)
+            if v.valid:
+                truncated = [RankedExperiment(experiment=default, priority_score=0.0)]
+            else:
+                rejected.append(
+                    {
+                        "experiment_id": default.id,
+                        "name": default.name,
+                        "reasons": v.reasons,
+                    }
+                )
+                default = None
+
         return ExperimentProposalOutput(
             ranked=truncated,
             decision_insufficient=True,
@@ -131,4 +204,5 @@ class ExperimentOptimizer:
                 "Decision not converged: INSUFFICIENT_EVIDENCE. "
                 "Run the top-ranked experiment before committing resources."
             ),
+            rejected=rejected,
         )

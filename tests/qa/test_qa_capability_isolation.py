@@ -100,6 +100,8 @@ def test_llm_evidence_cannot_self_declare_verified_through_pipeline() -> None:
         source="model says verified",
         supports_or_contradicts=Direction.SUPPORTS.value,
         verification=Verification.VERIFIED,
+        # v1.1.2 (P0-3): PROJECT evidence must carry project_id.
+        project_id="PRJ_EV",
     )
     # Ingest via the orchestrator's gated path (not a direct repo write).
     applied = orchestrator._ingest_evidence([evidence])

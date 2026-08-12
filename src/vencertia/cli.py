@@ -238,29 +238,23 @@ def research_plan(decision_id: str, db: str | None = None) -> None:
 
 @research_app.command("run")
 def research_run(decision_id: str, db: str | None = None) -> None:
-    """Execute the latest research plan (candidate evidence only)."""
+    """Execute the latest research plan through the SHARED pipeline (P0-5).
+
+    v1.1.2 semantic upgrade: runs the full research pipeline (search → dedup →
+    claim binding → applied evidence → belief updates → conflicts → stop rule)
+    via ResearchExecutionService — same implementation as solve and the API.
+    """
     settings = _settings_with_db(db)
-    runtime, repo = _default_runtime(settings)
-    decision = repo.get_decision(decision_id)
+    runtime, _ = _default_runtime(settings)
+    decision = runtime.repo.get_decision(decision_id)
     if decision is None:
         raise EntityNotFoundError("decision", decision_id)
-    plans = repo.list_research_plans(decision.id)
-    if not plans:
-        console.print("[yellow]No research plan; run `vencertia research plan` first.[/yellow]")
-        return
-    plan = plans[-1]
-    traces = []
-    for idx, _question in enumerate(plan.questions):
-        trace = runtime._run_research_round(
-            SolveRequest(project_id=decision.project_id, problem_text=decision.decision_question),
-            repo.get_project(decision.project_id),
-            decision,
-            plan,
-            idx + 1,
-        )[0]
-        repo.save_research_trace(trace)
-        traces.append(trace)
-    _dump([t.model_dump(mode="json") for t in traces])
+    service = runtime.engines.research_execution
+    if service is None:
+        console.print("[red]research_execution service not wired[/red]")
+        raise typer.Exit(code=1)
+    result = service.run_plan(decision_id)
+    _dump(result.model_dump(mode="json"))
 
 
 # -- experiments -------------------------------------------------------------
@@ -294,6 +288,7 @@ def experiment_propose(decision_id: str, db: str | None = None) -> None:
             "decision_insufficient": proposal.decision_insufficient,
             "reason": proposal.reason,
             "ranked": [r.model_dump(mode="json") for r in proposal.ranked],
+            "rejected": proposal.rejected,
         }
     )
 

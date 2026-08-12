@@ -114,7 +114,12 @@ def create_app(
     repo: Repository,
     runtime: SolveOrchestrator,
 ) -> FastAPI:
-    app = FastAPI(title="Vencertia Decision Runtime", version="1.1.0")
+    import vencertia
+
+    app = FastAPI(
+        title="Vencertia Decision Runtime",
+        version=vencertia.__version__,
+    )
 
     def ok(data: Any = None, message: str = "ok") -> ApiResponse:
         return ApiResponse(code=0, data=data, message=message)
@@ -129,10 +134,14 @@ def create_app(
         return ok(
             {
                 "ok": True,
-                "version": "1.0.0",  # backward-compatible v1.0 contract
-                "api_version": "1.1.0",
+                # v1.1.2 (P1-12): single source of truth for versions.
+                "runtime_version": vencertia.__version__,
+                "api_contract_version": vencertia.__api_contract_version__,
                 "policy_version": settings.policy_version,
                 "model_provider": settings.model_provider,
+                # Legacy compatibility keys (derived, never hard-coded):
+                "version": "1.0.0",  # v1.0 health contract alias
+                "api_version": vencertia.__api_contract_version__ + ".0",
             }
         )
 
@@ -177,11 +186,23 @@ def create_app(
 
     @app.post("/v1/evidence", response_model=ApiResponse)
     def add_evidence(req: EvidenceRequest) -> ApiResponse:
-        grade = runtime.policy.grade(req.evidence)
+        evidence = req.evidence
+        # P0-3: if no project_id is supplied, try to derive it from the first
+        # claim's owner; otherwise the write boundary rejects the request.
+        if not evidence.project_id:
+            for cid in (evidence.claim_ids or []):
+                claim = repo.get_claim(cid)
+                if claim is not None and claim.project_id:
+                    evidence = evidence.model_copy(update={"project_id": claim.project_id})
+                    break
+        grade = runtime.policy.grade(evidence)
         if grade.scope_gate == "REJECTED":
             raise HTTPException(status_code=400, detail=grade.reason)
-        graded = runtime.policy.apply_authority(req.evidence, settings.policy_version)
-        repo.add_evidence(graded)
+        graded = runtime.policy.apply_authority(evidence, settings.policy_version)
+        try:
+            repo.add_evidence(graded)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         return ok(graded.model_dump(mode="json"), message=grade.reason)
 
     # -- outcomes ----------------------------------------------------------------
@@ -226,6 +247,7 @@ def create_app(
                 "decision_insufficient": proposal.decision_insufficient,
                 "reason": proposal.reason,
                 "ranked": [r.model_dump(mode="json") for r in proposal.ranked],
+                "rejected": proposal.rejected,
             }
         )
 
@@ -357,29 +379,26 @@ def create_app(
 
     @app.post("/v1/research/run", response_model=ApiResponse)
     def research_run(req: ResearchRunRequest) -> ApiResponse:
+        """Execute the latest research plan through the SHARED pipeline (P0-5).
+
+        v1.1.2 semantic upgrade: the endpoint now runs the full research
+        pipeline (search → dedup → claim binding → applied evidence → belief
+        updates → conflicts → stop rule) via ResearchExecutionService, instead
+        of only storing traces. The response is additive: the previous trace
+        list is preserved inside ``result.traces``.
+        """
         decision = repo.get_decision(req.decision_id)
         if decision is None:
             raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
-        plans = repo.list_research_plans(decision.id)
-        if not plans:
-            raise HTTPException(status_code=400, detail="no research plan; POST /v1/research/plan first")
-        plan = plans[-1]
-        traces: list = []
-        for idx, question in enumerate(plan.questions):
-            if req.question_ids and question.id not in req.question_ids:
-                continue
-            if runtime.engines.claim_binding_engine is None:
-                continue
-            trace = runtime._run_research_round(
-                SolveRequest(project_id=decision.project_id, problem_text=decision.decision_question),
-                repo.get_project(decision.project_id),
-                decision,
-                plan,
-                idx + 1,
-            )[0]
-            repo.save_research_trace(trace)
-            traces.append(trace)
-        return ok([t.model_dump(mode="json") for t in traces])
+        service = runtime.engines.research_execution
+        if service is None:
+            raise HTTPException(status_code=400, detail="research_execution not wired")
+        result = service.run_plan(
+            req.decision_id,
+            question_ids=req.question_ids,
+            max_queries=req.max_queries,
+        )
+        return ok(result.model_dump(mode="json"))
 
     @app.post("/v1/evidence/bind", response_model=ApiResponse)
     def evidence_bind(req: EvidenceBindRequest) -> ApiResponse:

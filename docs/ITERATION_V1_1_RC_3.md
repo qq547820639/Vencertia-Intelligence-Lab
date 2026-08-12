@@ -1,5 +1,7 @@
 # ITERATION — v1.1 RC Hardening Round 3（QA 干净环境全量回归 + 10 Gate 核验）
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 > 执行人：严过关（QA）· 日期：2026-08-12 · 版本：1.1.1（工作区）
 > 基线：docs/ITERATION_V1_1_RC_2.md（对抗 edge-case）· 本轮：干净 venv 全量回归 + Release Gate 独立核验。
 
@@ -22,7 +24,7 @@ PYTHONPATH  = src（Makefile 约定）
 | 项 | 命令 | 结果 |
 |---|---|---|
 | lint | `ruff check .` | **All checks passed**（0 error） |
-| 全量测试 | `pytest -q` | **387 passed / 1 skipped / 1 xfailed / 0 failed**（含 QA 新增 42 + 1 xfail；skip=PG 门控） |
+| 全量测试 | `pytest -q` | **387 passed / 1 skipped / 1 xfailed / 0 failed**（含 QA 新增 42 + 1 xfail；skip 真实原因=`tests/test_api_v11.py:113` 无 candidate，非 PG 门控） |
 | L0 | `benchmark run --level L0` | **36/36（pass_rate 1.0）** |
 | legacy v0.2 参考 | L0Runner.run_legacy_file | **20/24（pass_rate 0.833333，与基线一致）** |
 | L1 | L1Runner.run(l1_cases.jsonl) | **6/6，rejected=['l1-07-leak']** |

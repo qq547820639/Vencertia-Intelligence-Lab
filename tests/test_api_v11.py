@@ -39,8 +39,11 @@ def test_health_reports_api_version(client):
     r = tc.get("/health")
     assert r.status_code == 200
     data = r.json()["data"]
-    assert data["version"] == "1.0.0"  # backward-compatible
-    assert data["api_version"] == "1.1.0"
+    # v1.1.2 (P1-12): single source of truth + legacy derived aliases.
+    assert data["runtime_version"] == "1.1.2"
+    assert data["api_contract_version"] == "1.1"
+    assert data["version"] == "1.0.0"  # backward-compatible v1.0 alias
+    assert data["api_version"] == "1.1.0"  # derived from api_contract_version
 
 
 def test_research_plan_endpoint(client):
@@ -56,7 +59,14 @@ def test_research_run_endpoint(client):
     tc.post("/v1/research/plan", json={"decision_id": result.decision_id})
     r = tc.post("/v1/research/run", json={"decision_id": result.decision_id})
     assert r.status_code == 200
-    assert isinstance(r.json()["data"], list)
+    # v1.1.2 (P0-5): /v1/research/run returns the full ResearchExecutionResult
+    # (additive — the previous trace list is preserved inside ``traces``).
+    data = r.json()["data"]
+    assert isinstance(data, dict)
+    assert "traces" in data
+    assert isinstance(data["traces"], list)
+    assert "applied_evidence" in data
+    assert data["decision_id"] == result.decision_id
 
 
 def test_evidence_bind_endpoint(client):
@@ -107,11 +117,21 @@ def test_research_trace_endpoint(client):
 
 
 def test_candidate_validate_endpoint(client):
+    """Deterministic fixture (P1-11): create the candidate explicitly instead of
+    depending on whether the solve scenario happened to generate one."""
+    from vencertia.domain import CandidateClaim
+
     tc, repo, _ = client
-    candidates = repo.list_candidate_claims()
-    if not candidates:
-        pytest.skip("no candidate claims generated in this scenario")
-    r = tc.post(f"/v1/claims/candidates/{candidates[0].id}/validate")
+    candidate = CandidateClaim(
+        id="CC_FIXTURE",
+        statement="ICP has a severe recurring problem",
+        scope="PROJECT",
+        source_evidence_ids=["E_FIXTURE"],
+        extraction_confidence=0.9,
+        validation_status="PENDING",
+    )
+    repo.save_candidate_claim(candidate)
+    r = tc.post(f"/v1/claims/candidates/{candidate.id}/validate")
     assert r.status_code == 200
     assert r.json()["data"]["validation_status"] == "VALIDATED"
 

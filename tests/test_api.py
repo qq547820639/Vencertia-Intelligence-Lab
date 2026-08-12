@@ -86,9 +86,20 @@ def test_evidence_add(client):
     tc, _ = client
     r = tc.post("/v1/evidence", json={
         "evidence": {"id": "E_API1", "scope": "PROJECT", "evidence_type": "REAL_PAYMENT",
-                     "source": "paid 200 EUR", "claim_ids": ["CLM_WTP"]}})
+                     "source": "paid 200 EUR", "claim_ids": ["CLM_WTP"],
+                     # v1.1.2 (P0-3): PROJECT evidence must carry project_id.
+                     "project_id": "PRJ_API"}})
     assert r.status_code == 200
     assert r.json()["data"]["authority_level"] == "PROJECT_REALITY"
+
+
+def test_evidence_add_rejects_project_scope_without_project_id(client):
+    """P0-3: PROJECT evidence without project_id is rejected with HTTP 400."""
+    tc, _ = client
+    r = tc.post("/v1/evidence", json={
+        "evidence": {"id": "E_API_NOPID", "scope": "PROJECT", "evidence_type": "REAL_PAYMENT",
+                     "source": "paid 200 EUR", "claim_ids": ["CLM_MISSING"]}})
+    assert r.status_code == 400
 
 
 def test_outcomes_endpoint(client):

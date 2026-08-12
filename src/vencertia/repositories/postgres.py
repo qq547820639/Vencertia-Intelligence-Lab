@@ -39,6 +39,15 @@ class PostgresRepository(EntityStoreMixin):
 
     # -- primitives ----------------------------------------------------------
 
+    def _maybe_commit(self) -> None:
+        """Commit only when not inside an outer transaction (P2-17).
+
+        psycopg3's ``with conn.transaction()`` owns the outermost commit;
+        intermediate commits inside a batch would break atomicity.
+        """
+        if getattr(self, "_txn_depth", 0) == 0:
+            self.conn.commit()
+
     def _load(self, entity_type: str, entity_id: str) -> dict[str, Any] | None:
         with self.conn.cursor() as cur:
             cur.execute(
@@ -87,7 +96,7 @@ class PostgresRepository(EntityStoreMixin):
                     "payload=EXCLUDED.payload, version=EXCLUDED.version, updated_at=EXCLUDED.updated_at",
                     (entity_type, obj.id, payload, obj.version, now),
                 )
-        self.conn.commit()
+        self._maybe_commit()
 
     def _list_all(self, entity_type: str) -> list[dict[str, Any]]:
         with self.conn.cursor() as cur:
@@ -106,7 +115,7 @@ class PostgresRepository(EntityStoreMixin):
                 "DELETE FROM entities WHERE entity_type=%s AND id=%s",
                 (entity_type, entity_id),
             )
-        self.conn.commit()
+        self._maybe_commit()
 
     def _append_event(self, event: DomainEvent) -> int:
         with self.conn.cursor() as cur:
@@ -124,7 +133,7 @@ class PostgresRepository(EntityStoreMixin):
                 ),
             )
             row = cur.fetchone()
-        self.conn.commit()
+        self._maybe_commit()
         return int(row[0]) if row else 0
 
     def _events_since(self, after_seq: int) -> list[DomainEvent]:

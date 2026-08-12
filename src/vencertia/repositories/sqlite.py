@@ -53,6 +53,16 @@ class SQLiteRepository(EntityStoreMixin):
 
     # -- primitives ----------------------------------------------------------
 
+    def _maybe_commit(self) -> None:
+        """Commit only when not inside an outer transaction (P2-17).
+
+        ``in_transaction`` increments ``_txn_depth``; while it is > 0 the
+        backend connection is inside an explicit BEGIN and intermediate
+        commits would destroy batch atomicity. The outermost frame commits.
+        """
+        if getattr(self, "_txn_depth", 0) == 0:
+            self.conn.commit()
+
     def _load(self, entity_type: str, entity_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
             "SELECT payload FROM entities WHERE entity_type=? AND id=?",
@@ -88,7 +98,7 @@ class SQLiteRepository(EntityStoreMixin):
                         (entity_type, obj.id, payload, obj.version, now),
                     )
                 else:
-                    self.conn.commit()
+                    self._maybe_commit()
                     raise StaleWriteError(entity_type, obj.id, expected_version)
         else:
             self.conn.execute(
@@ -98,7 +108,7 @@ class SQLiteRepository(EntityStoreMixin):
                 "payload=excluded.payload, version=excluded.version, updated_at=excluded.updated_at",
                 (entity_type, obj.id, payload, obj.version, now),
             )
-        self.conn.commit()
+        self._maybe_commit()
 
     def _list_all(self, entity_type: str) -> list[dict[str, Any]]:
         rows = self.conn.execute(
@@ -110,7 +120,7 @@ class SQLiteRepository(EntityStoreMixin):
         self.conn.execute(
             "DELETE FROM entities WHERE entity_type=? AND id=?", (entity_type, entity_id)
         )
-        self.conn.commit()
+        self._maybe_commit()
 
     def _append_event(self, event: DomainEvent) -> int:
         cursor = self.conn.execute(
@@ -126,7 +136,7 @@ class SQLiteRepository(EntityStoreMixin):
                 event.occurred_at.isoformat(),
             ),
         )
-        self.conn.commit()
+        self._maybe_commit()
         return int(cursor.lastrowid)
 
     def _events_since(self, after_seq: int) -> list[DomainEvent]:
@@ -217,7 +227,7 @@ class SQLiteRepository(EntityStoreMixin):
                         ),
                     )
                 else:
-                    self.conn.commit()
+                    self._maybe_commit()
                     raise StaleWriteError("binding", binding.id, expected_version)
         else:
             self.conn.execute(
@@ -246,7 +256,7 @@ class SQLiteRepository(EntityStoreMixin):
                     payload,
                 ),
             )
-        self.conn.commit()
+        self._maybe_commit()
 
     def get_binding(self, binding_id: str):
         row = self.conn.execute(
@@ -298,7 +308,7 @@ class SQLiteRepository(EntityStoreMixin):
                 payload,
             ),
         )
-        self.conn.commit()
+        self._maybe_commit()
 
     def list_belief_update_records(self, belief_id: str) -> list:
         rows = self.conn.execute(

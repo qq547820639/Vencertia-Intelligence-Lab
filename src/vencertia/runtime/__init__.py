@@ -11,6 +11,7 @@ from vencertia.runtime.claim_binding import (
     EvidenceClaimLinker,
     SemanticClaimMatcher,
 )
+from vencertia.runtime.compilation_service import CompilationService
 from vencertia.runtime.confidence_calibrator import ConfidenceCalibrator
 from vencertia.runtime.conflict_engine import ConflictEngine
 from vencertia.runtime.context import ContextBuilder, ContextBundle
@@ -22,6 +23,7 @@ from vencertia.runtime.context_ranker import (
 )
 from vencertia.runtime.convergence_engine import ConvergenceEngine
 from vencertia.runtime.decision_engine import DecisionEngine, DecisionEngineInput
+from vencertia.runtime.decision_evaluation_service import DecisionEvaluationService
 from vencertia.runtime.decision_sensitivity import DecisionSensitivityEngine
 from vencertia.runtime.evidence_dedup import DedupGroup, DedupResult, EvidenceDedupEngine
 from vencertia.runtime.evidence_policy import EvidenceGrade, EvidencePolicy
@@ -34,8 +36,13 @@ from vencertia.runtime.experiment_optimizer import (
 )
 from vencertia.runtime.observability import CallRecorder
 from vencertia.runtime.opportunity_cost import OpportunityCostEngine
+from vencertia.runtime.outcome_settlement_service import OutcomeSettlementService
 from vencertia.runtime.prediction_ledger import PredictionLedger
 from vencertia.runtime.research_planner import ResearchPlanner
+from vencertia.runtime.research_service import (
+    ResearchExecutionResult,
+    ResearchExecutionService,
+)
 from vencertia.runtime.research_stop import ResearchStopRule
 from vencertia.runtime.runtime import (
     EngineBundle,
@@ -57,6 +64,7 @@ __all__ = [
     "CallRecorder",
     "ClaimBindingEngine",
     "ClaimExtractor",
+    "CompilationService",
     "ConfidenceCalibrator",
     "ConflictEngine",
     "ContextBuilder",
@@ -66,6 +74,7 @@ __all__ = [
     "ConvergenceEngine",
     "DecisionEngine",
     "DecisionEngineInput",
+    "DecisionEvaluationService",
     "DecisionRelevantContextBuilder",
     "DecisionSensitivityEngine",
     "DedupGroup",
@@ -82,8 +91,11 @@ __all__ = [
     "ExperimentValidationResult",
     "OpportunityCostEngine",
     "OutcomeRecordedResult",
+    "OutcomeSettlementService",
     "PredictionLedger",
     "ResearchPlanner",
+    "ResearchExecutionResult",
+    "ResearchExecutionService",
     "ResearchStopRule",
     "SemanticClaimMatcher",
     "SemanticRanker",

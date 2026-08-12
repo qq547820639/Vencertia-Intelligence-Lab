@@ -10,7 +10,7 @@ import sys
 import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-VERSION = "v1.1.1"
+VERSION = "v1.1.2"
 OUT = os.path.join(ROOT, f"Vencertia_Intelligence_Lab_{VERSION}.zip")
 
 SKIP_DIRS = {
@@ -32,7 +32,7 @@ SKIP_DIRS = {
 }
 SKIP_SUFFIXES = (".pyc", ".db", ".zip", ".pyo", ".sqlite", ".sqlite3")
 
-# Additional directory names skipped for the v1.1.1 release (GAP: hygiene).
+# Additional directory names skipped for the v1.1.2 release (GAP: hygiene).
 SKIP_DIRS |= {"cache", "data_cache", ".coverage"}
 
 

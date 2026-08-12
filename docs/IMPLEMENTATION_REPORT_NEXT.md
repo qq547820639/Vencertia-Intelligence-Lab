@@ -1,5 +1,7 @@
 # IMPLEMENTATION REPORT — v1.1（Intelligence Ingestion）
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 > 版本：1.1 · 作者：寇豆码（工程师）· 状态：完成
 > 基线：v1.0（65 src 文件 / 174 tests / L0 26-26 / L1 6-6 / demo 闭环）
 >

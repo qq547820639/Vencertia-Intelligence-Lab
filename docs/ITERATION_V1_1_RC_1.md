@@ -1,5 +1,7 @@
 # ITERATION — v1.1 RC Hardening Round 1（GAP-01~10 实现 + 回归）
 
+> HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
+
 > 执行人：寇豆码（工程师）· 日期：2026-08-12 · 版本：1.1.1
 > 基线：docs/BASELINE_V1_1_RC.md（283 passed / 1 skipped，L0 36/36）
 
@@ -34,7 +36,7 @@
 |---|---|---|
 | pytest collected | 284 | 346 |
 | pytest passed | 283 | **345** |
-| pytest skipped | 1（PG 门控） | 1（PG 门控） |
+| pytest skipped | 1（`tests/test_api_v11.py:113` 无 candidate，非 PG 门控） | 同左 |
 | pytest failed | 0 | **0** |
 | 新增测试文件 | — | test_l1_contract（12）/ test_binding_status_v111（10）/ test_http_search_provider（23）/ test_sensitivity_robustness_v111（9）/ test_claim_binding_benchmark（8） |
 

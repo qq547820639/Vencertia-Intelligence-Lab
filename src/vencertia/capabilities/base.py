@@ -7,7 +7,7 @@ from typing import Protocol, runtime_checkable
 from pydantic import Field
 
 from vencertia.domain import Claim, Decision, Evidence, Experiment, VencertiaBaseModel
-from vencertia.runtime.context import ContextBundle
+from vencertia.domain.context import ContextBundle
 
 
 class CapabilityResult(VencertiaBaseModel):

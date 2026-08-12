@@ -55,6 +55,11 @@ class Evidence(VencertiaBaseModel):
     canonical_source_id: str | None = None  # normalized source id (URL / registered source)
     source_family: str | None = None  # media family (duplicate-article detection)
     similarity_group: str | None = None  # similarity group id (analytics)
+    # v1.1.2 tenant isolation (P0-3 / ADR-014):
+    #   project_id = owning project (None for shared external evidence)
+    #   company_id = COMPANY_CASE owner (reserved; strict company-level isolation is v1.2)
+    project_id: str | None = None
+    company_id: str | None = None
     created_at: datetime = Field(default_factory=utcnow)
     version: int = 1
 

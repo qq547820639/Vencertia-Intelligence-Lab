@@ -7,13 +7,16 @@ still has NO write authority: it returns candidates only.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from vencertia.capabilities.base import CapabilityResult
 from vencertia.domain import Evidence, ResearchPlan
+from vencertia.domain.context import ContextBundle, ContextBundleV11
 from vencertia.providers.models import SearchProvider
 from vencertia.providers.search import SearchAdapter
-from vencertia.runtime.context import ContextBundle
-from vencertia.runtime.context_ranker import ContextBundleV11
-from vencertia.runtime.research_planner import ResearchPlanner
+
+if TYPE_CHECKING:
+    from vencertia.runtime.research_planner import ResearchPlanner
 
 
 class ResearchCapability:

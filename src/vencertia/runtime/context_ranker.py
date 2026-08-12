@@ -7,49 +7,27 @@ adapter can be injected later (vector store per ADR-006).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
-    Claim,
-    CompanyCase,
     CriticalUncertainty,
     Decision,
     Evidence,
-    Experiment,
-    FinancialSnapshot,
     FounderProfile,
-    Objective,
     Outcome,
     Project,
     Scope,
     utcnow,
 )
+from vencertia.domain.context import ContextBundleV11
 from vencertia.repositories.base import Repository
-from vencertia.runtime.context import ContextBundle
 
 
 @dataclass
-class ContextBundleV11(ContextBundle):
-    """Extended context projection (all new fields optional, backward compatible)."""
-
-    objectives: list[Objective] = field(default_factory=list)
-    claims: list[Claim] = field(default_factory=list)
-    strong_evidence: list[Evidence] = field(default_factory=list)
-    contradictory_evidence: list[Evidence] = field(default_factory=list)
-    recent_outcomes: list[Outcome] = field(default_factory=list)
-    open_experiments: list[Experiment] = field(default_factory=list)
-    previous_decisions: list[Decision] = field(default_factory=list)
-    company_cases: list[CompanyCase] = field(default_factory=list)
-    financial_snapshots: list[FinancialSnapshot] = field(default_factory=list)
-    constraints: list[str] = field(default_factory=list)
-    critical_uncertainties: list[CriticalUncertainty] = field(default_factory=list)
-    conflict_alerts: list = field(default_factory=list)
-
-
 class SemanticRanker(Protocol):
     """Vector ranker adapter (v1.1 not implemented; deterministic baseline)."""
 
@@ -67,10 +45,11 @@ class ContextRanker:
         evidence: Evidence,
         decision: Decision | None,
         beliefs: list[Belief],
+        claim_by_belief: dict[str, str] | None = None,
     ) -> float:
         weights = self.settings.context_rank_weights
         scope_match = self._scope_match(evidence)
-        decision_relevance = self._decision_relevance(evidence, decision)
+        decision_relevance = self._decision_relevance(evidence, decision, claim_by_belief)
         belief_dependency = self._belief_dependency(evidence, beliefs)
         authority = self._authority(evidence)
         evidence_strength = (evidence.strength or 0.0) * (evidence.relevance or 0.0)
@@ -108,19 +87,38 @@ class ContextRanker:
         return 0.4
 
     @staticmethod
-    def _decision_relevance(evidence: Evidence, decision: Decision | None) -> float:
+    def _decision_relevance(
+        evidence: Evidence,
+        decision: Decision | None,
+        claim_by_belief: dict[str, str] | None = None,
+    ) -> float:
+        """P0-2: relevance of evidence to a decision via REAL belief→claim mapping.
+
+        ID-namespace discipline (ADR-014): ``Evidence.claim_ids`` are CLM_* and
+        ``Decision.relevant_belief_ids`` are BLF_*. Cross-namespace comparison is
+        FORBIDDEN — we resolve beliefs to claims through ``claim_by_belief``
+        (built from the repository's canonical Belief records) and intersect
+        with the evidence's claim ids. No string guessing (e.g. ``f"CLM_{r}"``).
+
+        Without a mapping (pure legacy callers) the score degrades to a neutral
+        0.5 — never a fabricated match.
+        """
         if decision is None:
             return 0.5
         claim_ids = {c for c in (evidence.claim_ids or [])}
-        relevant = {b for b in (decision.relevant_belief_ids or [])}
         if not claim_ids:
             return 0.3
-        # Heuristic: evidence with claims touching relevant beliefs scores high.
-        if relevant and claim_ids.intersection({f"CLM_{r}" for r in relevant}):
-            return 1.0
-        if relevant and claim_ids.intersection(relevant):
-            return 0.9
-        return 0.4
+        if claim_by_belief:
+            relevant_claim_ids = {
+                claim_by_belief[bid]
+                for bid in (decision.relevant_belief_ids or [])
+                if bid in claim_by_belief
+            }
+            if relevant_claim_ids and claim_ids.intersection(relevant_claim_ids):
+                return 1.0
+            return 0.4
+        # No mapping available (legacy caller): neutral, never a string guess.
+        return 0.5
 
     @staticmethod
     def _belief_dependency(evidence: Evidence, beliefs: list[Belief]) -> float:
@@ -197,7 +195,8 @@ class DecisionRelevantContextBuilder:
         project = self.repo.get_project(project_id)
         owner = user_id or (project.user_id if project else "unknown")
         beliefs = self.repo.get_beliefs(project_id)
-        evidence = self.repo.list_evidence()
+        # P0-3: read boundary — only project-owned + explicitly shared evidence.
+        evidence = self.repo.list_evidence(project_id=project_id)
         decisions = sorted(
             self.repo.list_decisions(project_id), key=lambda d: d.updated_at, reverse=True
         )
@@ -209,20 +208,14 @@ class DecisionRelevantContextBuilder:
             [self.repo.get_objective(decisions[0].objective_id)] if decisions else []
         )
         objectives = [o for o in objectives if o is not None]
-        outcomes = []
-        actions = []
+        # P0-4: recent_outcomes via the public Repository API. Outcomes are
+        # keyed OUT_* and reference actions by action_id (ACT_*); never assume
+        # Outcome.id == Action.id and never touch private ``repo._list``.
+        outcomes: list[Outcome] = []
         for d in decisions:
-            actions.extend(
-                [a for a in self.repo._list("action") if a.decision_id == d.id] if hasattr(self.repo, "_list") else []
-            )
-        for action in actions:
-            outcome = self.repo.get_outcome(action.id) if hasattr(self.repo, "get_outcome") else None
-            if outcome is None:
-                continue
-            # Outcomes are keyed by action_id; save_outcome uses outcome.id as key.
-            for row in (self.repo._list("outcome") if hasattr(self.repo, "_list") else []):
-                if row.action_id == action.id:
-                    outcomes.append(row)
+            for action in self.repo.list_actions(decision_id=d.id):
+                outcomes.extend(self.repo.list_outcomes(action_id=action.id))
+        outcomes.sort(key=lambda o: o.observed_at, reverse=True)
         founder_profile: FounderProfile | None = None
         if project is not None:
             founder_profile = self.repo.get_founder_profile(project.user_id)
@@ -235,12 +228,23 @@ class DecisionRelevantContextBuilder:
 
             critical_uncertainties = UncertaintyEngine().rank(latest, beliefs)
 
+        # P0-2: real belief→claim mapping for decision relevance (no guessing).
+        claim_by_belief = {b.id: b.claim_id for b in beliefs}
         evidence_sorted = sorted(
             evidence,
-            key=lambda e: self.ranker.score_evidence(e, latest or decision, beliefs),
+            key=lambda e: self.ranker.score_evidence(
+                e, latest or decision, beliefs, claim_by_belief=claim_by_belief
+            ),
             reverse=True,
         )
-        strong_evidence = [e for e in evidence_sorted if self.ranker.score_evidence(e, latest or decision, beliefs) >= 0.5][:limit]
+        strong_evidence = [
+            e
+            for e in evidence_sorted
+            if self.ranker.score_evidence(
+                e, latest or decision, beliefs, claim_by_belief=claim_by_belief
+            )
+            >= 0.5
+        ][:limit]
         contradictory_evidence = [
             e
             for e in evidence_sorted

@@ -17,10 +17,27 @@ def test_evidence_roundtrip(repo_factory):
     evidence = Evidence(
         id="E_1", claim_ids=["CLM_1"], scope=Scope.PROJECT,
         evidence_type="REAL_PAYMENT", source="paid", authority_level="PROJECT_REALITY",
+        # v1.1.2 (P0-3): PROJECT evidence must carry project_id at the write boundary.
+        project_id="PRJ_1",
     )
     repo.add_evidence(evidence)
     assert repo.get_evidence("E_1") == evidence
     assert repo.list_evidence(claim_ids=["CLM_1"]) == [evidence]
+
+
+def test_project_evidence_requires_project_id(repo):
+    """P0-3 write boundary: PROJECT evidence without project_id is rejected."""
+    from vencertia.repositories.base import EntityStoreMixin  # noqa: F401
+
+    evidence = Evidence(
+        id="E_NOPID", claim_ids=["CLM_1"], scope=Scope.PROJECT,
+        evidence_type="REAL_PAYMENT", source="paid", authority_level="PROJECT_REALITY",
+    )
+    with pytest.raises(ValueError, match="requires project_id"):
+        repo.add_evidence(evidence)
+    # Migration/import path explicitly opts out.
+    repo.add_evidence(evidence, allow_missing_project=True)
+    assert repo.get_evidence("E_NOPID") is not None
 
 
 def test_stale_write_raises(repo):

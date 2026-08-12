@@ -128,7 +128,49 @@ observed behavior inside this venture）携带**根本不同**的权威等级：
 
 ---
 
-## 附录：ADR 索引（v1.0 + v1.1）
+## ADR-014 — Evidence Project Ownership and the Shared Boundary（v1.1.2）
+
+**Context**：v1.1.1 中 `Evidence` 没有 `project_id` 字段，`Repository.list_evidence()`
+（`repositories/base.py:280`）全库读取；`ContextBuilder`（`runtime/context.py:56`）与
+`DecisionRelevantContextBuilder`（`runtime/context_ranker.py:200`）都无项目过滤。
+结果：项目 A 的 PROJECT 级证据（客户付费、实验结果、创始人陈述）会出现在项目 B 的
+决策上下文中，构成跨项目/跨租户语义串扰（Release Blocker）。同时存在两种共享边界
+的天然需要：MARKET/WORLD 外部研究证据可以被多个项目复用，COMPANY_CASE 证据受
+ADR-004 transferability gate 约束。
+
+**Decision**：证据归属（ownership）与共享边界显式化：
+
+1. **`Evidence.project_id: str | None = None`**（additive，向后兼容）；
+   `Evidence.company_id: str | None = None`（COMPANY_CASE 按 company identity 隔离的预留位，v1.1.2 可选）。
+2. **写边界强制**（`EntityStoreMixin.add_evidence`，ADR-002 单一状态变更入口）：
+   `scope ∈ {PROJECT, CUSTOMER}` 且无 `project_id` → `ValueError`（迁移/导入可显式
+   `allow_missing_project=True`）。"无归属的项目级事实"不允许进入 canonical 状态。
+3. **读边界过滤**（`Repository.list_evidence(project_id=P, include_shared=True)`）：
+   - `evidence.project_id == P` → 可见；
+   - `project_id is None` 且 `scope ∈ {WORLD, MARKET, COMPANY_CASE}` → 共享可见
+     （COMPANY_CASE 仍受 ADR-004 transferability gate，不因"可见"而自动获得项目级权重）；
+   - 其余（无归属的 PROJECT/CUSTOMER legacy 行）→ 不进入任何项目上下文。
+4. **归属规则**：
+   - `record_outcome` 产生的 PROJECT 证据 → `project_id = action.project_id`；
+   - research pipeline（SearchAdapter / RetrievalProvider / `_run_research_round`）
+     产生的 MARKET 证据 → `project_id = 当前项目`（"为该项目收集的"）；
+   - claim binding applied 证据 → 由 orchestrator 在 process 前回填 project_id；
+   - 显式共享的 external（如人工录入的行业报告）→ `project_id=None` + MARKET/WORLD scope。
+5. **迁移**：`scripts/backfill_evidence_project_ids.py` 按 `claim_ids → claims.project_id`
+   回填存量 PROJECT/CUSTOMER 证据；无法解析的行保持 `None`，不再进入任何项目上下文
+   （宁可不可见，不可串扰）。
+
+**Consequences**：
+- 多项目/多租户上下文隔离从"巧合"变成"读写双边界强制"（Release Gate E）；
+- 外部研究仍可跨项目复用（共享边界明确），但不携带项目级权威（ADR-013 保持）；
+- 行为变化：存量 PROJECT 证据若未回填将不再出现在任何项目上下文 —— 需要 comparison
+  report（Release Gate D）并执行回填脚本；
+- 代价：所有 PROJECT/CUSTOMER 证据写入点必须显式声明归属，API `add_evidence` 缺省
+  project_id 时按 claim 推导，推导失败拒绝写入（HTTP 400）。
+
+---
+
+## 附录：ADR 索引（v1.0 + v1.1 + v1.1.2）
 
 | ADR | 主题 | 版本 |
 |---|---|---|
@@ -145,3 +187,4 @@ observed behavior inside this venture）携带**根本不同**的权威等级：
 | 011 | **Research requires an explicit stopping rule** | v1.1 |
 | 012 | **External intelligence cannot directly mutate canonical state** | v1.1 |
 | 013 | **Research Evidence and Project Outcome Evidence Have Different Authority** | v1.1.1 |
+| 014 | **Evidence Project Ownership and the Shared Boundary** | v1.1.2 |

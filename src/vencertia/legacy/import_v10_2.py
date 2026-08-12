@@ -214,7 +214,10 @@ class V10_2Importer:
                 case = self._company_case_from_schema(schema, path.name)
                 self.repo.save_company_case(case)
                 for evidence in self._case_evidence_from_schema(schema, case.company_id):
-                    self.repo.add_evidence(evidence)
+                    # Migration path (P0-3): allow legacy rows without
+                    # project_id; they stay shared external (WORLD/MARKET/
+                    # COMPANY_CASE) or become UNASSIGNED for PROJECT scopes.
+                    self.repo.add_evidence(evidence, allow_missing_project=True)
                 self._emit_event("company_case", case.company_id, "COMPANY_CASE_IMPORTED")
                 imported += 1
             except Exception as exc:  # pragma: no cover - defensive
