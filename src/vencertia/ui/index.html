@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vencertia 决策工作台</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">V</span>
+      <div>
+        <h1>Vencertia 决策工作台</h1>
+        <p class="sub">校准优先的决策运行时 · 把「该不该做」变成有据可依的判断</p>
+      </div>
+    </div>
+    <div id="health" class="health">…</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel form-panel">
+      <h2>发起一个决策</h2>
+      <form id="solve-form">
+        <label>你要做什么决定？<span class="req">*</span>
+          <textarea id="problem" rows="4" placeholder="例：是否投入 6 周做 B2B SaaS MVP？" required></textarea>
+        </label>
+        <div class="row">
+          <label>决策模式
+            <select id="mode">
+              <option value="">自动（默认）</option>
+              <option value="EXPLORE">Explore · 探索方向</option>
+              <option value="OPERATE">Operate · 经营决策</option>
+            </select>
+          </label>
+          <label>风险容忍度
+            <select id="risk">
+              <option value="">未设置</option>
+              <option value="0.3">风险厌恶（0.3）</option>
+              <option value="0.5">风险中性（0.5）</option>
+              <option value="0.8">风险偏好（0.8）</option>
+            </select>
+          </label>
+        </div>
+        <label>候选选项（可选，JSON 数组）
+          <textarea id="options" rows="3" placeholder='[{"id":"a","label":"立即投入"},{"id":"b","label":"先做付费试点"}]'></textarea>
+        </label>
+        <button type="submit" id="solve-btn">开始判断</button>
+        <p class="hint">默认只给「5 段合同」，点「展开完整模型」才看信念图 / 参数来源 / 敏感度。</p>
+      </form>
+    </section>
+
+    <section class="panel result-panel" id="result-panel" hidden>
+      <div class="result-head">
+        <h2>判断结果</h2>
+        <div class="actions">
+          <button id="advanced-toggle" class="ghost">展开完整模型</button>
+          <button id="reset-btn" class="ghost">再问一个</button>
+        </div>
+      </div>
+      <div id="error" class="error" hidden></div>
+      <div id="summary" class="summary"></div>
+      <div id="advanced" class="advanced" hidden></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

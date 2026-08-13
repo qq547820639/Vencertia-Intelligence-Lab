@@ -543,6 +543,21 @@ def create_app(
 
     _register_exception_handlers(app, fail)
 
+    # -- static UI (v1.8) ----------------------------------------------------------------
+    # Zero-build decision workbench served by FastAPI; the frontend reuses the
+    # already-computed Chinese projection layer over /v1/solve.
+    import pathlib
+
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    ui_dir = pathlib.Path(__file__).parent / "ui"
+    app.mount("/static", StaticFiles(directory=str(ui_dir)), name="ui-static")
+
+    @app.get("/", include_in_schema=False)
+    def index() -> FileResponse:
+        return FileResponse(ui_dir / "index.html")
+
     return app
 
 

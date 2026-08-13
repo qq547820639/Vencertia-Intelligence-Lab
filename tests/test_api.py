@@ -40,7 +40,7 @@ def test_health(client):
     tc, _ = client
     r = tc.get("/health")
     assert r.status_code == 200
-    assert r.json()["data"]["version"] == "1.7.0"
+    assert r.json()["data"]["version"] == "1.8.0"
 
 
 def test_compile(client):

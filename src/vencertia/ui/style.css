@@ -1,0 +1,92 @@
+:root {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --ink: #1c2333;
+  --ink-2: #5a6474;
+  --line: #e5e8ee;
+  --accent: #2456e6;
+  --accent-soft: #eef2ff;
+  --warn: #b7791f;
+  --danger: #c0392b;
+  --ok: #1e8449;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(20, 30, 60, 0.05), 0 4px 16px rgba(20, 30, 60, 0.06);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.6;
+}
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 28px; background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 14px; }
+.logo {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--accent);
+  color: #fff; font-weight: 700; font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+.brand h1 { font-size: 18px; margin: 0; }
+.brand .sub { font-size: 12.5px; color: var(--ink-2); margin: 2px 0 0; }
+.health { font-size: 12.5px; color: var(--ink-2); background: var(--accent-soft); padding: 6px 12px; border-radius: 999px; }
+.layout {
+  max-width: 1080px; margin: 24px auto; padding: 0 20px;
+  display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start;
+}
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
+.panel h2 { font-size: 16px; margin: 0 0 16px; }
+label { display: block; font-size: 13px; color: var(--ink); margin-bottom: 14px; }
+label .req { color: var(--danger); }
+textarea, select, input {
+  width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; color: var(--ink);
+}
+textarea:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+button {
+  cursor: pointer; border: none; border-radius: 8px; font-size: 14px; padding: 11px 18px;
+  background: var(--accent); color: #fff; font-weight: 600;
+}
+button:hover { filter: brightness(1.05); }
+button.ghost { background: #fff; color: var(--accent); border: 1px solid var(--line); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.hint { font-size: 12px; color: var(--ink-2); margin: 12px 0 0; }
+
+.result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.result-head h2 { margin: 0; }
+.actions { display: flex; gap: 8px; }
+
+.error { background: #fdf0ee; color: var(--danger); border: 1px solid #f5c6c0; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; }
+
+.summary { display: flex; flex-direction: column; gap: 12px; }
+.verdict {
+  display: flex; align-items: center; gap: 14px; padding: 16px 18px;
+  border-radius: var(--radius); background: var(--accent-soft); border: 1px solid #dbe4ff;
+}
+.verdict .pill {
+  font-size: 15px; font-weight: 700; color: #fff; background: var(--accent);
+  padding: 6px 14px; border-radius: 999px; white-space: nowrap;
+}
+.verdict .conf { font-size: 14px; color: var(--ink-2); }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.card h3 { margin: 0 0 6px; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); }
+.card p, .card ul { margin: 0; font-size: 14px; }
+.card ul { padding-left: 18px; }
+.card.warn { border-color: #f3d9a6; background: #fffaf0; }
+.card.danger { border-color: #f5c6c0; background: #fdf0ee; }
+.card .tag { display: inline-block; font-size: 12px; background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 2px 8px; margin-right: 6px; }
+
+.advanced { margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 18px; }
+.advanced h3 { font-size: 14px; margin: 14px 0 8px; }
+.advanced pre {
+  background: #0f1522; color: #d7e1f5; border-radius: 10px; padding: 14px 16px;
+  font-size: 12px; overflow-x: auto; line-height: 1.5;
+}
+.advanced .list { font-size: 13.5px; }
+.advanced .list li { margin-bottom: 4px; }
