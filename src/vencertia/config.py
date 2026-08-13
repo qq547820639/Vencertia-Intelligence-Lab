@@ -7,6 +7,7 @@ deterministic defaults, so the system runs fully offline out of the box.
 from __future__ import annotations
 
 import os
+import warnings
 from dataclasses import dataclass, field
 from functools import lru_cache
 
@@ -147,10 +148,34 @@ class Settings:
     # change.
     opportunity_cost_enabled: bool = False
 
+    # -- v1.2 stakes / critic ---------------------------------------------------
+    # Three-band ABSTAIN thresholds (V-4). MEDIUM == the v1.1.2 global values,
+    # so a decision without explicit stakes reproduces prior behavior exactly.
+    stakes_thresholds: dict[str, dict[str, float]] = field(default_factory=lambda: {
+        "HIGH": {"minimum_margin": 0.12, "max_critical_uncertainty": 0.35},
+        "MEDIUM": {"minimum_margin": 0.08, "max_critical_uncertainty": 0.45},
+        "LOW": {"minimum_margin": 0.04, "max_critical_uncertainty": 0.60},
+    })
+    # V-3: a mandatory model critic is required when stakes_class >= this value.
+    critic_required_stakes: str = "HIGH"
+
     @classmethod
     def from_env(cls) -> Settings:
         """Build Settings from the process environment (VENCERTIA_* variables)."""
         weights = dict(DEFAULT_CONTEXT_RANK_WEIGHTS)
+        # M0-1: prefer VENCERTIA_MODEL_PROVIDER; fall back to the deprecated
+        # MODEL_PROVIDER alias with a warning (never silently downgrade to mock).
+        model_provider = os.environ.get("VENCERTIA_MODEL_PROVIDER")
+        if model_provider is None:
+            legacy = os.environ.get("MODEL_PROVIDER")
+            if legacy:
+                warnings.warn(
+                    "MODEL_PROVIDER is deprecated; use VENCERTIA_MODEL_PROVIDER",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                model_provider = legacy
+        model_provider = model_provider or "mock"
         raw_weights = os.environ.get("VENCERTIA_CONTEXT_RANK_WEIGHTS")
         if raw_weights:
             try:
@@ -164,7 +189,7 @@ class Settings:
         return cls(
             db_dsn=os.environ.get("VENCERTIA_DB_DSN", "sqlite:///data/vencertia.db"),
             postgres_dsn=os.environ.get("VENCERTIA_PG_DSN") or None,
-            model_provider=os.environ.get("VENCERTIA_MODEL_PROVIDER", "mock"),
+            model_provider=model_provider,
             openai_base_url=os.environ.get("VENCERTIA_OPENAI_BASE_URL") or None,
             openai_api_key=os.environ.get("VENCERTIA_OPENAI_API_KEY") or None,
             openai_model=os.environ.get("VENCERTIA_OPENAI_MODEL", "gpt-4o-mini"),

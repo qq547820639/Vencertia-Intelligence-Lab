@@ -34,7 +34,14 @@ from vencertia.domain.binding import (
     ClaimMatchResult,
     EvidenceClaimBinding,
 )
-from vencertia.domain.calibration import CalibratedConfidence, CalibrationProfile, CalibrationScope
+from vencertia.domain.calibration import (
+    CalibratedConfidence,
+    CalibrationProfile,
+    CalibrationScope,
+    CalibrationStatus,
+    EstimateType,
+    classify_calibration,
+)
 from vencertia.domain.claim import Claim
 from vencertia.domain.company import (
     CaseUnitRef,
@@ -44,7 +51,18 @@ from vencertia.domain.company import (
     FundingRound,
 )
 from vencertia.domain.convergence import ConvergenceReport, CriticalUncertainty
+from vencertia.domain.critic import (
+    CritiqueFindingType,
+    ModelCriticGate,
+    ModelCritique,
+    ModelRisk,
+)
 from vencertia.domain.decision import Decision, DecisionOption, DecisionResult, OptionScore
+from vencertia.domain.decision_ledger import (
+    CounterfactualStatus,
+    DecisionOutcomeRecord,
+    DecisionRecord,
+)
 from vencertia.domain.decision_trace import (
     BeliefContribution,
     DecisionSensitivity,
@@ -69,6 +87,7 @@ from vencertia.domain.memory import (
     MemoryStatus,
     MemoryType,
 )
+from vencertia.domain.model_parameter import ApprovalStatus, ModelParameter, ProvenanceType
 from vencertia.domain.objective import Objective, ObjectiveDirection
 from vencertia.domain.observability import ProviderCallRecord
 from vencertia.domain.policy import Rule, RuleSet
@@ -80,6 +99,8 @@ from vencertia.domain.research import (
     ResearchStopReport,
     ResearchTrace,
 )
+from vencertia.domain.stakes import StakesClass, StakesProfile
+from vencertia.domain.utility import UtilityComponent, UtilityRelationType
 
 __all__ = [
     "Action",
@@ -164,4 +185,22 @@ __all__ = [
     "VencertiaBaseModel",
     "Verification",
     "utcnow",
+    # v1.2 additions (M0/V-1~V-5)
+    "ApprovalStatus",
+    "CalibrationStatus",
+    "CounterfactualStatus",
+    "CritiqueFindingType",
+    "DecisionOutcomeRecord",
+    "DecisionRecord",
+    "EstimateType",
+    "ModelCriticGate",
+    "ModelCritique",
+    "ModelParameter",
+    "ModelRisk",
+    "ProvenanceType",
+    "StakesClass",
+    "StakesProfile",
+    "UtilityComponent",
+    "UtilityRelationType",
+    "classify_calibration",
 ]

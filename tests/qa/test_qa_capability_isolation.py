@@ -81,9 +81,9 @@ def test_capability_protocol_exposes_no_write_api() -> None:
     assert not members.intersection(
         {"save_belief", "save_decision", "add_evidence", "save_project", "save_experiment"}
     )
-    # CapabilityResult carries only candidate data.
+    # CapabilityResult carries only candidate data (critique added in v1.2 V-3).
     fields = set(CapabilityResult.model_fields.keys())
-    assert fields <= {"claims", "evidence", "decision_skeleton", "experiments", "notes"}
+    assert fields <= {"claims", "evidence", "decision_skeleton", "experiments", "notes", "critique"}
 
 
 def test_llm_evidence_cannot_self_declare_verified_through_pipeline() -> None:

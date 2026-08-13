@@ -220,6 +220,36 @@ class ResearchExecutionService:
                     ).total_seconds() * 1000.0
                 from vencertia.runtime.research_stop import RoundSummary
 
+                # M0-2: real decision_sensitivity_signal — feed the
+                # recommendation before/after this round's belief update.
+                decision_result_before = None
+                decision_result_after = None
+                if decision is not None and len(decision.options) >= 2:
+                    from vencertia.runtime.decision_engine import DecisionEngineInput
+
+                    try:
+                        decision_result_before = self.engines.decision_engine.evaluate(
+                            DecisionEngineInput(
+                                decision=decision,
+                                beliefs=beliefs_before,
+                                risk_aversion=self.settings.risk_aversion,
+                                minimum_margin=self.settings.minimum_margin,
+                                max_critical_uncertainty=self.settings.max_critical_uncertainty,
+                            )
+                        )
+                        decision_result_after = self.engines.decision_engine.evaluate(
+                            DecisionEngineInput(
+                                decision=decision,
+                                beliefs=beliefs_now,
+                                risk_aversion=self.settings.risk_aversion,
+                                minimum_margin=self.settings.minimum_margin,
+                                max_critical_uncertainty=self.settings.max_critical_uncertainty,
+                            )
+                        )
+                    except Exception:  # pragma: no cover - stop signal must not block research
+                        decision_result_before = None
+                        decision_result_after = None
+
                 _state["stop_report"] = self._evaluate_stop(
                     traces,
                     beliefs_before,
@@ -233,6 +263,8 @@ class ResearchExecutionService:
                         target_claim_ids=target_claims,
                         beliefs_before=beliefs_before,
                         beliefs_after=beliefs_now,
+                        decision_result_before=decision_result_before,
+                        decision_result_after=decision_result_after,
                         queries_executed=_trace.queries_executed,
                         latency_ms=latency_ms,
                     ),

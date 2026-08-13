@@ -326,6 +326,9 @@ def prediction_create(decision_id: str, db: str | None = None) -> None:
         raise EntityNotFoundError("decision", decision_id)
     beliefs = repo.get_beliefs(decision.project_id)
     entries = runtime.engines.prediction_ledger.register(decision, beliefs)
+    # M0-4: single persistence point — register() no longer saves.
+    for entry in entries:
+        repo.save_prediction(entry)
     _dump([e.model_dump(mode="json") for e in entries])
 
 

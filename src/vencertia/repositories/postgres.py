@@ -165,3 +165,157 @@ class PostgresRepository(EntityStoreMixin):
     def _txn(self, fn: Callable[[], None]) -> None:
         with self.conn.transaction():
             fn()
+
+    # -- v1.1 special tables (hot paths, PG dialect) ---------------------------
+    # Mirrors SQLiteRepository's claim_bindings / belief_update_records overrides
+    # against the PostgreSQL-specific 0004_pg_v1_1.sql schema.
+
+    @staticmethod
+    def _binding_method(binding) -> str:
+        return (
+            binding.binding_method.value
+            if hasattr(binding.binding_method, "value")
+            else str(binding.binding_method)
+        )
+
+    @staticmethod
+    def _binding_status(binding) -> str:
+        return binding.status.value if hasattr(binding.status, "value") else str(binding.status)
+
+    def save_binding(self, binding, expected_version: int | None = None) -> None:
+        payload = json.loads(binding.model_dump_json())
+        params = (
+            binding.id,
+            binding.evidence_id,
+            binding.claim_id,
+            binding.binding_confidence,
+            self._binding_method(binding),
+            self._binding_status(binding),
+            binding.model,
+            binding.provider,
+            binding.matched_at,
+            binding.retry_count,
+            binding.version,
+            payload,
+        )
+        with self.conn.cursor() as cur:
+            if expected_version is not None:
+                cur.execute(
+                    "UPDATE claim_bindings SET claim_id=%s, binding_confidence=%s, "
+                    "binding_method=%s, status=%s, model=%s, provider=%s, matched_at=%s, "
+                    "retry_count=%s, version=%s, payload=%s WHERE id=%s AND version=%s",
+                    (
+                        binding.claim_id,
+                        binding.binding_confidence,
+                        self._binding_method(binding),
+                        self._binding_status(binding),
+                        binding.model,
+                        binding.provider,
+                        binding.matched_at,
+                        binding.retry_count,
+                        binding.version,
+                        payload,
+                        binding.id,
+                        expected_version,
+                    ),
+                )
+                if cur.rowcount == 0:
+                    cur.execute("SELECT version FROM claim_bindings WHERE id=%s", (binding.id,))
+                    existing = cur.fetchone()
+                    if existing is None:
+                        cur.execute(
+                            "INSERT INTO claim_bindings(id,evidence_id,claim_id,binding_confidence,"
+                            "binding_method,status,model,provider,matched_at,retry_count,version,payload) "
+                            "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                            params,
+                        )
+                    else:
+                        raise StaleWriteError("binding", binding.id, expected_version)
+            else:
+                cur.execute(
+                    "INSERT INTO claim_bindings(id,evidence_id,claim_id,binding_confidence,"
+                    "binding_method,status,model,provider,matched_at,retry_count,version,payload) "
+                    "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                    "ON CONFLICT(id) DO UPDATE SET "
+                    "claim_id=EXCLUDED.claim_id, binding_confidence=EXCLUDED.binding_confidence, "
+                    "binding_method=EXCLUDED.binding_method, status=EXCLUDED.status, "
+                    "model=EXCLUDED.model, provider=EXCLUDED.provider, matched_at=EXCLUDED.matched_at, "
+                    "retry_count=EXCLUDED.retry_count, version=EXCLUDED.version, payload=EXCLUDED.payload",
+                    params,
+                )
+        self._maybe_commit()
+
+    def get_binding(self, binding_id: str):
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT payload FROM claim_bindings WHERE id=%s", (binding_id,))
+            row = cur.fetchone()
+        if row is None:
+            return None
+        from vencertia.domain import EvidenceClaimBinding
+
+        payload = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+        return EvidenceClaimBinding.model_validate(payload)
+
+    def list_bindings(
+        self,
+        evidence_id: str | None = None,
+        claim_id: str | None = None,
+        status: str | None = None,
+    ) -> list:
+        sql = "SELECT payload FROM claim_bindings WHERE 1=1"
+        params: list[Any] = []
+        if evidence_id is not None:
+            sql += " AND evidence_id=%s"
+            params.append(evidence_id)
+        if claim_id is not None:
+            sql += " AND claim_id=%s"
+            params.append(claim_id)
+        if status is not None:
+            sql += " AND status=%s"
+            params.append(status)
+        with self.conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+        from vencertia.domain import EvidenceClaimBinding
+
+        out: list = []
+        for row in rows:
+            payload = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+            out.append(EvidenceClaimBinding.model_validate(payload))
+        return out
+
+    def save_belief_update_record(self, record) -> None:
+        payload = json.loads(record.model_dump_json())
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO belief_update_records(id,belief_id,claim_id,posterior_version,"
+                "created_at,payload) VALUES(%s,%s,%s,%s,%s,%s) "
+                "ON CONFLICT(id) DO UPDATE SET "
+                "belief_id=EXCLUDED.belief_id, claim_id=EXCLUDED.claim_id, "
+                "posterior_version=EXCLUDED.posterior_version, created_at=EXCLUDED.created_at, "
+                "payload=EXCLUDED.payload",
+                (
+                    record.id,
+                    record.belief_id,
+                    record.claim_id,
+                    record.posterior_version,
+                    record.created_at,
+                    payload,
+                ),
+            )
+        self._maybe_commit()
+
+    def list_belief_update_records(self, belief_id: str) -> list:
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT payload FROM belief_update_records WHERE belief_id=%s ORDER BY posterior_version",
+                (belief_id,),
+            )
+            rows = cur.fetchall()
+        from vencertia.domain import BeliefUpdateRecord
+
+        out: list = []
+        for row in rows:
+            payload = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+            out.append(BeliefUpdateRecord.model_validate(payload))
+        return out

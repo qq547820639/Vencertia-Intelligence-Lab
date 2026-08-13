@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vencertia-decision-runtime"
-version = "1.1.2"
+version = "1.2.0"
 description = "Calibration-first adaptive decision runtime for high-uncertainty venture decisions"
 readme = "README.md"
 requires-python = ">=3.11"

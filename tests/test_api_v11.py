@@ -39,11 +39,11 @@ def test_health_reports_api_version(client):
     r = tc.get("/health")
     assert r.status_code == 200
     data = r.json()["data"]
-    # v1.1.2 (P1-12): single source of truth + legacy derived aliases.
-    assert data["runtime_version"] == "1.1.2"
-    assert data["api_contract_version"] == "1.1"
-    assert data["version"] == "1.0.0"  # backward-compatible v1.0 alias
-    assert data["api_version"] == "1.1.0"  # derived from api_contract_version
+    # v1.2 (P1-12): single source of truth + legacy derived aliases.
+    assert data["runtime_version"] == "1.2.0"
+    assert data["api_contract_version"] == "1.2"
+    assert data["version"] == "1.2.0"  # derived from vencertia.__version__
+    assert data["api_version"] == "1.2.0"  # derived from api_contract_version
 
 
 def test_research_plan_endpoint(client):

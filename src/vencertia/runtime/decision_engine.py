@@ -21,7 +21,11 @@ from vencertia.domain import (
     Objective,
     RuleSet,
 )
-from vencertia.runtime.uncertainty_engine import UncertaintyEngine, compute_option_scores
+from vencertia.runtime.uncertainty_engine import (
+    UncertaintyEngine,
+    compute_option_scores,
+    option_coefficients,
+)
 
 DecisionEngineOutput = DecisionResult
 
@@ -62,6 +66,26 @@ class DecisionEngine:
         self.settings = settings or get_settings()
         self.uncertainty_engine = uncertainty_engine or UncertaintyEngine()
 
+    def _thresholds_for(
+        self, decision: Decision, inp: DecisionEngineInput
+    ) -> tuple[float, float]:
+        """Select the ABSTAIN threshold band for a decision's stakes class (V-4).
+
+        HIGH/LOW use their explicit stakes band; MEDIUM (the v1.1.2 default) and
+        any unknown class keep using the caller-provided global thresholds so
+        per-request / per-case overrides are preserved exactly.
+        """
+        stakes_class = (
+            decision.stakes_class.value
+            if hasattr(decision.stakes_class, "value")
+            else str(decision.stakes_class)
+        )
+        if stakes_class in ("HIGH", "LOW"):
+            band = self.settings.stakes_thresholds.get(stakes_class)
+            if band is not None:
+                return band["minimum_margin"], band["max_critical_uncertainty"]
+        return inp.minimum_margin, inp.max_critical_uncertainty
+
     def evaluate(self, inp: DecisionEngineInput) -> DecisionResult:
         scores = compute_option_scores(
             inp.decision, inp.beliefs, inp.risk_aversion
@@ -71,6 +95,7 @@ class DecisionEngine:
 
         best, second = scores[0], scores[1]
         margin = best.adjusted_utility - second.adjusted_utility
+        minimum_margin, max_critical_uncertainty = self._thresholds_for(inp.decision, inp)
 
         criticals = self.uncertainty_engine.rank(
             inp.decision, inp.beliefs, option_scores=scores
@@ -95,13 +120,29 @@ class DecisionEngine:
             ),
         )
 
-        abstain = margin < inp.minimum_margin or critical_uncertainty > inp.max_critical_uncertainty
+        abstain = margin < minimum_margin or critical_uncertainty > max_critical_uncertainty
+        stakes_class = (
+            inp.decision.stakes_class.value
+            if hasattr(inp.decision.stakes_class, "value")
+            else str(inp.decision.stakes_class)
+        )
+        abstain_exit_condition: str | None = None
         if abstain:
             status = DecisionType.ABSTAIN
             recommended = None
             rationale.append(
                 "Decision has not converged; acquire decision-changing evidence before committing."
             )
+            if inp.decision.stakes is not None:
+                if margin < minimum_margin:
+                    abstain_exit_condition = (
+                        f"margin {margin:.4f} below stakes threshold {minimum_margin:.2f}"
+                    )
+                elif critical_uncertainty > max_critical_uncertainty:
+                    abstain_exit_condition = (
+                        f"critical uncertainty {critical_uncertainty:.4f} above stakes "
+                        f"threshold {max_critical_uncertainty:.2f}"
+                    )
         else:
             best_option = self._option(inp.decision, best.option_id)
             status = self._map_decision_type(best_option)
@@ -121,6 +162,8 @@ class DecisionEngine:
             if hasattr(inp.convergence_status, "value")
             else str(inp.convergence_status),
             rationale=rationale,
+            stakes_class=stakes_class,
+            abstain_exit_condition=abstain_exit_condition,
         )
 
     @staticmethod
@@ -155,7 +198,7 @@ class DecisionEngine:
         best = result.option_scores[0] if result.option_scores else None
         best_option = self._option(inp.decision, best.option_id) if best else None
         for belief in inp.beliefs:
-            best_coef = (best_option.belief_coefficients or {}).get(belief.id, 0.0) if best_option else 0.0
+            best_coef = option_coefficients(best_option).get(belief.id, 0.0) if best_option else 0.0
             contribution = best_coef * belief.probability
             direction = "NEUTRAL"
             if contribution > 0:

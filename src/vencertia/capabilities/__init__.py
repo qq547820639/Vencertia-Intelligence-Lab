@@ -16,12 +16,15 @@ from vencertia.capabilities.market import MarketCapability
 from vencertia.capabilities.research import ResearchCapability
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
+    ApprovalStatus,
     Belief,
     Claim,
     Decision,
     DecisionOption,
     Experiment,
+    ModelParameter,
     Objective,
+    ProvenanceType,
     VencertiaBaseModel,
 )
 from vencertia.providers.models import ModelProvider
@@ -87,6 +90,9 @@ class DecisionCompiler:
         objective = Objective.model_validate(objective_data)
         decision_data["objective_id"] = objective.id
         decision = Decision.model_validate(decision_data)
+        # V-1: non-mock (LLM) models propose parameters, not approve them.
+        if self._model_is_llm():
+            decision = self._mark_parameters_proposed(decision)
         claims = [Claim.model_validate(c) for c in raw.get("claims") or []]
         beliefs = [Belief.model_validate(b) for b in raw.get("beliefs") or []]
         experiments = [Experiment.model_validate(e) for e in raw.get("experiments") or []]
@@ -98,6 +104,29 @@ class DecisionCompiler:
             experiments=experiments,
             notes=list(raw.get("notes") or []),
         )
+
+    def _model_is_llm(self) -> bool:
+        """A model with a non-mock ``name`` is treated as an LLM proposer."""
+        return getattr(self.model, "name", None) not in (None, "mock")
+
+    def _mark_parameters_proposed(self, decision: Decision) -> Decision:
+        """Wrap LLM-produced float coefficients as PROPOSED ModelParameters (V-1).
+
+        ``LLM_PROPOSED/PROPOSED`` records the provenance/approval semantics
+        ("LLM propose ≠ approve") without blocking the deterministic engines.
+        """
+        for option in decision.options:
+            if not option.belief_coefficients:
+                continue
+            parameters = dict(option.belief_parameters or {})
+            for belief_id, value in option.belief_coefficients.items():
+                parameters[belief_id] = ModelParameter(
+                    value=value,
+                    provenance=ProvenanceType.LLM_PROPOSED,
+                    status=ApprovalStatus.PROPOSED,
+                )
+            option.belief_parameters = parameters
+        return decision
 
 
 def build_capability_registry(

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from vencertia.config import Settings
@@ -27,6 +27,7 @@ from vencertia.domain import (
     OutcomeType,
     VencertiaBaseModel,
 )
+from vencertia.providers.errors import ProviderError
 from vencertia.repositories.base import EntityNotFoundError, Repository, StaleWriteError
 from vencertia.runtime import SolveOrchestrator, SolveRequest
 
@@ -109,6 +110,41 @@ class PredictionCorrectRequest(VencertiaBaseModel):
     source: str
 
 
+def _register_exception_handlers(app: FastAPI, fail) -> None:
+    """Register unified error → envelope handlers (M0-3).
+
+    All handlers return ``{code, data, message}`` while preserving the HTTP
+    status code:
+      EntityNotFoundError -> 404
+      StaleWriteError     -> 409
+      ValueError          -> 400
+      ProviderError       -> 502
+    """
+    from fastapi.responses import JSONResponse
+
+    def _response(status_code: int, message: str) -> JSONResponse:
+        return JSONResponse(
+            status_code=status_code,
+            content=fail(status_code, message).model_dump(mode="json"),
+        )
+
+    @app.exception_handler(EntityNotFoundError)
+    async def entity_not_found_handler(_, exc: EntityNotFoundError):
+        return _response(404, str(exc))
+
+    @app.exception_handler(StaleWriteError)
+    async def stale_write_handler(_, exc: StaleWriteError):
+        return _response(409, str(exc))
+
+    @app.exception_handler(ValueError)
+    async def value_error_handler(_, exc: ValueError):
+        return _response(400, str(exc))
+
+    @app.exception_handler(ProviderError)
+    async def provider_error_handler(_, exc: ProviderError):
+        return _response(502, str(exc))
+
+
 def create_app(
     settings: Settings,
     repo: Repository,
@@ -140,7 +176,7 @@ def create_app(
                 "policy_version": settings.policy_version,
                 "model_provider": settings.model_provider,
                 # Legacy compatibility keys (derived, never hard-coded):
-                "version": "1.0.0",  # v1.0 health contract alias
+                "version": vencertia.__version__,  # v1.0 health contract alias
                 "api_version": vencertia.__api_contract_version__ + ".0",
             }
         )
@@ -149,37 +185,31 @@ def create_app(
 
     @app.post("/v1/decisions/compile", response_model=ApiResponse)
     def compile_decision(req: CompileRequest) -> ApiResponse:
-        try:
-            project = repo.get_project(req.project_id)
-            if project is None:
-                raise EntityNotFoundError("project", req.project_id)
-            compiled = runtime.compiler.compile(
-                req.problem_text,
-                {"project_id": req.project_id, "user_id": req.user_id or project.user_id},
-                options=req.options,
-            )
-            return ok(compiled.model_dump(mode="json"))
-        except EntityNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        project = repo.get_project(req.project_id)
+        if project is None:
+            raise EntityNotFoundError("project", req.project_id)
+        compiled = runtime.compiler.compile(
+            req.problem_text,
+            {"project_id": req.project_id, "user_id": req.user_id or project.user_id},
+            options=req.options,
+        )
+        return ok(compiled.model_dump(mode="json"))
 
     @app.post("/v1/decisions/evaluate", response_model=ApiResponse)
     def evaluate_decision(req: EvaluateRequest) -> ApiResponse:
-        try:
-            result, convergence = runtime.evaluate_decision(req.decision_id)
-            return ok(
-                {
-                    "decision": result.model_dump(mode="json"),
-                    "convergence": convergence.model_dump(mode="json"),
-                }
-            )
-        except EntityNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        result, convergence = runtime.evaluate_decision(req.decision_id)
+        return ok(
+            {
+                "decision": result.model_dump(mode="json"),
+                "convergence": convergence.model_dump(mode="json"),
+            }
+        )
 
     @app.get("/v1/decisions/{decision_id}", response_model=ApiResponse)
     def get_decision(decision_id: str) -> ApiResponse:
         decision = repo.get_decision(decision_id)
         if decision is None:
-            raise HTTPException(status_code=404, detail=f"decision not found: {decision_id}")
+            raise EntityNotFoundError("decision", decision_id)
         return ok(decision.model_dump(mode="json"))
 
     # -- evidence ----------------------------------------------------------------
@@ -197,29 +227,23 @@ def create_app(
                     break
         grade = runtime.policy.grade(evidence)
         if grade.scope_gate == "REJECTED":
-            raise HTTPException(status_code=400, detail=grade.reason)
+            raise ValueError(grade.reason)
         graded = runtime.policy.apply_authority(evidence, settings.policy_version)
-        try:
-            repo.add_evidence(graded)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        repo.add_evidence(graded)
         return ok(graded.model_dump(mode="json"), message=grade.reason)
 
     # -- outcomes ----------------------------------------------------------------
 
     @app.post("/v1/outcomes", response_model=ApiResponse)
     def record_outcome(req: OutcomeRequest) -> ApiResponse:
-        try:
-            result = runtime.record_outcome(
-                req.action_id,
-                req.result,
-                quantitative=req.quantitative,
-                outcome_type=req.outcome_type,
-                direction=req.direction,
-            )
-            return ok(result.model_dump(mode="json"))
-        except EntityNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        result = runtime.record_outcome(
+            req.action_id,
+            req.result,
+            quantitative=req.quantitative,
+            outcome_type=req.outcome_type,
+            direction=req.direction,
+        )
+        return ok(result.model_dump(mode="json"))
 
     # -- experiments ---------------------------------------------------------------
 
@@ -229,7 +253,7 @@ def create_app(
 
         decision = repo.get_decision(req.decision_id)
         if decision is None:
-            raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
+            raise EntityNotFoundError("decision", req.decision_id)
         beliefs = repo.get_beliefs(decision.project_id)
         criticals = runtime.engines.uncertainty_engine.rank(decision, beliefs)
         critical_belief_id = criticals[0].belief_id if criticals else None
@@ -255,7 +279,7 @@ def create_app(
     def resolve_experiment(experiment_id: str, req: ExperimentResolveRequest) -> ApiResponse:
         experiment = repo.get_experiment(experiment_id)
         if experiment is None:
-            raise HTTPException(status_code=404, detail=f"experiment not found: {experiment_id}")
+            raise EntityNotFoundError("experiment", experiment_id)
         action = Action(
             id=f"ACT_{experiment_id}",
             project_id="PRJ_UNKNOWN",
@@ -291,42 +315,35 @@ def create_app(
     def create_predictions(req: PredictionCreateRequest) -> ApiResponse:
         decision = repo.get_decision(req.decision_id)
         if decision is None:
-            raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
+            raise EntityNotFoundError("decision", req.decision_id)
         beliefs = repo.get_beliefs(decision.project_id)
         entries = runtime.engines.prediction_ledger.register(decision, beliefs)
+        # M0-4: single persistence point — register() no longer saves.
+        for entry in entries:
+            repo.save_prediction(entry)
         return ok([e.model_dump(mode="json") for e in entries])
 
     @app.post("/v1/predictions/{prediction_id}/resolve", response_model=ApiResponse)
     def resolve_prediction(prediction_id: str, req: PredictionResolveRequest) -> ApiResponse:
-        try:
-            entry = runtime.engines.prediction_ledger.resolve(prediction_id, req.outcome)
-            return ok(entry.model_dump(mode="json"))
-        except EntityNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        entry = runtime.engines.prediction_ledger.resolve(prediction_id, req.outcome)
+        return ok(entry.model_dump(mode="json"))
 
     @app.post("/v1/predictions/{prediction_id}/correct", response_model=ApiResponse)
     def correct_prediction(prediction_id: str, req: PredictionCorrectRequest) -> ApiResponse:
         from vencertia.events.types import EventType, make_event
 
-        try:
-            entry = runtime.engines.prediction_ledger.correct(
-                prediction_id, req.new_outcome, req.source
+        entry = runtime.engines.prediction_ledger.correct(
+            prediction_id, req.new_outcome, req.source
+        )
+        runtime.bus.publish(
+            make_event(
+                EventType.PREDICTION_CORRECTED,
+                "prediction",
+                entry.id,
+                {"outcome": entry.outcome, "source": req.source, "version": entry.version},
             )
-            runtime.bus.publish(
-                make_event(
-                    EventType.PREDICTION_CORRECTED,
-                    "prediction",
-                    entry.id,
-                    {"outcome": entry.outcome, "source": req.source, "version": entry.version},
-                )
-            )
-            return ok(entry.model_dump(mode="json"))
-        except EntityNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        )
+        return ok(entry.model_dump(mode="json"))
 
     # -- calibration -------------------------------------------------------------------
 
@@ -339,7 +356,7 @@ def create_app(
         try:
             cal_scope = CalibrationScope(scope.upper())
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=f"invalid scope: {scope}") from exc
+            raise ValueError(f"invalid scope: {scope}") from exc
         profile = runtime.engines.calibration_engine.report(
             CalibrationInput(predictions, cal_scope, key, settings.ece_bins)
         )
@@ -368,11 +385,11 @@ def create_app(
     def research_plan(req: ResearchPlanRequest) -> ApiResponse:
         decision = repo.get_decision(req.decision_id)
         if decision is None:
-            raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
+            raise EntityNotFoundError("decision", req.decision_id)
         beliefs = repo.get_beliefs(decision.project_id)
         criticals = runtime.engines.uncertainty_engine.rank(decision, beliefs)
         if runtime.engines.research_planner is None:
-            raise HTTPException(status_code=400, detail="research_planner not wired")
+            raise ValueError("research_planner not wired")
         plan = runtime.engines.research_planner.plan(decision, beliefs, criticals, None)
         repo.save_research_plan(plan)
         return ok(plan.model_dump(mode="json"))
@@ -389,10 +406,10 @@ def create_app(
         """
         decision = repo.get_decision(req.decision_id)
         if decision is None:
-            raise HTTPException(status_code=404, detail=f"decision not found: {req.decision_id}")
+            raise EntityNotFoundError("decision", req.decision_id)
         service = runtime.engines.research_execution
         if service is None:
-            raise HTTPException(status_code=400, detail="research_execution not wired")
+            raise ValueError("research_execution not wired")
         result = service.run_plan(
             req.decision_id,
             question_ids=req.question_ids,
@@ -404,9 +421,9 @@ def create_app(
     def evidence_bind(req: EvidenceBindRequest) -> ApiResponse:
         evidence = repo.get_evidence(req.evidence_id)
         if evidence is None:
-            raise HTTPException(status_code=404, detail=f"evidence not found: {req.evidence_id}")
+            raise EntityNotFoundError("evidence", req.evidence_id)
         if runtime.engines.claim_binding_engine is None:
-            raise HTTPException(status_code=400, detail="claim_binding_engine not wired")
+            raise ValueError("claim_binding_engine not wired")
         existing_claims = repo.list_claims()
 
         output = runtime.engines.claim_binding_engine.process(
@@ -455,14 +472,14 @@ def create_app(
     def decision_sensitivity(decision_id: str) -> ApiResponse:
         sensitivity = repo.get_decision_sensitivity(decision_id)
         if sensitivity is None:
-            raise HTTPException(status_code=404, detail=f"sensitivity not found: {decision_id}")
+            raise EntityNotFoundError("decision_sensitivity", decision_id)
         return ok(sensitivity.model_dump(mode="json"))
 
     @app.get("/v1/decisions/{decision_id}/trace", response_model=ApiResponse)
     def decision_trace(decision_id: str) -> ApiResponse:
         trace = repo.get_decision_trace(decision_id)
         if trace is None:
-            raise HTTPException(status_code=404, detail=f"trace not found: {decision_id}")
+            raise EntityNotFoundError("decision_trace", decision_id)
         return ok(trace.model_dump(mode="json"))
 
     @app.get("/v1/beliefs/{belief_id}/history", response_model=ApiResponse)
@@ -480,7 +497,7 @@ def create_app(
         candidates = repo.list_candidate_claims()
         candidate = next((c for c in candidates if c.id == candidate_id), None)
         if candidate is None:
-            raise HTTPException(status_code=404, detail=f"candidate not found: {candidate_id}")
+            raise EntityNotFoundError("candidate_claim", candidate_id)
 
         updated = candidate.model_copy(update={"validation_status": "VALIDATED"})
         repo.save_candidate_claim(updated, expected_version=candidate.version)
@@ -490,24 +507,12 @@ def create_app(
 
     @app.post("/v1/solve", response_model=ApiResponse)
     def solve(req: SolveRequest) -> ApiResponse:
-        try:
-            result = runtime.solve(req)
-            return ok(result.model_dump(mode="json"))
-        except EntityNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        result = runtime.solve(req)
+        return ok(result.model_dump(mode="json"))
 
     # -- error handlers ---------------------------------------------------------------------
 
-    @app.exception_handler(StaleWriteError)
-    async def stale_write_handler(_, exc: StaleWriteError):
-        from fastapi.responses import JSONResponse
-
-        return JSONResponse(
-            status_code=409,
-            content=fail(409, str(exc)).model_dump(mode="json"),
-        )
+    _register_exception_handlers(app, fail)
 
     return app
 

@@ -28,6 +28,7 @@ from vencertia.domain import (
     CriticalUncertainty,
     Decision,
     DecisionOption,
+    DecisionRecord,
     DecisionResult,
     DecisionSensitivity,
     DecisionTrace,
@@ -480,12 +481,42 @@ class SolveOrchestrator:
                             latency_ms = (
                                 _trace.completed_at - _trace.started_at
                             ).total_seconds() * 1000.0
+                        # M0-2: real decision_sensitivity_signal — feed the
+                        # recommendation before/after this round's belief update.
+                        beliefs_now = self.repo.get_beliefs(project.id) or _beliefs
+                        decision_result_before = None
+                        decision_result_after = None
+                        if decision is not None and len(decision.options) >= 2:
+                            try:
+                                decision_result_before = self.engines.decision_engine.evaluate(
+                                    DecisionEngineInput(
+                                        decision=decision,
+                                        beliefs=_beliefs_before,
+                                        risk_aversion=self.settings.risk_aversion,
+                                        minimum_margin=self.settings.minimum_margin,
+                                        max_critical_uncertainty=self.settings.max_critical_uncertainty,
+                                    )
+                                )
+                                decision_result_after = self.engines.decision_engine.evaluate(
+                                    DecisionEngineInput(
+                                        decision=decision,
+                                        beliefs=beliefs_now,
+                                        risk_aversion=self.settings.risk_aversion,
+                                        minimum_margin=self.settings.minimum_margin,
+                                        max_critical_uncertainty=self.settings.max_critical_uncertainty,
+                                    )
+                                )
+                            except Exception:  # pragma: no cover - stop signal must not block research
+                                decision_result_before = None
+                                decision_result_after = None
                         round_summary = RoundSummary(
                             applied_evidence=applied_local,
                             bindings=list(round_bindings_local),
                             target_claim_ids=target_claims_local,
                             beliefs_before=_beliefs_before,
-                            beliefs_after=self.repo.get_beliefs(project.id) or _beliefs,
+                            beliefs_after=beliefs_now,
+                            decision_result_before=decision_result_before,
+                            decision_result_after=decision_result_after,
                             queries_executed=_trace.queries_executed,
                             latency_ms=latency_ms,
                         )
@@ -693,6 +724,23 @@ class SolveOrchestrator:
             decision.id,
             {"status": decision_result.status},
         )
+
+        # V-2: persist the decision ledger record (recommendation -> action -> outcome).
+        decision_record = DecisionRecord(
+            id="DR_" + uuid4().hex,
+            decision_id=decision.id,
+            project_id=decision.project_id,
+            recommendation=decision_result.recommended_option_id,
+            model_version=request.model_tag,
+            status="RECOMMENDED",
+            abstain_reason=(
+                "; ".join(decision_result.rationale[-1:])
+                if decision_result.status == "ABSTAIN"
+                else None
+            ),
+        )
+        self.repo.save_decision_record(decision_record)
+        self._emit(EventType.DECISION_RECORDED, "decision_record", decision_record.id, {})
 
         # P1-9: OpportunityCostEngine — AVAILABLE ENGINE / NOT ACTIVE BY
         # DEFAULT. Only when Settings.opportunity_cost_enabled is true and the
@@ -1098,12 +1146,16 @@ class SolveOrchestrator:
         beliefs: list[Belief],
         request: SolveRequest,
     ) -> list[PredictionEntry]:
-        entries = self.engines.prediction_ledger.register(decision, beliefs)
+        entries = self.engines.prediction_ledger.register(
+            decision,
+            beliefs,
+            domain=request.domain,
+            model_tag=request.model_tag,
+            module_tag="decision",
+        )
         for entry in entries:
-            entry.domain = request.domain
-            entry.model_tag = request.model_tag
-            entry.module_tag = "decision"
-            self.repo.save_prediction(entry, expected_version=1)
+            # Single write (fresh insert, no expected_version) — M0-4.
+            self.repo.save_prediction(entry)
             self._emit(EventType.PREDICTION_CREATED, "prediction", entry.id, {})
         return entries
 

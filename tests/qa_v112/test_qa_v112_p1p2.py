@@ -261,15 +261,15 @@ def test_qa_p112_version_four_places_consistent():
     pyproject = tomllib.loads(
         Path(__file__).resolve().parents[2].joinpath("pyproject.toml").read_text(encoding="utf-8")
     )
-    assert vencertia.__version__ == "1.1.2"
+    assert vencertia.__version__ == "1.2.0"
     assert pyproject["project"]["version"] == vencertia.__version__
     assert app.version == vencertia.__version__
 
     health = tc.get("/health").json()["data"]
     assert health["runtime_version"] == vencertia.__version__
-    assert health["api_contract_version"] == "1.1"
-    assert health["version"] == "1.0.0"  # legacy alias
-    assert health["api_version"] == "1.1.0"
+    assert health["api_contract_version"] == "1.2"
+    assert health["version"] == vencertia.__version__  # legacy alias derived from __version__
+    assert health["api_version"] == "1.2.0"
 
 
 # ---------------------------------------------------------------------------

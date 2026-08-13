@@ -19,6 +19,8 @@ from vencertia.domain import (
     Claim,
     CompanyCase,
     Decision,
+    DecisionOutcomeRecord,
+    DecisionRecord,
     DecisionSensitivity,
     DecisionTrace,
     Evidence,
@@ -196,6 +198,17 @@ class Repository(Protocol):
         self, kind: str | None = None, since: datetime | None = None
     ) -> list[ProviderCallRecord]: ...
 
+    # -- v1.2 decision ledger (V-2) ---------------------------------------------------
+    def save_decision_record(
+        self, record: DecisionRecord, expected_version: int | None = None
+    ) -> None: ...
+    def get_decision_record(self, decision_id: str) -> DecisionRecord | None: ...
+    def list_decision_records(self, project_id: str | None = None) -> list[DecisionRecord]: ...
+    def save_decision_outcome_record(self, record: DecisionOutcomeRecord) -> None: ...
+    def list_decision_outcome_records(
+        self, decision_record_id: str
+    ) -> list[DecisionOutcomeRecord]: ...
+
 
 # Entity type keys (stored in the generic entities table)
 ENTITY_TYPES: dict[str, type[VencertiaBaseModel]] = {
@@ -225,6 +238,9 @@ ENTITY_TYPES: dict[str, type[VencertiaBaseModel]] = {
     "evidence_conflict": EvidenceConflict,
     "call_record": ProviderCallRecord,
     "belief_update_record": BeliefUpdateRecord,
+    # v1.2 entity types (generic entities table, no new migration)
+    "decision_record": DecisionRecord,
+    "decision_outcome_record": DecisionOutcomeRecord,
 }
 
 
@@ -682,3 +698,34 @@ class EntityStoreMixin:
         if since is not None:
             rows = [r for r in rows if r.started_at >= since]
         return rows
+
+    # -- v1.2 decision ledger (V-2) ------------------------------------------------
+
+    def save_decision_record(
+        self, record: DecisionRecord, expected_version: int | None = None
+    ) -> None:
+        self._save(record, expected_version)
+
+    def get_decision_record(self, decision_id: str) -> DecisionRecord | None:
+        for record in self._list("decision_record"):
+            if record.decision_id == decision_id:
+                return record
+        return None
+
+    def list_decision_records(self, project_id: str | None = None) -> list[DecisionRecord]:
+        rows = self._list("decision_record")
+        if project_id is None:
+            return rows
+        return [r for r in rows if r.project_id == project_id]
+
+    def save_decision_outcome_record(self, record: DecisionOutcomeRecord) -> None:
+        self._save(record)
+
+    def list_decision_outcome_records(
+        self, decision_record_id: str
+    ) -> list[DecisionOutcomeRecord]:
+        return [
+            r
+            for r in self._list("decision_outcome_record")
+            if r.decision_record_id == decision_record_id
+        ]

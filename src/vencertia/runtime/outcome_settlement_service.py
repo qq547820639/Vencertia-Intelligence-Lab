@@ -13,6 +13,8 @@ from uuid import uuid4
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
+    CounterfactualStatus,
+    DecisionOutcomeRecord,
     DecisionResult,
     Evidence,
     EvidenceType,
@@ -143,6 +145,31 @@ class OutcomeSettlementService:
         )
         self.repo.save_outcome(outcome)
         self._emit(EventType.OUTCOME_RECORDED, "outcome", outcome.id, {"action_id": action_id})
+
+        # V-2: backfill the decision ledger — regret is N/A without utility labels.
+        if decision is not None:
+            record = self.repo.get_decision_record(decision.id)
+            if record is not None:
+                record.action_taken = action.id
+                record.status = "SETTLED"
+                record.updated_at = utcnow()
+                record.version += 1
+                self.repo.save_decision_record(record, expected_version=record.version - 1)
+                outcome_record = DecisionOutcomeRecord(
+                    id="OLR_" + uuid4().hex,
+                    decision_record_id=record.id,
+                    outcome_id=outcome.id,
+                    regret_estimate=None,
+                    counterfactual_status=CounterfactualStatus.NOT_IDENTIFIABLE,
+                )
+                self.repo.save_decision_outcome_record(outcome_record)
+                self._emit(
+                    EventType.DECISION_OUTCOME_RECORDED,
+                    "decision_outcome_record",
+                    outcome_record.id,
+                    {"decision_record_id": record.id},
+                )
+
         self.repo.add_evidence(graded)
         self._emit(EventType.EVIDENCE_ADDED, "evidence", graded.id, {"claim_ids": claim_ids})
 

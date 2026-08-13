@@ -71,7 +71,9 @@ def _prediction(repo) -> PredictionEntry:
         id="wtp", claim_id="CLM_WTP", statement="wtp", scope="PROJECT", project_id="PRJ_1",
         probability=0.7, posterior=0.7, alpha=7, beta=3, decision_relevant=True,
     )
-    return ledger.register(decision, [belief])[0]
+    entry = ledger.register(decision, [belief])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
+    return entry
 
 
 def test_prediction_resolve_immutable_and_correct_new_version(repo):

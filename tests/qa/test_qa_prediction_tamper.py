@@ -35,6 +35,7 @@ def test_resolve_preserves_original_probability() -> None:
     repo = InMemoryRepository()
     ledger = PredictionLedger(repo)
     entry = ledger.register(_decision(), [_belief()])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     resolved = ledger.resolve(entry.id, True)
     assert resolved.predicted_probability == 0.7
     stored = repo.get_prediction(entry.id)
@@ -47,6 +48,7 @@ def test_double_resolve_raises() -> None:
     repo = InMemoryRepository()
     ledger = PredictionLedger(repo)
     entry = ledger.register(_decision(), [_belief()])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     ledger.resolve(entry.id, True)
     with pytest.raises(ValueError):
         ledger.resolve(entry.id, False)
@@ -57,6 +59,7 @@ def test_post_resolve_tamper_is_detected_by_hash() -> None:
     repo = InMemoryRepository()
     ledger = PredictionLedger(repo)
     entry = ledger.register(_decision(), [_belief()])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     ledger.resolve(entry.id, True)
     stored = repo.get_prediction(entry.id)
     tampered = stored.model_copy(
@@ -85,6 +88,7 @@ def test_resolve_populates_resolved_at() -> None:
     repo = InMemoryRepository()
     ledger = PredictionLedger(repo)
     entry = ledger.register(_decision(), [_belief()])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     resolved = ledger.resolve(entry.id, True)
     assert resolved.resolution == "TRUE"
     assert resolved.resolved_at is not None, "settled prediction must have resolved_at"

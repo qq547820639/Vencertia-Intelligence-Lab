@@ -7,6 +7,7 @@ from datetime import datetime
 from pydantic import Field, model_validator
 
 from vencertia.domain.base import Scope, UpdateMethod, VencertiaBaseModel, utcnow
+from vencertia.domain.calibration import CalibrationStatus, EstimateType
 
 
 class EvidenceApplication(VencertiaBaseModel):
@@ -56,6 +57,9 @@ class Belief(VencertiaBaseModel):
     update_method: UpdateMethod = UpdateMethod.BETA_BERNOULLI
     calibration_group: str = "default"
     decision_relevant: bool = False
+    # V-1 provenance/calibration metadata (optional, defaults reproduce v1.1.2).
+    estimate_type: EstimateType = EstimateType.UNSPECIFIED
+    calibration_status: CalibrationStatus = CalibrationStatus.UNCALIBRATED
     # v1.1 versioning fields (all optional, backward compatible)
     posterior_version: int = 1  # incremented on every belief update
     previous_snapshot: dict | None = None  # {probability, uncertainty, alpha, beta}

@@ -40,6 +40,7 @@ def test_register_then_modify_belief_does_not_change_snapshot(repo):
     beliefs = [_belief("wtp", 0.7, 7, 3)]
     entries = ledger.register(_decision(), beliefs)
     entry = entries[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     # Modify the belief after registration.
     beliefs[0].posterior = 0.1
     stored = repo.get_prediction(entry.id)
@@ -49,6 +50,7 @@ def test_register_then_modify_belief_does_not_change_snapshot(repo):
 def test_resolve_is_irreversible(repo):
     ledger = PredictionLedger(repo)
     entry = ledger.register(_decision(), [_belief("wtp", 0.7, 7, 3)])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     resolved = ledger.resolve(entry.id, True)
     assert resolved.resolution == "TRUE"
     assert resolved.outcome is True
@@ -60,6 +62,7 @@ def test_resolve_is_irreversible(repo):
 def test_tampered_snapshot_marks_cancelled(repo):
     ledger = PredictionLedger(repo)
     entry = ledger.register(_decision(), [_belief("wtp", 0.7, 7, 3)])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     # Tamper with the stored snapshot in the repo.
     stored = repo.get_prediction(entry.id)
     tampered = stored.model_copy(
@@ -94,6 +97,7 @@ def test_resolve_writes_aware_utc_resolved_at(repo):
     """Defect-2 regression: resolve() must set resolved_at (aware UTC)."""
     ledger = PredictionLedger(repo)
     entry = ledger.register(_decision(), [_belief("wtp", 0.7, 7, 3)])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     assert entry.resolved_at is None
     resolved = ledger.resolve(entry.id, True)
     assert resolved.resolved_at is not None

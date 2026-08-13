@@ -37,11 +37,23 @@ class PredictionLedger:
 
     # -- registration ---------------------------------------------------------
 
-    def register(self, decision: Decision, beliefs: list[Belief]) -> list[PredictionEntry]:
+    def register(
+        self,
+        decision: Decision,
+        beliefs: list[Belief],
+        *,
+        domain: str = "general",
+        model_tag: str = "default",
+        module_tag: str = "decision",
+    ) -> list[PredictionEntry]:
         """Register one prediction per decision-relevant belief.
 
         The belief snapshot is frozen at registration; later belief changes do
         not alter it. The context hash is computed from the snapshot itself.
+
+        M0-4: this method does NOT persist. It backfills domain/model_tag/
+        module_tag onto each entry and returns them; the caller is responsible
+        for persisting exactly once (fresh insert, no expected_version).
         """
         horizon_days = HORIZON_DAYS.get(decision.horizon, 30)
         entries: list[PredictionEntry] = []
@@ -63,10 +75,12 @@ class PredictionLedger:
                     }
                 },
                 policy_version=self.policy_version,
+                domain=domain,
+                model_tag=model_tag,
+                module_tag=module_tag,
                 due_at=belief.updated_at + timedelta(days=horizon_days),
             )
             entry.context_snapshot_hash = self._entry_hash(entry)
-            self.repo.save_prediction(entry)
             entries.append(entry)
         return entries
 

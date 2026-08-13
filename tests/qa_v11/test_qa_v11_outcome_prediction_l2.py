@@ -80,6 +80,7 @@ def _registered(repo) -> tuple[PredictionLedger, PredictionEntry]:
         probability=0.7, posterior=0.7, alpha=7, beta=3, decision_relevant=True,
     )
     entry = ledger.register(decision, [belief])[0]
+    repo.save_prediction(entry)  # M0-4: register() no longer persists
     return ledger, entry
 
 

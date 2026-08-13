@@ -6,7 +6,14 @@ from typing import Protocol, runtime_checkable
 
 from pydantic import Field
 
-from vencertia.domain import Claim, Decision, Evidence, Experiment, VencertiaBaseModel
+from vencertia.domain import (
+    Claim,
+    Decision,
+    Evidence,
+    Experiment,
+    ModelCritique,
+    VencertiaBaseModel,
+)
 from vencertia.domain.context import ContextBundle
 
 
@@ -18,6 +25,8 @@ class CapabilityResult(VencertiaBaseModel):
     decision_skeleton: Decision | None = None
     experiments: list[Experiment] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    # V-3: structured model criticism (optional; None keeps old capabilities intact).
+    critique: ModelCritique | None = None
 
 
 @runtime_checkable

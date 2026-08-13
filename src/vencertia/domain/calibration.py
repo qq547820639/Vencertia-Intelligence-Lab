@@ -17,6 +17,45 @@ class CalibrationScope(str, Enum):
     MODULE = "MODULE"  # by engine/module
 
 
+class CalibrationStatus(str, Enum):
+    """Five-state calibration status + ``CALIBRATED`` legacy alias (V-1).
+
+    The alias keeps old persisted JSON (``"CALIBRATED"``) deserializable; the
+    calibration engine keeps emitting the legacy values for backward
+    compatibility. The five-state vocabulary is consumed via
+    :func:`classify_calibration`.
+    """
+
+    UNCALIBRATED = "UNCALIBRATED"
+    LOW_SAMPLE = "LOW_SAMPLE"
+    DOMAIN_CALIBRATED = "DOMAIN_CALIBRATED"
+    USER_CALIBRATED = "USER_CALIBRATED"
+    VALIDATED = "VALIDATED"
+    CALIBRATED = "CALIBRATED"  # v1.1 compatibility alias
+
+
+class EstimateType(str, Enum):
+    """How a belief's probability estimate was produced (V-1)."""
+
+    UNSPECIFIED = "UNSPECIFIED"
+    ORDINAL_SUPPORT = "ORDINAL_SUPPORT"
+    MODEL_SCORE = "MODEL_SCORE"
+    CALIBRATED_PROBABILITY = "CALIBRATED_PROBABILITY"
+
+
+def classify_calibration(n: int, min_samples: int = 20) -> CalibrationStatus:
+    """Classify a calibration sample count into a :class:`CalibrationStatus`.
+
+    ``n <= 0`` → UNCALIBRATED; ``0 < n < min_samples`` → LOW_SAMPLE;
+    otherwise → DOMAIN_CALIBRATED.
+    """
+    if n <= 0:
+        return CalibrationStatus.UNCALIBRATED
+    if n < min_samples:
+        return CalibrationStatus.LOW_SAMPLE
+    return CalibrationStatus.DOMAIN_CALIBRATED
+
+
 class CalibrationProfile(VencertiaBaseModel):
     id: str  # CAL_...
     scope: CalibrationScope = CalibrationScope.ALL
@@ -39,6 +78,6 @@ class CalibratedConfidence(VencertiaBaseModel):
 
     raw: float = Field(ge=0, le=1)
     calibrated: float | None = Field(default=None, ge=0, le=1)
-    status: str = "UNCALIBRATED"  # UNCALIBRATED | CALIBRATED
+    status: CalibrationStatus = CalibrationStatus.UNCALIBRATED  # UNCALIBRATED | CALIBRATED
     n: int = 0
     calibration_group: str = "default"
