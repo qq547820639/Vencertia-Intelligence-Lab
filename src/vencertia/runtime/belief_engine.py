@@ -77,6 +77,7 @@ class BeliefEngine:
     def _update_beta_bernoulli(self, inp: BeliefUpdateInput) -> BeliefUpdateOutput:
         by_id = {b.id: b.model_copy(deep=True) for b in inp.beliefs}
         seen: dict[tuple[str, str], int] = {}
+        signal_seen: dict[str, int] = {}  # V-6: cross-belief shared-signal counter
         applications: list[EvidenceApplication] = []
         support_weights: dict[str, float] = {}
         contradict_weights: dict[str, float] = {}
@@ -108,6 +109,7 @@ class BeliefEngine:
                     scope_gate=grade.scope_gate,
                     seen=seen,
                     max_pseudo=inp.max_pseudo_observations,
+                    signal_seen=signal_seen,
                 )
                 if app is None:
                     continue
@@ -162,6 +164,7 @@ class BeliefEngine:
         scope_gate: str,
         seen: dict[tuple[str, str], int],
         max_pseudo: float,
+        signal_seen: dict[str, int] | None = None,
     ) -> EvidenceApplication | None:
         """Apply one evidence to one belief; returns None when gated out."""
         # Company-case prior-only gate: never touch PROJECT/CUSTOMER beliefs.
@@ -180,7 +183,17 @@ class BeliefEngine:
         seen[key] = index + 1
         discount = 1.0 / (1.0 + index)
 
-        weight = grade_weight * discount
+        # V-6: cross-belief shared-signal discount, keyed by shared_signal_group
+        # (independent of dedup_discount; only active when the caller threads a
+        # shared counter and the evidence declares a shared signal group).
+        signal_discount = 1.0
+        if signal_seen is not None and evidence.shared_signal_group:
+            sig = evidence.shared_signal_group
+            s_index = signal_seen.get(sig, 0)
+            signal_seen[sig] = s_index + 1
+            signal_discount = 1.0 / (1.0 + s_index)
+
+        weight = grade_weight * discount * signal_discount
         mass = max_pseudo * weight
         alpha_delta = beta_delta = 0.0
         direction = evidence.supports_or_contradicts
@@ -209,6 +222,7 @@ class BeliefEngine:
             alpha_delta=alpha_delta,
             beta_delta=beta_delta,
             dedup_discount=discount,
+            signal_discount=signal_discount,
             scope_gate=scope_gate,
             prior_only=False,
         )

@@ -506,8 +506,12 @@ def create_app(
     # -- solve ----------------------------------------------------------------------------
 
     @app.post("/v1/solve", response_model=ApiResponse)
-    def solve(req: SolveRequest) -> ApiResponse:
+    def solve(req: SolveRequest, advanced: bool = False) -> ApiResponse:
         result = runtime.solve(req)
+        if not advanced:
+            # V-7 Progressive Disclosure: Default returns the 5-section contract;
+            # Advanced (?advanced=true) expands the structured advanced_view.
+            result.advanced_view = None
         return ok(result.model_dump(mode="json"))
 
     # -- error handlers ---------------------------------------------------------------------

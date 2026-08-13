@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vencertia.domain.action_outcome import Action, Outcome
 from vencertia.domain.base import (
+    ActionState,
     ActionStatus,
     AuthorityLevel,
     ClaimStatus,
@@ -18,12 +19,15 @@ from vencertia.domain.base import (
     PredictionResolution,
     RuleKind,
     Scope,
+    SolveMode,
     UpdateMethod,
     VencertiaBaseModel,
     Verification,
+    map_decision_type_to_action_state,
     utcnow,
 )
 from vencertia.domain.belief import Belief, ConflictAlert, EvidenceApplication
+from vencertia.domain.belief_edge import BeliefEdge, BeliefRelationType
 from vencertia.domain.belief_update import BeliefUpdateRecord
 from vencertia.domain.binding import (
     BindingMethod,
@@ -105,10 +109,13 @@ from vencertia.domain.utility import UtilityComponent, UtilityRelationType
 __all__ = [
     "Action",
     "ActionStatus",
+    "ActionState",
     "AccessClass",
     "AuthorityLevel",
     "Belief",
     "BeliefContribution",
+    "BeliefEdge",
+    "BeliefRelationType",
     "BeliefUpdateRecord",
     "BindingMethod",
     "BindingStatus",
@@ -180,6 +187,7 @@ __all__ = [
     "RuleKind",
     "RuleSet",
     "Scope",
+    "SolveMode",
     "Stage",
     "UpdateMethod",
     "VencertiaBaseModel",
@@ -203,4 +211,5 @@ __all__ = [
     "UtilityComponent",
     "UtilityRelationType",
     "classify_calibration",
+    "map_decision_type_to_action_state",
 ]

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 # v1.1.2 (P1-12): single source of truth for the runtime version. pyproject.toml
 # and importlib.metadata must agree (enforced by tests/test_integrity_v112.py).
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 # API contract version (minor-level). The FastAPI app and /health expose it
 # dynamically; legacy "version"/"api_version" health keys are derived aliases.
 __api_contract_version__ = "1.2"

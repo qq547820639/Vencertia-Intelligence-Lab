@@ -8,6 +8,20 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vencertia
+          POSTGRES_PASSWORD: vencertia
+          POSTGRES_DB: vencertia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vencertia -d vencertia"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -20,11 +34,15 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[postgres,dev]"
       - name: Ruff check
         run: python -m ruff check src tests examples
       - name: Pytest
         run: python -m pytest -q
+      - name: PostgreSQL parity
+        env:
+          VENCERTIA_PG_DSN: postgresql://vencertia:vencertia@localhost:5432/vencertia
+        run: python -m pytest tests/test_postgres_parity.py -v
       - name: Benchmark L0
         run: python -m vencertia.cli benchmark run --level L0
       - name: API smoke

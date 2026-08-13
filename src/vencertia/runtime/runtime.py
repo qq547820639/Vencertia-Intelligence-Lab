@@ -12,15 +12,17 @@ next experiment; predictions are registered before settlement.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
 from pydantic import Field
 
-from vencertia.capabilities import CompiledDecision, DecisionCompiler
+from vencertia.capabilities import ChallengerCapability, CompiledDecision, DecisionCompiler
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
+    ActionState,
     Belief,
     CalibratedConfidence,
     ClaimBindingInput,
@@ -36,6 +38,8 @@ from vencertia.domain import (
     Evidence,
     EvidenceConflict,
     Experiment,
+    ModelCriticGate,
+    ModelCritique,
     Outcome,
     OutcomeType,
     PredictionEntry,
@@ -45,8 +49,10 @@ from vencertia.domain import (
     ResearchPlan,
     ResearchStopReport,
     ResearchTrace,
+    SolveMode,
     Stage,
     VencertiaBaseModel,
+    map_decision_type_to_action_state,
     utcnow,
 )
 from vencertia.events.bus import EventBus
@@ -102,6 +108,7 @@ class SolveRequest(VencertiaBaseModel):
     user_id: str | None = None
     domain: str = "general"
     model_tag: str = "mock"
+    mode: SolveMode | None = None  # V-7: EXPLORE/OPERATE; None = compatible default
 
 
 class SolveResult(VencertiaBaseModel):
@@ -112,6 +119,16 @@ class SolveResult(VencertiaBaseModel):
     next_experiment: RankedExperiment | None = None
     predictions: list[PredictionEntry] = Field(default_factory=list)
     rationale: list[str] = Field(default_factory=list)
+
+
+class SolveResultAdvancedView(VencertiaBaseModel):
+    """V-7 advanced projection (structured sub-model, not a throwaway dict)."""
+
+    belief_graph: list[dict] = Field(default_factory=list)  # BeliefEdge JSON projection
+    utility: dict[str, float] = Field(default_factory=dict)  # option_id -> adjusted_utility
+    sensitivity: DecisionSensitivity | None = None
+    trace: DecisionTrace | None = None
+    stakes: dict | None = None  # StakesProfile projection
 
 
 class SolveResultV11(SolveResult):
@@ -129,6 +146,12 @@ class SolveResultV11(SolveResult):
     failure_criteria: str | None = None
     stop_condition: str | None = None
     sensitivity: DecisionSensitivity | None = None
+    # V-7 presentation-layer mapping + mode echo + advanced projection.
+    action_state: ActionState | None = None
+    mode: SolveMode | None = None
+    advanced_view: SolveResultAdvancedView | None = None
+    # V-3 (T3 wiring): structured model critique, optional, default None.
+    model_critique: ModelCritique | None = None
 
 
 class OutcomeRecordedResult(VencertiaBaseModel):
@@ -316,6 +339,39 @@ class SolveOrchestrator:
         payload: dict[str, Any] | None = None,
     ) -> None:
         self.bus.publish(make_event(event_type, entity_type, entity_id, payload))
+
+    # -- model critic (V-3 gate wiring) ---------------------------------------
+
+    def _run_model_critic(self, decision: Decision, context) -> ModelCritique | None:
+        """Run the challenger model critic only when the gate requires it.
+
+        Failure or a None critique degrades gracefully (warn + PROVIDER_FAILED
+        event) — the solve loop never blocks on the critic.
+        """
+        stakes_class = (
+            decision.stakes_class.value
+            if hasattr(decision.stakes_class, "value")
+            else str(decision.stakes_class)
+        )
+        if not ModelCriticGate.should_require(stakes_class, self.settings.critic_required_stakes):
+            return None
+        try:
+            result = ChallengerCapability().run("critique this decision", context)
+            critique = result.critique if result else None
+        except Exception as exc:  # degrade: a real LLM failure must not block solve
+            logging.getLogger("vencertia").warning("Model critic unavailable: %s", exc)
+            self._emit(
+                EventType.PROVIDER_FAILED,
+                "model_critic",
+                decision.id,
+                {"reason": str(exc)},
+            )
+            critique = None
+        if critique is None:
+            logging.getLogger("vencertia").warning(
+                "Model critic returned no critique; proceeding without it"
+            )
+        return critique
 
     # -- solve ----------------------------------------------------------------
 
@@ -565,6 +621,11 @@ class SolveOrchestrator:
         criticals = self.engines.uncertainty_engine.rank(decision, beliefs)
         experiments = compiled.experiments or request.experiment_candidates
 
+        # V-3 (T3): run the model critic BEFORE decision evaluation when the
+        # gate requires it. Failure/None degrades to proceeding without a
+        # critique (never blocks solve).
+        model_critique = self._run_model_critic(decision, context)
+
         # P2-16: convergence + decision engine + trace + sensitivity delegated
         # to DecisionEvaluationService (behavior identical to v1.1.1 inline).
         if self.engines.decision_evaluation_service is not None:
@@ -803,6 +864,28 @@ class SolveOrchestrator:
                 "ambiguity_criteria": exp.ambiguity_criteria,
             }
 
+        # V-7: presentation-layer action projection + advanced view. Both are
+        # additive; Default callers simply see the new (optional) fields, and
+        # ``advanced_view`` is stripped at the API layer unless ``advanced=true``.
+        action_state = map_decision_type_to_action_state(
+            decision_result.status,
+            abstain_reason=(
+                decision_result.rationale[-1]
+                if decision_result.status == "ABSTAIN"
+                else None
+            ),
+            has_next_experiment=(next_experiment is not None),
+        )
+        advanced_view = SolveResultAdvancedView(
+            belief_graph=[
+                e.model_dump(mode="json") for e in self.repo.list_belief_edges(project.id)
+            ],
+            utility={s.option_id: s.adjusted_utility for s in decision_result.option_scores},
+            sensitivity=sensitivity,
+            trace=decision_trace,
+            stakes=decision.stakes.model_dump(mode="json") if decision.stakes else None,
+        )
+
         return SolveResultV11(
             decision=decision_result,
             decision_id=decision.id,
@@ -823,6 +906,10 @@ class SolveOrchestrator:
             failure_criteria=next_experiment_criteria.get("failure_criteria") if next_experiment else None,
             stop_condition=stop_report.status if stop_report else None,
             sensitivity=sensitivity,
+            action_state=action_state,
+            mode=request.mode,
+            advanced_view=advanced_view,
+            model_critique=model_critique,
         )
 
     # -- outcome closed loop -----------------------------------------------------

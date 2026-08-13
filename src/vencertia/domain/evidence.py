@@ -60,6 +60,10 @@ class Evidence(VencertiaBaseModel):
     #   company_id = COMPANY_CASE owner (reserved; strict company-level isolation is v1.2)
     project_id: str | None = None
     company_id: str | None = None
+    # V-6: cross-belief shared signal group (prevents the same signal driving
+    # multiple beliefs from being triple-counted). Optional; None reproduces
+    # the v1.2 behavior exactly.
+    shared_signal_group: str | None = None
     created_at: datetime = Field(default_factory=utcnow)
     version: int = 1
 

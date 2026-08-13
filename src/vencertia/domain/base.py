@@ -127,6 +127,52 @@ class DecisionType(str, Enum):
     ABSTAIN = "ABSTAIN"
 
 
+class ActionState(str, Enum):
+    """V-7 presentation-layer vocabulary (distinct from engine ``DecisionType``).
+
+    ``ActionState`` is the human-facing action projection; the engine keeps
+    ``DecisionType`` as its only decision vocabulary.
+    """
+
+    ACT = "ACT"
+    TEST = "TEST"
+    HOLD = "HOLD"
+    WAIT = "WAIT"
+    STOP = "STOP"
+
+
+class SolveMode(str, Enum):
+    """V-7 solve mode: EXPLORE (information-gathering) vs OPERATE (committing)."""
+
+    EXPLORE = "EXPLORE"
+    OPERATE = "OPERATE"
+
+
+def map_decision_type_to_action_state(
+    decision_type: DecisionType | str,
+    abstain_reason: str | None = None,
+    *,
+    has_next_experiment: bool = False,
+) -> ActionState:
+    """DecisionType (engine) → ActionState (presentation), pure read-only mapping.
+
+    Mapping: GO/CONDITIONAL_GO/SELECT_OPTION → ACT; HOLD → HOLD;
+    ABSTAIN(+next_experiment) → TEST; ABSTAIN(no next) → WAIT; PIVOT/KILL → STOP;
+    unknown → HOLD (conservative fallback).
+    """
+    del abstain_reason  # reserved for future refinement; mapping is status-driven
+    dt = decision_type.value if hasattr(decision_type, "value") else str(decision_type)
+    if dt in ("GO", "CONDITIONAL_GO", "SELECT_OPTION"):
+        return ActionState.ACT
+    if dt == "HOLD":
+        return ActionState.HOLD
+    if dt == "ABSTAIN":
+        return ActionState.TEST if has_next_experiment else ActionState.WAIT
+    if dt in ("PIVOT", "KILL"):
+        return ActionState.STOP
+    return ActionState.HOLD
+
+
 class ConvergenceStatus(str, Enum):
     NOT_CONVERGED = "NOT_CONVERGED"
     RESEARCH_MORE = "RESEARCH_MORE"

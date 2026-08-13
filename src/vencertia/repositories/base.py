@@ -14,6 +14,7 @@ from typing import Any, ClassVar, Protocol, TypeVar, runtime_checkable
 from vencertia.domain import (
     Action,
     Belief,
+    BeliefEdge,
     BeliefUpdateRecord,
     CandidateClaim,
     Claim,
@@ -95,6 +96,13 @@ class Repository(Protocol):
     def get_beliefs(self, project_id: str, as_of: datetime | None = None) -> list[Belief]: ...
     def get_belief(self, belief_id: str) -> Belief | None: ...
     def save_belief(self, belief: Belief, expected_version: int | None = None) -> None: ...
+
+    # Belief edges (V-6)
+    def save_belief_edge(self, edge: BeliefEdge, expected_version: int | None = None) -> None: ...
+    def get_belief_edge(self, edge_id: str) -> BeliefEdge | None: ...
+    def list_belief_edges(
+        self, project_id: str | None = None, decision_id: str | None = None
+    ) -> list[BeliefEdge]: ...
 
     # Decision
     def save_decision(self, decision: Decision, expected_version: int | None = None) -> None: ...
@@ -215,6 +223,7 @@ ENTITY_TYPES: dict[str, type[VencertiaBaseModel]] = {
     "evidence": Evidence,
     "claim": Claim,
     "belief": Belief,
+    "belief_edge": BeliefEdge,
     "decision": Decision,
     "experiment": Experiment,
     "action": Action,
@@ -387,6 +396,22 @@ class EntityStoreMixin:
 
     def save_belief(self, belief: Belief, expected_version: int | None = None) -> None:
         self._save(belief, expected_version)
+
+    def save_belief_edge(self, edge: BeliefEdge, expected_version: int | None = None) -> None:
+        self._save(edge, expected_version)
+
+    def get_belief_edge(self, edge_id: str) -> BeliefEdge | None:
+        return self._get("belief_edge", edge_id)
+
+    def list_belief_edges(
+        self, project_id: str | None = None, decision_id: str | None = None
+    ) -> list[BeliefEdge]:
+        rows = self._list("belief_edge")
+        if project_id is not None:
+            rows = [e for e in rows if e.project_id == project_id]
+        if decision_id is not None:
+            rows = [e for e in rows if e.decision_id == decision_id]
+        return rows
 
     def save_decision(self, decision: Decision, expected_version: int | None = None) -> None:
         self._save(decision, expected_version)

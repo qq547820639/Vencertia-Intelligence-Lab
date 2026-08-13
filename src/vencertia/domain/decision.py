@@ -24,6 +24,8 @@ class DecisionOption(VencertiaBaseModel):
     label: str
     description: str = ""
     kind: DecisionType | None = None  # GO/CONDITIONAL_GO/HOLD/PIVOT/KILL/SELECT_OPTION
+    # V-7: presentation-layer option kind (GO/WAIT/STAGE/TEST/HOLD/PIVOT/KILL).
+    option_kind: str | None = None
     base_utility: float = 0.0
     belief_coefficients: dict[str, float] = Field(default_factory=dict)
     # V-1: provenance-annotated coefficients (optional, additive layer).

@@ -19,6 +19,9 @@ class EvidenceApplication(VencertiaBaseModel):
     alpha_delta: float = 0.0
     beta_delta: float = 0.0
     dedup_discount: float = Field(default=1.0, ge=0, le=1)
+    # V-6: cross-belief signal discount (independent of dedup_discount; 1.0 ==
+    # no shared-signal discount, reproduces v1.2 behavior).
+    signal_discount: float = Field(default=1.0, ge=0, le=1)
     scope_gate: str = "OK"  # OK | COMPANY_CASE_PRIOR_ONLY | REJECTED
     prior_only: bool = False  # True for company-case prior updates (no pseudo-count)
 

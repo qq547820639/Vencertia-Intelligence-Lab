@@ -38,7 +38,14 @@ def test_m05_run_migrations_postgres_executes_both_schemas():
     assert "CREATE TABLE IF NOT EXISTS belief_update_records" in executed[1]
 
 
-def test_m05_postgres_repository_disabled_without_dsn():
+def test_m05_postgres_repository_disabled_without_dsn(monkeypatch):
+    # Hermetic: force the DSN env var to be unset and invalidate the settings
+    # cache so this test is green both locally (no DSN) and in CI (DSN set).
+    from vencertia.config import get_settings
+
+    monkeypatch.delenv("VENCERTIA_PG_DSN", raising=False)
+    get_settings.cache_clear()  # lru_cache invalidation → re-read environment
+
     from vencertia.repositories.postgres import PostgresDisabledError, PostgresRepository
 
     with pytest.raises(PostgresDisabledError):
