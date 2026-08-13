@@ -20,9 +20,9 @@ def _entry(pid, due_days=5) -> PredictionEntry:
     )
 
 
-def test_register_then_settle():
+def test_register_then_settle(tmp_path):
     repo = InMemoryRepository()
-    runner = L2Runner(repo=repo)
+    runner = L2Runner(repo=repo, path=tmp_path / "predictions.jsonl")
     runner.register(_entry("PRD_L2_1"))
     assert repo.get_prediction("PRD_L2_1") is not None
     settled = runner.settle("PRD_L2_1", True, "user_alice")
@@ -32,9 +32,9 @@ def test_register_then_settle():
     assert settled.resolution_source == "user_alice"
 
 
-def test_due_report_lists_overdue():
+def test_due_report_lists_overdue(tmp_path):
     repo = InMemoryRepository()
-    runner = L2Runner(repo=repo)
+    runner = L2Runner(repo=repo, path=tmp_path / "predictions.jsonl")
     runner.register(_entry("PRD_DUE", due_days=-1))
     runner.register(_entry("PRD_FUTURE", due_days=30))
     due = runner.due_report()
@@ -43,9 +43,9 @@ def test_due_report_lists_overdue():
     assert "PRD_FUTURE" not in ids
 
 
-def test_cannot_settle_twice():
+def test_cannot_settle_twice(tmp_path):
     repo = InMemoryRepository()
-    runner = L2Runner(repo=repo)
+    runner = L2Runner(repo=repo, path=tmp_path / "predictions.jsonl")
     runner.register(_entry("PRD_L2_2"))
     runner.settle("PRD_L2_2", False, "user")
     import pytest

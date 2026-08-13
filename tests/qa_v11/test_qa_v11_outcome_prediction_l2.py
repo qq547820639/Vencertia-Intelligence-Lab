@@ -125,12 +125,12 @@ def test_qa_correct_requires_settled():
         ledger.correct(entry.id, False, "user")  # open entry
 
 
-def test_qa_l2_register_settle_closed_loop():
+def test_qa_l2_register_settle_closed_loop(tmp_path):
     """L2: register -> due -> settle is a closed loop with immutable probability."""
     from vencertia.benchmark.l2 import L2Runner
 
     repo = InMemoryRepository()
-    runner = L2Runner(repo=repo)
+    runner = L2Runner(repo=repo, path=tmp_path / "predictions.jsonl")
     entry = PredictionEntry(
         id="PRD_L2_QA", project_id="PRJ_L2", claim_id="CLM_X", target="t",
         predicted_probability=0.6, due_at=utcnow(),
