@@ -909,30 +909,15 @@ class SolveOrchestrator:
             ),
             has_next_experiment=(next_experiment is not None),
         )
-        from vencertia.presentation import BELIEF_RELATION_ZH, PROVENANCE_ZH
+        # v1.6: presentation-layer projection is delegated to a pure function in
+        # ``vencertia.presentation`` (single source of Chinese copy); the engine
+        # layer no longer imports the ZH mapping constants directly.
+        from vencertia.presentation import project_advanced_view
 
-        belief_graph: list[dict] = []
-        for e in self.repo.list_belief_edges(project.id):
-            row = e.model_dump(mode="json")
-            row["relation_zh"] = BELIEF_RELATION_ZH.get(row.get("relation", ""), "关系未知")
-            belief_graph.append(row)
-
-        # v1.3 P0-4: key coefficient provenance summary (six-state Chinese projection).
-        parameter_provenance: list[dict] = []
-        for option in decision.options:
-            for belief_id, param in (option.belief_parameters or {}).items():
-                prov = param.provenance.value if hasattr(param.provenance, "value") else str(param.provenance)
-                parameter_provenance.append(
-                    {
-                        "option_id": option.id,
-                        "belief_id": belief_id,
-                        "value": param.value,
-                        "provenance": prov,
-                        "provenance_zh": PROVENANCE_ZH.get(prov, prov),
-                        "status": param.status.value if hasattr(param.status, "value") else str(param.status),
-                        "needs_confirmation": prov == "LLM_PROPOSED",
-                    }
-                )
+        belief_graph, parameter_provenance = project_advanced_view(
+            [e.model_dump(mode="json") for e in self.repo.list_belief_edges(project.id)],
+            decision.options,
+        )
 
         advanced_view = SolveResultAdvancedView(
             belief_graph=belief_graph,

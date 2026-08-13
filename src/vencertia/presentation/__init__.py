@@ -377,3 +377,73 @@ def solve_summary(result: SolveResultV11) -> dict:
             (result.advanced_view.stakes if result.advanced_view else None) or {}
         ),
     }
+
+
+def project_advanced_view(
+    belief_graph_rows: list[dict], options
+) -> tuple[list[dict], list[dict]]:
+    """v1.6 dependency inversion: project engine-neutral data into Chinese-labeled
+    presentation structure (``relation_zh`` / ``provenance_zh``).
+
+    The engine layer (``runtime.py``) owns only neutral data (enum values); the
+    Chinese mapping constants live here in the presentation layer, which is the
+    single source of copy. This removes the last ``runtime -> BELIEF_RELATION_ZH``
+    / ``PROVENANCE_ZH`` import (v1.5 left this inversion for v1.6).
+
+    Pure function: list[dict] + options in -> (belief_graph, parameter_provenance).
+    """
+    belief_graph: list[dict] = []
+    for row in belief_graph_rows:
+        r = dict(row)
+        r["relation_zh"] = BELIEF_RELATION_ZH.get(r.get("relation", ""), "关系未知")
+        belief_graph.append(r)
+
+    parameter_provenance: list[dict] = []
+    for option in options:
+        for belief_id, param in (option.belief_parameters or {}).items():
+            prov = (
+                param.provenance.value
+                if hasattr(param.provenance, "value")
+                else str(param.provenance)
+            )
+            parameter_provenance.append(
+                {
+                    "option_id": option.id,
+                    "belief_id": belief_id,
+                    "value": param.value,
+                    "provenance": prov,
+                    "provenance_zh": PROVENANCE_ZH.get(prov, prov),
+                    "status": (
+                        param.status.value
+                        if hasattr(param.status, "value")
+                        else str(param.status)
+                    ),
+                    "needs_confirmation": prov == "LLM_PROPOSED",
+                }
+            )
+    return belief_graph, parameter_provenance
+
+
+__all__ = [
+    # 11 mapping / config constants
+    "PROBABILITY_BANDS",
+    "ACTION_STATE_ZH",
+    "DECISION_TYPE_ZH",
+    "CALIBRATION_STATUS_ZH",
+    "PROVENANCE_ZH",
+    "BELIEF_RELATION_ZH",
+    "STAKES_CLASS_ZH",
+    "ENTITY_ZH",
+    "PROVIDER_ERROR_ZH",
+    "RESEARCH_STOP_STATUS_ZH",
+    "CALIBRATION_MIN_SAMPLES",
+    # 8 pure functions
+    "probability_level",
+    "estimate_phrase",
+    "localize_error_message",
+    "experiment_voi_summary",
+    "personalization_summary",
+    "calibration_summary",
+    "solve_summary",
+    "project_advanced_view",
+]

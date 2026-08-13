@@ -30,6 +30,7 @@ from vencertia.presentation import (
     localize_error_message,
     personalization_summary,
     probability_level,
+    project_advanced_view,
     solve_summary,
 )
 
@@ -51,5 +52,6 @@ __all__ = [
     "localize_error_message",
     "personalization_summary",
     "probability_level",
+    "project_advanced_view",
     "solve_summary",
 ]

@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from vencertia.presentation import (
+    estimate_phrase,
+    localize_error_message,
+    probability_level,
+)
 from vencertia.runtime.belief_engine import BeliefEngine, BeliefUpdateInput, BeliefUpdateOutput
 from vencertia.runtime.calibration_engine import CalibrationEngine, CalibrationInput
 from vencertia.runtime.claim_binding import (
@@ -39,11 +44,6 @@ from vencertia.runtime.observability import CallRecorder
 from vencertia.runtime.opportunity_cost import OpportunityCostEngine
 from vencertia.runtime.outcome_settlement_service import OutcomeSettlementService
 from vencertia.runtime.prediction_ledger import PredictionLedger
-from vencertia.runtime.presentation import (
-    estimate_phrase,
-    localize_error_message,
-    probability_level,
-)
 from vencertia.runtime.research_planner import ResearchPlanner
 from vencertia.runtime.research_service import (
     ResearchExecutionResult,

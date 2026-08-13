@@ -91,3 +91,30 @@ def test_runtime_exports_advanced_view_and_phrasing():
     assert callable(estimate_phrase)
     assert callable(probability_level)
     assert callable(localize_error_message)
+
+
+def test_project_advanced_view_chinese_labels():
+    """v1.6: project_advanced_view is the single source of relation_zh/provenance_zh."""
+    from vencertia.domain.decision import DecisionOption
+    from vencertia.domain.model_parameter import ApprovalStatus, ModelParameter, ProvenanceType
+    from vencertia.presentation import project_advanced_view
+
+    graph, prov = project_advanced_view(
+        [{"id": "BE_1", "relation": "CAUSES"}, {"id": "BE_2", "relation": "UNKNOWN_RELATIONSHIP"}],
+        [
+            DecisionOption(
+                id="opt1", label="A",
+                belief_parameters={
+                    "b1": ModelParameter(value=0.7, provenance=ProvenanceType.USER_DEFINED, status=ApprovalStatus.APPROVED),
+                    "b2": ModelParameter(value=0.3, provenance=ProvenanceType.LLM_PROPOSED, status=ApprovalStatus.PROPOSED),
+                },
+            )
+        ],
+    )
+    assert graph[0]["relation_zh"] == "因果关系"
+    assert graph[1]["relation_zh"] == "关系未知"
+    by_belief = {p["belief_id"]: p for p in prov}
+    assert by_belief["b1"]["provenance_zh"] == "由你设定"
+    assert by_belief["b1"]["needs_confirmation"] is False
+    assert by_belief["b2"]["provenance_zh"] == "模型建议，未经你确认"
+    assert by_belief["b2"]["needs_confirmation"] is True
