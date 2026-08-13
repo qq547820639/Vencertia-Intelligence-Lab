@@ -3,7 +3,7 @@
 > HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
 
 > 执行人：严过关（QA）· 日期：2026-08-12 · 版本：1.1.1（工作区）
-> 基线：docs/ITERATION_V1_1_RC_2.md（对抗 edge-case）· 本轮：干净 venv 全量回归 + Release Gate 独立核验。
+> 基线：docs/iteration-v1-1-rc-2.md（对抗 edge-case）· 本轮：干净 venv 全量回归 + Release Gate 独立核验。
 
 ## 1. 干净环境
 

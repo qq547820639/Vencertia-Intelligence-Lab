@@ -50,8 +50,8 @@ a5fc40e docs: enhance README with TOC, target users, workflow diagram and predic
 
 | 状态 | 时间 | tests | L0 | 说明 |
 |---|---|---|---|---|
-| v1.0 reported | 2026-08-12 早 | 174 passed | 26/26 | v1.0 交付时记录（docs/IMPLEMENTATION_REPORT.md） |
-| v1.1 pre-RC | 2026-08-12 10:00 | 283 passed / 1 skipped | 36/36 | v1.1 主体交付（docs/IMPLEMENTATION_REPORT_NEXT.md） |
+| v1.0 reported | 2026-08-12 早 | 174 passed | 26/26 | v1.0 交付时记录（docs/implementation-report.md） |
+| v1.1 pre-RC | 2026-08-12 10:00 | 283 passed / 1 skipped | 36/36 | v1.1 主体交付（docs/implementation-report-next.md） |
 | **v1.1 RC（本轮）** | **2026-08-12 10:49** | **283 passed / 1 skipped** | **36/36** | 本文档，Gap Closure 起点 |
 
 ## 6. 已知 Gap（本轮 10 项，见 TASK/规格）
@@ -62,8 +62,8 @@ GAP-02 缺真正 HttpSearchProvider
 GAP-03 Robustness 只有两级
 GAP-04 缺独立 Claim Binding Benchmark
 GAP-05 L1 Python Model / JSON Schema / Template 协议漂移（最高优先级）
-GAP-06 缺 docs/OPERATIONS.md
-GAP-07 缺完整 Baseline 文档体系（BASELINE_V1_0.md）
+GAP-06 缺 docs/operations.md
+GAP-07 缺完整 Baseline 文档体系（baseline-v1-0.md）
 GAP-08 缺 ADR-013
 GAP-09 README / Delivery / Implementation 测试数字漂移
 GAP-10 Search 文档描述与实际实现不一致

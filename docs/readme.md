@@ -34,15 +34,15 @@ PYTHONPATH=src python -m vencertia.cli migrate-v10.2 --source legacy/... --dry-r
 
 | 文档 | 内容 |
 |---|---|
-| `docs/ARCHITECTURE.md` | 三层架构 + Mermaid 图 + 权力边界 + 不变式 |
+| `docs/architecture.md` | 三层架构 + Mermaid 图 + 权力边界 + 不变式 |
 | `docs/domain-model.md` | 域对象字段级定义（权威） |
 | `docs/{decision,belief,evidence-policy,experiment-optimizer,calibration}-engine.md` | 引擎算法 |
 | `docs/architecture-decisions.md` | ADR-001~007 |
 | `docs/migration-v10.2-to-decision-runtime.md` | V10.2 映射 |
-| `docs/API.md` / `docs/CLI.md` | 接口文档 |
-| `docs/BENCHMARK.md` | 基准分层/指标/防泄漏 |
-| `docs/OSS_ADMISSION_POLICY.md` | OSS/模型准入策略 |
-| `docs/ITERATION_LOG.md` | 3 轮迭代记录 |
+| `docs/api.md` / `docs/cli.md` | 接口文档 |
+| `docs/benchmark.md` | 基准分层/指标/防泄漏 |
+| `docs/oss-admission-policy.md` | OSS/模型准入策略 |
+| `docs/iteration-log.md` | 3 轮迭代记录 |
 | `TASK_BREAKDOWN.md` | 工程师施工图 |
 
 ## v1.0 与 v0.1 差异

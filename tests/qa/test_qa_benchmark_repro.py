@@ -30,8 +30,8 @@ def test_l0_is_synthetic_source(project_root: Path) -> None:
 
 
 def test_benchmark_docs_distinguish_synthetic_from_predictive(project_root: Path) -> None:
-    """docs/BENCHMARK.md must frame L0 as regression (not real predictive power)."""
-    doc = (project_root / "docs" / "BENCHMARK.md").read_text(encoding="utf-8")
+    """docs/benchmark.md must frame L0 as regression (not real predictive power)."""
+    doc = (project_root / "docs" / "benchmark.md").read_text(encoding="utf-8")
     assert "synthetic" in doc.lower()
     assert "regression" in doc.lower()
     # L1 uses historical time-sliced replay with leakage discipline.

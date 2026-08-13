@@ -99,7 +99,7 @@
 | 项 | 内容 |
 |---|---|
 | 目标 | 0 skipped（确定性 fixture）；版本单一来源接线到 API/health/demo/.env；PG 门控错误文档修正 |
-| 文件 | `tests/test_api_v11.py`、`src/vencertia/api.py`、`src/vencertia/cli.py`、`examples/demo_b2b_saas_mvp.py`、`.env.example`、`docs/BASELINE_V1_1_RC.md`、`docs/OPERATIONS.md`、`docs/ITERATION_V1_1_RC_3.md`、`docs/IMPLEMENTATION_REPORT_V1_1_RC.md` |
+| 文件 | `tests/test_api_v11.py`、`src/vencertia/api.py`、`src/vencertia/cli.py`、`examples/demo_b2b_saas_mvp.py`、`.env.example`、`docs/baseline-v1-1-rc.md`、`docs/operations.md`、`docs/iteration-v1-1-rc-3.md`、`docs/implementation-report-v1-1-rc.md` |
 | 接口 | health 返回 `runtime_version`/`api_contract_version` + legacy 键派生；FastAPI version=__version__ |
 | 验收 | `test_candidate_validate_endpoint` 确定性通过（无 skip）；`test_version_single_source`；health 键值正确；`rg "PG 门控" docs` 仅剩历史快照标注 |
 | 依赖 | Iter1-T01（版本常量） |
@@ -140,7 +140,7 @@
 | 验收 | `research_round_mutation_is_atomic`；`outcome_settlement_rolls_back_on_failure`；Release Gate：A 0 failed/0 skipped（或准确解释）、B L0 36-36、C L1 6/6、D Binding P≥1.0/R≥0.96/F1≥0.9796（行为变化附 comparison report）、E 隔离 PASS、F Research API 闭环 PASS、G Experiment validation PASS、H Provider observability PASS、I SQLite+PG parity、J 文档版本一致 |
 | 依赖 | IT3-T02 |
 
-**Iter3 完成标准**：v1.1.2 发布候选；`docs/BASELINE_V1_1_2.md` 更新为最终数字；版本 1.1.2（禁止 1.2.0）。
+**Iter3 完成标准**：v1.1.2 发布候选；`docs/baseline-v1-1-2.md` 更新为最终数字；版本 1.1.2（禁止 1.2.0）。
 
 ---
 

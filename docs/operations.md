@@ -2,8 +2,8 @@
 
 > HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
 
-> 面向部署/运维的实操手册（GAP-06）。开发细节见 `docs/ARCHITECTURE.md`、
-> `docs/OVERVIEW.md`；Provider 详见 `docs/PROVIDERS.md`。
+> 面向部署/运维的实操手册（GAP-06）。开发细节见 `docs/architecture.md`、
+> `docs/overview.md`；Provider 详见 `docs/providers.md`。
 
 ## 1. Installation
 
@@ -208,5 +208,5 @@ make release   # scripts/make_release.py → Vencertia_Intelligence_Lab_v1.1.1.z
 | `ModuleNotFoundError: vencertia` | 未设 PYTHONPATH | `export PYTHONPATH=src` |
 | `Unknown model_provider` | 拼写错误 | 检查 `VENCERTIA_MODEL_PROVIDER` |
 | Provider 超时/限流 | 网络/配额 | 检查 `VENCERTIA_PROVIDER_*` 重试与超时设置 |
-| L0 数字不对 | 文档引用旧状态 | 以 `docs/BASELINE_V1_0.md` 三状态表核对（GAP-07） |
+| L0 数字不对 | 文档引用旧状态 | 以 `docs/baseline-v1-0.md` 三状态表核对（GAP-07） |
 | 事件缺失 | EventBus 未接 sink | API/CLI 用 `build_container()` 自动接线 |

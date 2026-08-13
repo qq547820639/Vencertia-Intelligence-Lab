@@ -3,7 +3,7 @@
 > HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
 
 > 执行人：严过关（QA）· 日期：2026-08-12 · 版本：1.1.1（工作区）
-> 基线：docs/ITERATION_V1_1_RC_1.md（工程师实现完成）· 本轮为独立对抗验证，非盖章。
+> 基线：docs/iteration-v1-1-rc-1.md（工程师实现完成）· 本轮为独立对抗验证，非盖章。
 
 ## 1. 独立复跑（trust but verify）
 
@@ -84,4 +84,4 @@
 
 ## 6. 后续
 
-- ITERATION_V1_1_RC_3.md：干净环境全量回归 + 10 Gate 核验（QA Iteration 3）。
+- iteration-v1-1-rc-3.md：干净环境全量回归 + 10 Gate 核验（QA Iteration 3）。

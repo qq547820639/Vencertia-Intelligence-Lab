@@ -63,7 +63,7 @@
 
 ## ADR-005 — Framework-Agnostic：域不依赖任何具体模型/Agent 框架
 
-**Context**：OSS_INTEGRATION_DECISIONS.md 已确立"adapter 边界"原则；LiteLLM/LangGraph/Qdrant 等均为准入候选。
+**Context**：oss-integration-decisions.md 已确立"adapter 边界"原则；LiteLLM/LangGraph/Qdrant 等均为准入候选。
 
 **Decision**：域层与引擎层只依赖 `providers/` 接口（`ModelProvider`/`SearchProvider`/`RetrievalProvider`）：
 - v1.0 实现：`MockProvider`（默认，离线可跑）+ `OpenAICompatibleProvider`（httpx，OpenAI 兼容端点）；
@@ -76,7 +76,7 @@
 
 ## ADR-006 — Benchmark Precedes OSS Admission
 
-**Context**：BENCHMARK_SPEC.md 与 IMPLEMENTATION_PLAN.md 已写入准入规则；v0.1 只做了 L0 合成回归。
+**Context**：benchmark-spec.md 与 implementation-plan.md 已写入准入规则；v0.1 只做了 L0 合成回归。
 
 **Decision**：任何新模型/OSS 集成进入生产前，必须通过冻结基准证明至少一项：
 1. 统计可信的质量提升（无不可接受的成本/延迟）；

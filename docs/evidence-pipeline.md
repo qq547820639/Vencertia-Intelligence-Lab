@@ -42,4 +42,4 @@ Search/Retrieval → SearchAdapter（fingerprint/canonical_source/source_family�
 
 ## Scope 隔离（v1.0 不变式延续）
 
-Company Case 证据不得直接改项目 WTP；绑定级矩阵见 `docs/CLAIM_BINDING.md`。
+Company Case 证据不得直接改项目 WTP；绑定级矩阵见 `docs/claim-binding.md`。

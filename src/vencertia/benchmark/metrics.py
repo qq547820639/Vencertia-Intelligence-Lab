@@ -1,4 +1,4 @@
-"""Benchmark metrics — pure functions (docs/BENCHMARK.md).
+"""Benchmark metrics — pure functions (docs/benchmark.md).
 
 All metrics are deterministic and operate on simple lists so they can be
 unit-tested without any runtime wiring.

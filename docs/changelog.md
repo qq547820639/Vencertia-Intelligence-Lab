@@ -43,7 +43,7 @@
 
 ## v1.1.1 — Release Candidate Hardening (2026-08-12)
 
-> GAP-01~10 全部闭合；数字以最后一次干净回归为准（`docs/BASELINE_V1_0.md` 三状态表）。
+> GAP-01~10 全部闭合；数字以最后一次干净回归为准（`docs/baseline-v1-0.md` 三状态表）。
 
 ### Added
 - **BindingStatus 四态**（GAP-01）：`BOUND / AMBIGUOUS / REJECTED /
@@ -65,7 +65,7 @@
 - **L1 三层协议统一**（GAP-05，P0）：`L1Case` / JSON Schema / template /
   `l1_cases.jsonl` 唯一 canonical contract；T0 三字段默认 `[]`（严禁从
   hindsight 回填）；leakage gate 拒绝未过审计 case。
-- **docs/OPERATIONS.md**（GAP-06，18 节）；**docs/BASELINE_V1_0.md**
+- **docs/operations.md**（GAP-06，18 节）；**docs/baseline-v1-0.md**
   （GAP-07，三状态不混数字）；**ADR-013**（GAP-08，外部研究 vs
   项目结果证据权威性不同）。
 
@@ -80,7 +80,7 @@
 
 ### Fixed
 - 旧命名断言按规格更新（STRONG_DECISION→ROBUST_DECISION 等，规格驱动，
-  非 benchmark 欺骗，见 `docs/ITERATION_V1_1_RC_1.md`）。
+  非 benchmark 欺骗，见 `docs/iteration-v1-1-rc-1.md`）。
 - 阈值边界浮点噪声（flip 恰在阈值上被误判 fragile → round(6dp) 稳定）。
 - **BLOCKER-API-001**：`SQLiteRepository` connect 增加 `check_same_thread=False`，
   修复 `make api`（uvicorn）下默认 SQLite DSN 的跨线程
@@ -96,7 +96,7 @@
 - **MINOR-PR-003**：`http_search` 非 dict 数组 → EMPTY_RESULT 的行为在
   docstring 明确记录（非 SCHEMA_MISMATCH，非数据丢失）。
 - **MINOR-L1-004**：leakage gate 为 authoring-time 标记制在
-  `docs/BENCHMARK.md` 与 `l1.py` docstring 明确。
+  `docs/benchmark.md` 与 `l1.py` docstring 明确。
 
 ### Tests
 - 新增 `tests/test_l1_contract.py`（12）、`tests/test_binding_status_v111.py`
@@ -106,7 +106,7 @@
   `tests/test_default_container_api_smoke.py`（2，BLOCKER-API-001 防回归）。
 - QA 轮新增 `tests/qa_v111/` 对抗套件（binding/benchmark/provider/sensitivity/
   decision/l1 edges）。
-- 全量 pytest：见 `docs/BASELINE_V1_1_RC.md` 最终数字。
+- 全量 pytest：见 `docs/baseline-v1-1-rc.md` 最终数字。
 
 ### Benchmarks
 - L0：36/36（不退化）；L1：6/6 + leakage 拒绝；Synthetic Claim Binding：

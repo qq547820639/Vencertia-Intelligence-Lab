@@ -1,4 +1,4 @@
-# ITERATION_V1_1_2_3.md — Iter3: P2 + 全量回归 + 发布闸门
+# iteration-v1-1-2-3.md — Iter3: P2 + 全量回归 + 发布闸门
 
 > 作者：寇豆码（Engineer） · 日期：2026-08-12 · 上游：`docs/v1.1.2-design.md` Part D（P2-14..P2-17）
 
@@ -11,7 +11,7 @@
 | P2-16 | SolveOrchestrator 拆分：facade 保留；提取 CompilationService / DecisionEvaluationService / OutcomeSettlementService（ResearchExecutionService 已在 IT1-T04）；EngineBundle 新增 4 个 service 字段（additive）；API/CLI 签名不变、SolveResult/OutcomeRecordedResult schema 不变、持久化数据可读 | `runtime/compilation_service.py`（新）、`runtime/decision_evaluation_service.py`（新）、`runtime/outcome_settlement_service.py`（新）、`runtime/runtime.py`、`runtime/__init__.py` |
 | P2-17 | 事务边界：SQLite/Postgres `_store`/`_append_event`/`_delete`/`save_binding`/`save_belief_update_record` 在 `in_transaction` 内不提前 commit（深度计数）；research round mutation batch 包事务（solve 循环 + run_plan）；outcome settlement 全链包事务；失败整体 rollback | `repositories/base.py`、`repositories/sqlite.py`、`repositories/postgres.py`、`runtime/runtime.py`、`runtime/research_service.py`、`runtime/outcome_settlement_service.py` |
 | 迁移 | `scripts/backfill_evidence_project_ids.py`：存量 PROJECT/CUSTOMER 证据按 claim_ids→claims.project_id 回填；无法解析保持 None（UNASSIGNED，读边界不进入任何项目上下文） | `scripts/backfill_evidence_project_ids.py`（新） |
-| 文档 | README/DELIVERY 数字更新（417 / 0 skipped）；BASELINE_V1_1_2.md 更新为最终数字；三份 ITERATION_V1_1_2_{1,2,3}.md | `README.md`、`DELIVERY_REPORT.md`、`docs/*.md` |
+| 文档 | README/DELIVERY 数字更新（417 / 0 skipped）；baseline-v1-1-2.md 更新为最终数字；三份 ITERATION_V1_1_2_{1,2,3}.md | `README.md`、`DELIVERY_REPORT.md`、`docs/*.md` |
 
 ## Tests before → after（拆分前后比对）
 

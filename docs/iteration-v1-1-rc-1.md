@@ -3,7 +3,7 @@
 > HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
 
 > 执行人：寇豆码（工程师）· 日期：2026-08-12 · 版本：1.1.1
-> 基线：docs/BASELINE_V1_1_RC.md（283 passed / 1 skipped，L0 36/36）
+> 基线：docs/baseline-v1-1-rc.md（283 passed / 1 skipped，L0 36/36）
 
 ## 1. Changes（本轮实现）
 
@@ -28,7 +28,7 @@
 | `Makefile` | benchmark-binding / benchmark-all（GAP-04） |
 | `src/vencertia/benchmark/l0.py` + `data/benchmarks/l0_cases.json` | multiple_binding 用例显式 ambiguity_margin=0（GAP-01 规格驱动） |
 | `pyproject.toml` / `.gitignore` / `scripts/make_release.py` | 版本 1.1.1 / 卫生项 / 打包名 Vencertia_Intelligence_Lab_v1.1.1.zip |
-| `docs/OPERATIONS.md`、`docs/BASELINE_V1_0.md`、`docs/architecture-decisions-next.md`（ADR-013）、`docs/PROVIDERS.md`、`docs/CHANGELOG.md`、`README.md`、`DELIVERY_REPORT.md`、`docs/IMPLEMENTATION_REPORT_NEXT.md` | GAP-06/07/08/09/10 文档 |
+| `docs/operations.md`、`docs/baseline-v1-0.md`、`docs/architecture-decisions-next.md`（ADR-013）、`docs/providers.md`、`docs/changelog.md`、`README.md`、`DELIVERY_REPORT.md`、`docs/implementation-report-next.md` | GAP-06/07/08/09/10 文档 |
 
 ## 2. Tests before / after
 

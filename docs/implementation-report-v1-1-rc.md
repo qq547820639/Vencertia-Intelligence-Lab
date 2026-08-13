@@ -3,13 +3,13 @@
 > HISTORICAL SNAPSHOT — 记录 v1.1.1 交付时点事实，不作为 v1.1.2 的 authority。
 
 > 版本：1.1.1 · 作者：寇豆码（工程师）· 状态：RC 完成
-> 日期：2026-08-12 · 基线：docs/BASELINE_V1_1_RC.md
+> 日期：2026-08-12 · 基线：docs/baseline-v1-1-rc.md
 
 ## 1. Source Baseline
 
 ```text
 GIT_SHA    = e6cd82d9f7138e901a759f0e209f86cb51f90173（基线起点，main）
-WORKTREE   = 基线时 clean（除 docs/BASELINE_V1_1_RC.md）
+WORKTREE   = 基线时 clean（除 docs/baseline-v1-1-rc.md）
 Python     = 3.13.12（/Users/panhao/.workbuddy/binaries/python/envs/default/bin/python）
 PYTHONPATH = src
 Package    = vencertia-decision-runtime 1.1.0 → 1.1.1（禁止 1.2.0）
@@ -24,16 +24,16 @@ Package    = vencertia-decision-runtime 1.1.0 → 1.1.1（禁止 1.2.0）
 | GAP-02 | HttpSearchProvider | **DONE** | providers/http_search.py；search_provider=mock\|http；无 URL fail loud；10 种失败模式；PROVIDER_FAILED 事件 + graceful degradation；tests/test_http_search_provider.py（23 条） |
 | GAP-03 | Robustness 三级 | **DONE** | ROBUST/MODERATE/FRAGILE + 旧字符串兼容；阈值进 Settings；edge tests；tests/test_sensitivity_robustness_v111.py（9 条） |
 | GAP-04 | 独立 Claim Binding Benchmark | **DONE** | benchmark/claim_binding.py + 34 cases/14 类；8 指标+Coverage；零分母 N/A；make benchmark-binding / benchmark-all；tests/test_claim_binding_benchmark.py（8 条） |
-| GAP-06 | docs/OPERATIONS.md | **DONE** | 18 节，含环境变量全表 |
-| GAP-07 | Baseline 文档 | **DONE** | docs/BASELINE_V1_0.md（三状态不混数字）；BASELINE_V1_1_RC.md 保留复核 |
+| GAP-06 | docs/operations.md | **DONE** | 18 节，含环境变量全表 |
+| GAP-07 | Baseline 文档 | **DONE** | docs/baseline-v1-0.md（三状态不混数字）；baseline-v1-1-rc.md 保留复核 |
 | GAP-08 | ADR-013 | **DONE** | "Research Evidence and Project Outcome Evidence Have Different Authority"；明确 "External research cannot directly produce PROJECT_REALITY authority." |
 | GAP-09 | 文档数字统一 | **DONE** | fresh run 后统一 README/DELIVERY/CHANGELOG/BASELINE/IMPLEMENTATION 数字（格式 X passed / Y skipped） |
-| GAP-10 | Search 文档一致性 | **DONE** | PROVIDERS.md/OPERATIONS.md/DELIVERY_REPORT.md 写明 "Generic HTTP Search adapter implemented. No commercial search vendor is bundled. Live use requires user-supplied endpoint and credentials." |
+| GAP-10 | Search 文档一致性 | **DONE** | providers.md/operations.md/DELIVERY_REPORT.md 写明 "Generic HTTP Search adapter implemented. No commercial search vendor is bundled. Live use requires user-supplied endpoint and credentials." |
 
 ## 3. Iterations
 
-- **ITERATION_V1_1_RC_1.md**：实现 + 回归 + 失败/修复决定（F1~F7）+ BenchmarkCaseReview（CB-034）。
-- ITERATION_V1_1_RC_2.md / _3.md：后续 QA 轮补充（工程师不写）。
+- **iteration-v1-1-rc-1.md**：实现 + 回归 + 失败/修复决定（F1~F7）+ BenchmarkCaseReview（CB-034）。
+- iteration-v1-1-rc-2.md / _3.md：后续 QA 轮补充（工程师不写）。
 
 ## 4. Final Tests
 

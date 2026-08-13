@@ -1,6 +1,6 @@
 # OSS / Model Admission Policy (v1.0, executable)
 
-Derived from `docs/OSS_INTEGRATION_DECISIONS.md` and ADR-006.
+Derived from `docs/oss-integration-decisions.md` and ADR-006.
 
 ## Rule
 
@@ -21,7 +21,7 @@ Admission requires at least one of:
    `comparison_report(baseline, candidate)` — candidate pass rate must be
    ≥ baseline pass rate (L0; L1 when data allows).
 3. Freeze the benchmark set; do not tune the harness to fit a candidate.
-4. Update `docs/CHANGELOG.md` with the benchmark delta.
+4. Update `docs/changelog.md` with the benchmark delta.
 
 ## Leakage discipline
 

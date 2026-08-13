@@ -46,7 +46,7 @@ P2：Repository private 调用清理 / 层依赖环（capabilities→domain.cont
 
 ## 4. Release Gate（A-J）— v1.1.2 收口
 
-A tests 417 passed / **0 skipped** / 0 failed / B L0 36-36 不降 / C L1 6 cases 不退化 / D Binding P 1.0 R 0.96 F1 0.9796（behavior comparison 见 `docs/ITERATION_V1_1_2_3.md`）/ E 跨项目证据隔离 PASS / F Research API 闭环 PASS / G Experiment validation PASS / H Provider observability PASS / I SQLite+PG parity / J 文档版本一致（1.1.2）
+A tests 417 passed / **0 skipped** / 0 failed / B L0 36-36 不降 / C L1 6 cases 不退化 / D Binding P 1.0 R 0.96 F1 0.9796（behavior comparison 见 `docs/iteration-v1-1-2-3.md`）/ E 跨项目证据隔离 PASS / F Research API 闭环 PASS / G Experiment validation PASS / H Provider observability PASS / I SQLite+PG parity / J 文档版本一致（1.1.2）
 
 ## 5. 版本
 

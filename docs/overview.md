@@ -10,9 +10,9 @@ AgentV10.2 从 Prompt-driven Multi-Agent Startup Advisory 重构为 **Determinis
 - **测试**：174 passed, 0 failed（含 QA 独立对抗套件 46 条）
 - **L0 Benchmark**：26/26（pass_rate 1.0）；**L1**：6/6（泄漏案例正确拒绝）
 - **Demo 闭环**：B2B SaaS MVP → ABSTAIN/DO NOT COMMIT → SELL PAID PILOT → 20 outreach 0 paid → WTP 0.348→0.189 → 重评 → 预测结算 → 校准更新
-- **24 项验收**：全部满足（见 docs/IMPLEMENTATION_REPORT.md §6）
+- **24 项验收**：全部满足（见 docs/implementation-report.md §6）
 
-## 三轮迭代（诚实记录，见 docs/ITERATION_LOG.md）
+## 三轮迭代（诚实记录，见 docs/iteration-log.md）
 1. 内核可跑：修复 pydantic 递归/枚举混用/模块遮蔽/收敛不可达等 6 问题
 2. 接口可交付：CLI 分组重构/L1 参考修正等 4 问题
 3. 可靠性强化 + QA 对抗修复：ABSTAIN 必带 next_experiment（MAJOR）、resolved_at aware UTC、status=EVALUATED 持久化

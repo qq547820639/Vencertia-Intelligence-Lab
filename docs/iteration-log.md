@@ -73,8 +73,8 @@ capabilities + providers（mock）+ API 14 端点 + CLI 14 命令 + L1 harness +
 乐观锁/事件审计复查、calibration 分层、迁移导入、文档一致性、全量回归。
 
 ### 完成内容
-- 文档：README / API.md / CLI.md / BENCHMARK.md / OSS_ADMISSION_POLICY.md /
-  IMPLEMENTATION_REPORT.template.md / CHANGELOG.md / ITERATION_LOG.md。
+- 文档：README / api.md / cli.md / benchmark.md / oss-admission-policy.md /
+  implementation-report.template.md / changelog.md / iteration-log.md。
 - 全局一致性审查（见下）：修复 import 路径、枚举引用、接口签名一致性问题。
 - `make verify` 全绿：test（124 passed）+ benchmark（L0 26/26）+ CLI/API import OK。
 

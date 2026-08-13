@@ -7,9 +7,9 @@
 >
 > **后续更新（GAP-09）**：本文档是 v1.1 pre-RC 的历史记录（283 passed /
 > 1 skipped）。v1.1.1 RC Hardening 的最终数字见
-> `docs/IMPLEMENTATION_REPORT_V1_1_RC.md`（345 passed / 1 skipped，
+> `docs/implementation-report-v1-1-rc.md`（345 passed / 1 skipped，
 > L0 36/36，Synthetic Claim Binding Benchmark 8 指标）。
-> 历史数字与最终数字按状态区分，不混用（`docs/BASELINE_V1_0.md`）。
+> 历史数字与最终数字按状态区分，不混用（`docs/baseline-v1-0.md`）。
 
 ## 1. 交付摘要
 
@@ -25,7 +25,7 @@
 | ruff | — | **All checks passed** |
 | CLI/API import | OK | OK |
 
-## 2. 三轮迭代记录（详见 `docs/ITERATION_LOG.md` v1.1 节）
+## 2. 三轮迭代记录（详见 `docs/iteration-log.md` v1.1 节）
 
 - **Iter1 Wiring**（T01→T03）：Composition Root + Provider 韧性 + 领域扩展 +
   ClaimBinding + ResearchPipeline + /solve 闭环。全量测试 174 不回归。
@@ -109,4 +109,4 @@ Context→Compiler→CriticalUnknown→ResearchPlanner→Search/Retrieval→Clai
 - release：Vencertia_Decision_Runtime_v1.1.zip（378 files，独立可运行）
 - test report：283 passed / 1 skipped（含 QA 对抗 38）
 - benchmark report：L0 36/36 + L1 6/6 + legacy 20/24 参考
-- implementation report：本文档 + docs/ITERATION_LOG.md v1.1 节
+- implementation report：本文档 + docs/iteration-log.md v1.1 节

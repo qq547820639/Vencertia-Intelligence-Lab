@@ -3,15 +3,15 @@
 > HISTORICAL SNAPSHOT — 记录 v1.0 交付时点事实，不作为 v1.1/v1.1.2 的 authority。
 
 > 本文件**区分三个 Baseline 状态**，数字不混用（GAP-07）。
-> 唯一现行基线是 `docs/BASELINE_V1_1_RC.md`；本文档只做历史对照。
+> 唯一现行基线是 `docs/baseline-v1-1-rc.md`；本文档只做历史对照。
 
 ## 1. 三个状态（科学准确，不混数字）
 
 | 状态 | 时间 | pytest | L0 | 说明 |
 |---|---|---|---|---|
-| **v1.0 reported** | 2026-08-12 早 | **174 passed / 0 failed** | **26/26** | v1.0 交付时记录（docs/IMPLEMENTATION_REPORT.md） |
-| **v1.1 pre-RC** | 2026-08-12 10:00 | **283 passed / 1 skipped** | **36/36** | v1.1 主体交付（docs/IMPLEMENTATION_REPORT_NEXT.md） |
-| **v1.1 RC final** | 2026-08-12（本轮） | **390 passed / 1 skipped** | **36/36** | GAP-01~10 完成后最后一次干净回归（docs/IMPLEMENTATION_REPORT_V1_1_RC.md） |
+| **v1.0 reported** | 2026-08-12 早 | **174 passed / 0 failed** | **26/26** | v1.0 交付时记录（docs/implementation-report.md） |
+| **v1.1 pre-RC** | 2026-08-12 10:00 | **283 passed / 1 skipped** | **36/36** | v1.1 主体交付（docs/implementation-report-next.md） |
+| **v1.1 RC final** | 2026-08-12（本轮） | **390 passed / 1 skipped** | **36/36** | GAP-01~10 完成后最后一次干净回归（docs/implementation-report-v1-1-rc.md） |
 
 > 规则：任何文档引用测试数字必须标注所属状态；不得把 v1.0 的 174 与
 > v1.1 的 283 混在同一句话里表述为同一版本的数字。

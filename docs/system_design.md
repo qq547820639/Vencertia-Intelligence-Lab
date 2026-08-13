@@ -98,8 +98,8 @@ data/benchmarks/v0.2.jsonl           # 保留（L0 24 例）
 data/benchmarks/l1_cases.jsonl       # L1 时间切片案例（新增）
 
 docs/                                # 本批次全部设计文档
-README.md  API.md  CLI.md  BENCHMARK.md  OSS_ADMISSION_POLICY.md
-IMPLEMENTATION_REPORT.template.md  CHANGELOG.md
+README.md  api.md  cli.md  benchmark.md  oss-admission-policy.md
+implementation-report.template.md  changelog.md
 ```
 
 ## A.3 Data Structures and Interfaces（类图）

@@ -1,4 +1,4 @@
-# ITERATION_V1_1_2_2.md — Iter2: 全部 P1
+# iteration-v1-1-2-2.md — Iter2: 全部 P1
 
 > 作者：寇豆码（Engineer） · 日期：2026-08-12 · 上游：`docs/v1.1.2-design.md` Part C（P1-7..P1-13）
 

@@ -1,4 +1,4 @@
-# ITERATION_V1_1_2_1.md — Iter1: 全部 P0（Runtime Integrity 语义断点修复）
+# iteration-v1-1-2-1.md — Iter1: 全部 P0（Runtime Integrity 语义断点修复）
 
 > 作者：寇豆码（Engineer） · 日期：2026-08-12 · 基线：3bf22c8（390 passed / 1 skipped）
 > 上游：`docs/v1.1.2-design.md` Part B（P0-1..P0-6）

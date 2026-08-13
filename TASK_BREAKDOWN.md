@@ -389,12 +389,12 @@ typer 全量命令：
 
 | 文件 | 职责 |
 |---|---|
-| `docs/API.md` | 14 端点请求/响应示例（含 SolveResult 结构） |
-| `docs/CLI.md` | 14 命令用法 |
-| `docs/BENCHMARK.md` | 基准分层/指标定义/准入流程/防泄漏纪律 |
-| `docs/OSS_ADMISSION_POLICY.md` | 从 OSS_INTEGRATION_DECISIONS.md 升级为可执行策略（ADR-006） |
-| `docs/IMPLEMENTATION_REPORT.template.md` | 每轮迭代报告模板（假设/基准切片/指标 delta/成本/失败模式/版本/回滚） |
-| `docs/CHANGELOG.md` | 版本变更记录（v0.1 → v1.0） |
+| `docs/api.md` | 14 端点请求/响应示例（含 SolveResult 结构） |
+| `docs/cli.md` | 14 命令用法 |
+| `docs/benchmark.md` | 基准分层/指标定义/准入流程/防泄漏纪律 |
+| `docs/oss-admission-policy.md` | 从 oss-integration-decisions.md 升级为可执行策略（ADR-006） |
+| `docs/implementation-report.template.md` | 每轮迭代报告模板（假设/基准切片/指标 delta/成本/失败模式/版本/回滚） |
+| `docs/changelog.md` | 版本变更记录（v0.1 → v1.0） |
 | `docs/architecture.md` 等 7 份设计文档 | 已由架构师交付（本批次） |
 | `tests/`（T05 新增） | `test_api.py`（14 端点）、`test_cli.py`（14 命令）、`test_solve.py`、`test_benchmark_l0.py`、`test_benchmark_l1.py`、`test_e2e_demo.py`（demo 闭环端到端） |
 
@@ -450,7 +450,7 @@ class L1Runner:
 | 迭代 2（T04→T05） | "接口可交付" | capabilities mock + providers + API 全量 + CLI 全量 + L1 harness + demo | 14 端点/14 命令测试通过；demo 闭环演示；L1 防泄漏检查通过 |
 | 迭代 3（打磨/审计） | "质量与文档" | 乐观锁/事件审计复查、calibration 分层、迁移导入、文档一致性、IMPLEMENTATION_REPORT 填写 | `make verify` 全绿；文档与实现一致；回滚路径明确 |
 
-> 每轮结束按 `docs/IMPLEMENTATION_REPORT.template.md` 记录：假设 / 基准切片 / 指标 delta / 成本 / 失败模式 / 版本 / 回滚。
+> 每轮结束按 `docs/implementation-report.template.md` 记录：假设 / 基准切片 / 指标 delta / 成本 / 失败模式 / 版本 / 回滚。
 
 ---
 

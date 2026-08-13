@@ -21,7 +21,7 @@
 
 ## 2. 最终架构
 
-三层分离（详见 docs/ARCHITECTURE.md 与 docs/system_design.md 的 Mermaid 图）：
+三层分离（详见 docs/architecture.md 与 docs/system_design.md 的 Mermaid 图）：
 
 ```
 REALITY（canonical truth，Repository 独占写）
@@ -98,7 +98,7 @@ QA 独立对抗验证发现 3 个源码缺陷，工程师根因修复：
 | L0 新套件（synthetic regression） | 26 | 26 | 1.0 | GO/KILL/PIVOT/HOLD/CONDITIONAL_GO/SELECT_OPTION/ABSTAIN、company-case 隔离、transferability、posterior 引用值、NEUTRAL 0.15、dedup、6 种收敛态、实验选择 |
 | L0 legacy v0.2 参考集 | 24 | 20 | 0.833 | 4 例 gold 为人工参考标签，与确定性引擎数学不一致（v0.1 引擎同样如此）；**保留为参考，不作硬门槛** |
 | L1（time-sliced） | 6 | 6 | 1.0 | 泄漏案例 l1-07-leak 被 harness 正确拒绝（leakage_audit） |
-| L2（prospective） | — | — | — | 从登记 Prediction 开始，未来真实结算（L0/L1 与真实预测能力已在 BENCHMARK.md 明确区分） |
+| L2（prospective） | — | — | — | 从登记 Prediction 开始，未来真实结算（L0/L1 与真实预测能力已在 benchmark.md 明确区分） |
 
 关键指标（L0）：decision_accuracy=0.615（多数 case gold=ABSTAIN/NO_DECISION 且按 option 精确匹配，勿误读为预测能力）；experiment_selection_accuracy=1.0；critical_uncertainty_accuracy=1.0；decision_regret=0.0。
 
@@ -119,7 +119,7 @@ Demo 校准数据（n=1，仅演示）：Brier=0.121101；ECE=0.347996（单样�
 
 | # | 验收项 | 状态 |
 |---|---|---|
-| 1 | V10.2 完整分析 + migration mapping | ✅ docs/MIGRATION_V10_2_TO_DECISION_RUNTIME.md + legacy/mapping.py + import_v10_2.py |
+| 1 | V10.2 完整分析 + migration mapping | ✅ docs/migration-v10.2-to-decision-runtime.md + legacy/mapping.py + import_v10_2.py |
 | 2 | 新 canonical domain model 实现 | ✅ src/vencertia/domain/ 18 模块 |
 | 3 | Agent 无 canonical state mutation authority | ✅ capability 协议无写方法 + QA 对抗验证 |
 | 4 | Decision / Experiment 彻底分离 | ✅ 双空间 + ABSTAIN 必带 next_experiment |
@@ -132,7 +132,7 @@ Demo 校准数据（n=1，仅演示）：Brier=0.121101；ECE=0.347996（单样�
 | 11 | Prediction 真实结算 | ✅ 防篡改 + resolved_at aware UTC |
 | 12 | Brier + ECE | ✅ 手算验证 + 4 层分层 |
 | 13 | Benchmark 可重复运行 | ✅ 两次运行逐项一致 |
-| 14 | L0 与真实预测能力明确区分 | ✅ BENCHMARK.md 声明 |
+| 14 | L0 与真实预测能力明确区分 | ✅ benchmark.md 声明 |
 | 15 | SQLite/PostgreSQL persistence | ✅ SQLite 全量 + PG DSN 门控 |
 | 16 | API | ✅ FastAPI 14 端点 |
 | 17 | CLI | ✅ typer 14 命令 |

@@ -454,7 +454,7 @@ def benchmark_run(level: str = "L0", path: Path | None = None, db: str | None = 
         report = runner.due_report()
         if not report:
             console.print(
-                "[yellow]L2 前瞻预测库为空：需先 register 前瞻预测（参见 docs/BENCHMARK.md）。[/yellow]"
+                "[yellow]L2 前瞻预测库为空：需先 register 前瞻预测（参见 docs/benchmark.md）。[/yellow]"
             )
             return
         _dump([e.model_dump(mode="json") for e in report])
