@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any
 from uuid import uuid4
 
@@ -81,7 +82,7 @@ class CallRecorder:
                 retry_count=retries,
                 error_type=error_type,
             )
-            with __import__("contextlib").suppress(Exception):  # pragma: no cover
+            with suppress(Exception):  # pragma: no cover - audit must never block
                 self.repo.save_call_record(record)
         return result
 

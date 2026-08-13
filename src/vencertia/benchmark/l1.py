@@ -38,6 +38,36 @@ from vencertia.runtime.evidence_policy import EvidencePolicy
 from vencertia.runtime.experiment_optimizer import ExperimentOptimizer, ExperimentProposalInput
 from vencertia.runtime.uncertainty_engine import UncertaintyEngine
 
+# jsonschema is a DEV dependency by design (minimal runtime footprint); the L1
+# runner validates when it is present (CI installs dev extras) and skips
+# validation gracefully when it is not.
+try:  # pragma: no cover - environment dependent
+    import jsonschema
+
+    _JsonschemaValidationError = jsonschema.exceptions.ValidationError
+except ImportError:  # pragma: no cover - environment dependent
+    jsonschema = None  # type: ignore[assignment]
+    _JsonschemaValidationError = ValueError  # placeholder; never raised when jsonschema is None
+
+
+def _load_validator(schema_path: str | Path | None):
+    """Load the Draft-07 validator for the canonical L1 schema (or None)."""
+    if jsonschema is None:
+        return None
+    resolved = schema_path or (
+        Path(__file__).resolve().parents[3] / "schemas" / "historical_decision_case.schema.json"
+    )
+    resolved = Path(resolved)
+    if not resolved.exists():
+        return None
+    schema = json.loads(resolved.read_text(encoding="utf-8"))
+    return jsonschema.Draft7Validator(schema)
+
+
+def _short_error(exc) -> str:
+    message = getattr(exc, "message", str(exc))
+    return str(message)[:120]
+
 
 class L1Case(VencertiaBaseModel):
     """A time-sliced historical case (canonical L1 contract, GAP-05).
@@ -129,17 +159,39 @@ class L1Runner:
         self.convergence_engine = convergence_engine or ConvergenceEngine(self.settings)
         self.experiment_optimizer = experiment_optimizer or ExperimentOptimizer(self.settings)
 
-    def run(self, path: str | Path) -> BenchmarkReport:
+    def run(
+        self,
+        path: str | Path,
+        schema_path: str | Path | None = None,
+    ) -> BenchmarkReport:
+        """Replay a JSONL case file.
+
+        ``schema_path``: optional Draft-07 JSON Schema used to validate each
+        case BEFORE execution (v1.9). Defaults to the canonical
+        ``schemas/historical_decision_case.schema.json``; validation is skipped
+        with a note when the ``jsonschema`` package is unavailable (it is a dev
+        dependency, not a runtime dependency) or the file does not exist.
+        Schema-invalid cases are rejected (never executed) — the same honest
+        gate as the leakage flag.
+        """
         path = Path(path)
+        validator = _load_validator(schema_path)
         cases: list[L1Case] = []
         rejected: list[str] = []
         for line in path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
             raw = json.loads(line)
+            case_id = raw.get("id", "?")
             if not raw.get("leakage_audit_passed", False):
-                rejected.append(raw.get("id", "?"))
+                rejected.append(case_id)
                 continue
+            if validator is not None:
+                try:
+                    validator.validate(raw)
+                except _JsonschemaValidationError as exc:  # noqa: BLE001 - gate boundary
+                    rejected.append(f"{case_id} [schema-invalid: {_short_error(exc)}]")
+                    continue
             cases.append(L1Case.model_validate(raw))
 
         results: list[BenchmarkCaseResult] = []
@@ -188,6 +240,18 @@ class L1Runner:
 
     def _run_case(self, case: L1Case) -> BenchmarkCaseResult:
         t0 = case.information_available_at_t0
+        # v1.9: the schema marks ``decision`` optional inside the T0 envelope —
+        # a case without it must be reported as an honest failure instead of
+        # a KeyError aborting the entire run.
+        if not t0.get("decision"):
+            return BenchmarkCaseResult(
+                id=case.id,
+                predicted_option="",
+                gold_option="",
+                decided=False,
+                correct=False,
+                notes="Missing information_available_at_t0.decision; case skipped.",
+            )
         decision = Decision.model_validate(t0["decision"])
         beliefs = [Belief.model_validate(b) for b in t0.get("beliefs", [])]
         evidence = [Evidence.model_validate(e) for e in t0.get("evidence", [])]

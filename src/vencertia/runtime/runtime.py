@@ -828,7 +828,10 @@ class SolveOrchestrator:
                 if opp is not None:
                     for option in decision.options:
                         option.opportunity_cost = round(opp.opportunity_cost, 4)
-                    self.repo.save_decision(decision, expected_version=decision.version)
+                    # v1.9: follow the optimistic-lock convention (new version
+                    # for a new mutation) instead of re-saving the same version.
+                    decision.version += 1
+                    self.repo.save_decision(decision, expected_version=decision.version - 1)
                     decision_trace.notes.append(
                         "opportunity_cost updated from portfolio (opt-in)"
                     )

@@ -35,20 +35,17 @@ class ApplicationContainer:
         self._providers: ProviderBundle | None = None
         self._engines: EngineBundle | None = None
         self._orchestrator: SolveOrchestrator | None = None
+        self._call_recorder = None
 
     # -- assembly ---------------------------------------------------------------
 
     def _build_repository(self) -> Repository:
         if self._settings.postgres_dsn:
-            from vencertia.repositories.postgres import PostgresDisabledError, PostgresRepository
+            from vencertia.repositories.postgres import PostgresRepository
 
-            try:
-                return PostgresRepository(self._settings.postgres_dsn)
-            except PostgresDisabledError:
-                # DSN-gated (ADR-005): fall back to SQLite only when the DSN is
-                # set but the driver is missing would hide errors; instead we
-                # re-raise so misconfiguration is loud.
-                raise
+            # DSN-gated (ADR-005): misconfiguration (missing driver) fails loud —
+            # PostgresDisabledError propagates, no silent fallback to SQLite.
+            return PostgresRepository(self._settings.postgres_dsn)
         if self._settings.db_dsn == "sqlite:///:memory:" or self._settings.db_dsn == ":memory:":
             return InMemoryRepository()
         return SQLiteRepository(self._settings.db_dsn)
@@ -73,14 +70,20 @@ class ApplicationContainer:
 
     @property
     def call_recorder(self):
-        """Shared CallRecorder for provider observability (P1-7)."""
-        from vencertia.runtime.observability import CallRecorder
+        """Shared CallRecorder for provider observability (P1-7).
 
-        return CallRecorder(
-            self.repository,
-            enabled=self.settings.call_log_enabled,
-            settings=self.settings,
-        )
+        Cached: every consumer of this property must observe the SAME recorder
+        instance (previous behavior created a new instance per access).
+        """
+        if self._call_recorder is None:
+            from vencertia.runtime.observability import CallRecorder
+
+            self._call_recorder = CallRecorder(
+                self.repository,
+                enabled=self.settings.call_log_enabled,
+                settings=self.settings,
+            )
+        return self._call_recorder
 
     @property
     def providers(self) -> ProviderBundle:

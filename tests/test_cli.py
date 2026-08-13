@@ -33,7 +33,7 @@ def test_cli_solve(tmp_path):
 
 
 def test_cli_solve_default_prints_summary(tmp_path):
-    """T2: default CLI solve prints the 5-section summary contract."""
+    """T2: default CLI solve prints the readable 5-section contract panel."""
     req = {
         "project_id": "PRJ_CLI_SUM", "problem_text": "Should we commit six weeks to the MVP?",
         "user_id": "u1",
@@ -41,6 +41,20 @@ def test_cli_solve_default_prints_summary(tmp_path):
     req_path = tmp_path / "req.json"
     req_path.write_text(json.dumps(req))
     r = runner.invoke(app, ["solve", str(req_path), "--db", _tmp_db(tmp_path)])
+    assert r.exit_code == 0, r.output
+    assert "当前判断" in r.output
+    assert "最大未知" in r.output
+
+
+def test_cli_solve_json_flag_prints_summary_json(tmp_path):
+    """v1.9: --json keeps the machine-readable 5-section payload."""
+    req = {
+        "project_id": "PRJ_CLI_JSON", "problem_text": "Should we commit six weeks to the MVP?",
+        "user_id": "u1",
+    }
+    req_path = tmp_path / "req.json"
+    req_path.write_text(json.dumps(req))
+    r = runner.invoke(app, ["solve", str(req_path), "--db", _tmp_db(tmp_path), "--json"])
     assert r.exit_code == 0, r.output
     payload = json.loads(r.output)
     assert "current_judgment" in payload

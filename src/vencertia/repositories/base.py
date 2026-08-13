@@ -632,7 +632,15 @@ class EntityStoreMixin:
         if claim_id is not None:
             rows = [b for b in rows if b.claim_id == claim_id]
         if status is not None:
-            rows = [b for b in rows if b.status == status or b.status.value == status]
+            # v1.9: ``use_enum_values=True`` already coerces the field to str
+            # after model_validate; ``b.status.value`` raised AttributeError for
+            # any binding whose status differed from the filter (in-memory
+            # backend). Normalize via getattr-safe access.
+            rows = [
+                b
+                for b in rows
+                if (b.status.value if hasattr(b.status, "value") else b.status) == status
+            ]
         return rows
 
     def save_candidate_claim(

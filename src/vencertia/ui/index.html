@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vencertia 决策工作台</title>
+  <title>Vencertia 决策复盘器</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -11,16 +11,16 @@
     <div class="brand">
       <span class="logo">V</span>
       <div>
-        <h1>Vencertia 决策工作台</h1>
-        <p class="sub">校准优先的决策运行时 · 把「该不该做」变成有据可依的判断</p>
+        <h1>Vencertia 决策复盘器</h1>
+        <p class="sub">记录你的判断 · 追踪结果 · 用校准证明决策质量</p>
       </div>
     </div>
     <div id="health" class="health">…</div>
   </header>
 
   <main class="layout">
-    <section class="panel form-panel">
-      <h2>发起一个决策</h2>
+    <aside class="panel form-panel">
+      <h2>发起一个新决策</h2>
       <form id="solve-form">
         <label>你要做什么决定？<span class="req">*</span>
           <textarea id="problem" rows="4" placeholder="例：是否投入 6 周做 B2B SaaS MVP？" required></textarea>
@@ -29,38 +29,71 @@
           <label>决策模式
             <select id="mode">
               <option value="">自动（默认）</option>
-              <option value="EXPLORE">Explore · 探索方向</option>
-              <option value="OPERATE">Operate · 经营决策</option>
+              <option value="EXPLORE">探索方向</option>
+              <option value="OPERATE">经营决策</option>
             </select>
           </label>
           <label>风险容忍度
             <select id="risk">
               <option value="">未设置</option>
-              <option value="0.3">风险厌恶（0.3）</option>
-              <option value="0.5">风险中性（0.5）</option>
-              <option value="0.8">风险偏好（0.8）</option>
+              <option value="0.3">风险厌恶（求稳）</option>
+              <option value="0.5">风险中性</option>
+              <option value="0.8">风险偏好（敢冒风险）</option>
             </select>
           </label>
         </div>
-        <label>候选选项（可选，JSON 数组）
-          <textarea id="options" rows="3" placeholder='[{"id":"a","label":"立即投入"},{"id":"b","label":"先做付费试点"}]'></textarea>
-        </label>
         <button type="submit" id="solve-btn">开始判断</button>
-        <p class="hint">默认只给「5 段合同」，点「展开完整模型」才看信念图 / 参数来源 / 敏感度。</p>
+        <p class="hint">给出一个可解释的判断；记录会自动进入右侧台账。</p>
       </form>
-    </section>
+      <div id="solve-error" class="error" hidden></div>
+      <div id="solve-result" class="solve-result"></div>
 
-    <section class="panel result-panel" id="result-panel" hidden>
-      <div class="result-head">
-        <h2>判断结果</h2>
-        <div class="actions">
-          <button id="advanced-toggle" class="ghost">展开完整模型</button>
-          <button id="reset-btn" class="ghost">再问一个</button>
+      <section id="history-section" hidden>
+        <div class="history-head">
+          <h3>最近判断</h3>
+          <button type="button" id="history-clear" class="link-btn">清空</button>
         </div>
-      </div>
-      <div id="error" class="error" hidden></div>
-      <div id="summary" class="summary"></div>
-      <div id="advanced" class="advanced" hidden></div>
+        <div id="history-list"></div>
+      </section>
+    </aside>
+
+    <section class="review-main">
+      <section class="panel">
+        <h2>校准仪表盘</h2>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-num" id="stat-open">—</div>
+            <div class="stat-label">待复盘预测</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="stat-n">—</div>
+            <div class="stat-label">已结算样本</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="stat-hit">—</div>
+            <div class="stat-label">命中率</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="stat-ece">—</div>
+            <div class="stat-label">期望校准误差</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="stat-brier">—</div>
+            <div class="stat-label">布赖尔分</div>
+          </div>
+        </div>
+        <p id="calib-verdict" class="hint"></p>
+
+        <div id="open-predictions" hidden>
+          <h3 class="subhead">待复盘预测</h3>
+          <div id="open-pred-list"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>决策台账</h2>
+        <div id="ledger-list"></div>
+      </section>
     </section>
   </main>
 

@@ -12,7 +12,7 @@ from typing import Any
 from vencertia.config import Settings, get_settings
 from vencertia.domain import Project
 from vencertia.events.bus import EventBus
-from vencertia.events.types import EventType
+from vencertia.events.types import EventType, make_event
 from vencertia.providers.models import ModelProvider
 from vencertia.repositories.base import Repository
 
@@ -79,8 +79,16 @@ class CompilationService:
             self.repo.save_belief(belief)
         if self.bus is not None:
             self.bus.publish(
-                __import__("vencertia.events.types", fromlist=["make_event"]).make_event(
-                    EventType.DECISION_CREATED, "decision", compiled.decision.id, {}
+                make_event(EventType.DECISION_CREATED, "decision", compiled.decision.id, {})
+            )
+            # v1.9: canonical context inputs changed (new claims/beliefs) — any
+            # consumer caching a project's context projection must rebuild.
+            self.bus.publish(
+                make_event(
+                    EventType.CONTEXT_INVALIDATED,
+                    "project",
+                    request.project_id,
+                    {"decision_id": compiled.decision.id},
                 )
             )
 

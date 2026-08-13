@@ -28,6 +28,7 @@ from vencertia.events.bus import EventBus
 from vencertia.events.types import EventType, make_event
 from vencertia.repositories.base import EntityNotFoundError, Repository
 from vencertia.runtime.belief_engine import BeliefUpdateInput
+from vencertia.runtime.decision_engine import DecisionEngineInput
 from vencertia.runtime.evidence_policy import EvidencePolicy
 
 
@@ -264,9 +265,7 @@ class OutcomeSettlementService:
             decision, beliefs, criticals, experiments=experiments
         )
         result = self.engines.decision_engine.evaluate(
-            __import__(
-                "vencertia.runtime.decision_engine", fromlist=["DecisionEngineInput"]
-            ).DecisionEngineInput(
+            DecisionEngineInput(
                 decision=decision,
                 beliefs=beliefs,
                 risk_aversion=self.settings.risk_aversion,

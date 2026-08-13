@@ -36,6 +36,21 @@ class PostgresRepository(EntityStoreMixin):
         self.dsn = resolved
         self.conn = psycopg.connect(resolved)
         run_migrations(self.conn, "postgres")
+        self._closed = False
+
+    # -- lifecycle (v1.9) ------------------------------------------------------
+
+    def close(self) -> None:
+        """Close the underlying connection (idempotent)."""
+        if not getattr(self, "_closed", False):
+            self.conn.close()
+            self._closed = True
+
+    def __enter__(self) -> PostgresRepository:
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
 
     # -- primitives ----------------------------------------------------------
 
@@ -47,6 +62,14 @@ class PostgresRepository(EntityStoreMixin):
         """
         if getattr(self, "_txn_depth", 0) == 0:
             self.conn.commit()
+
+    def _rollback_implicit(self) -> None:
+        """Close the implicit transaction before a loud failure path (stale
+        write / create-version mismatch). Inside an explicit batch
+        (``in_transaction``, depth > 0) the outer ``conn.transaction()``
+        context manager owns the rollback."""
+        if getattr(self, "_txn_depth", 0) == 0:
+            self.conn.rollback()
 
     def _load(self, entity_type: str, entity_id: str) -> dict[str, Any] | None:
         with self.conn.cursor() as cur:
@@ -81,12 +104,20 @@ class PostgresRepository(EntityStoreMixin):
                     )
                     existing = cur.fetchone()
                     if existing is None:
+                        # v1.9: parity with InMemoryRepository — creating a NEW
+                        # row through the optimistic-lock path requires version 1.
+                        if expected_version != 1:
+                            self._rollback_implicit()
+                            raise StaleWriteError(entity_type, obj.id, expected_version)
                         cur.execute(
                             "INSERT INTO entities(entity_type,id,payload,version,updated_at) "
                             "VALUES(%s,%s,%s,%s,%s)",
                             (entity_type, obj.id, payload, obj.version, now),
                         )
                     else:
+                        # v1.9: close the implicit transaction before raising —
+                        # previously this left the connection "in transaction".
+                        self._rollback_implicit()
                         raise StaleWriteError(entity_type, obj.id, expected_version)
             else:
                 cur.execute(
@@ -223,6 +254,9 @@ class PostgresRepository(EntityStoreMixin):
                     cur.execute("SELECT version FROM claim_bindings WHERE id=%s", (binding.id,))
                     existing = cur.fetchone()
                     if existing is None:
+                        if expected_version != 1:
+                            self._rollback_implicit()
+                            raise StaleWriteError("binding", binding.id, expected_version)
                         cur.execute(
                             "INSERT INTO claim_bindings(id,evidence_id,claim_id,binding_confidence,"
                             "binding_method,status,model,provider,matched_at,retry_count,version,payload) "
@@ -230,6 +264,9 @@ class PostgresRepository(EntityStoreMixin):
                             params,
                         )
                     else:
+                        # v1.9: close the implicit transaction before raising
+                        # (previously leaked an open transaction).
+                        self._rollback_implicit()
                         raise StaleWriteError("binding", binding.id, expected_version)
             else:
                 cur.execute(

@@ -83,10 +83,12 @@ def _safe_ratio(numerator: int, denominator: int) -> float | None:
 
 
 def _scope(value: str) -> Scope:
+    # v1.9: fail loud on an unknown scope — silently mapping typos to MARKET
+    # hid authored-case errors behind a plausible-but-wrong scope.
     try:
         return Scope(value)
-    except ValueError:
-        return Scope.MARKET
+    except ValueError as exc:
+        raise ValueError(f"unknown scope {value!r} in claim-binding case") from exc
 
 
 @dataclass

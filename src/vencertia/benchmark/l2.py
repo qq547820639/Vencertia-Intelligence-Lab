@@ -2,21 +2,45 @@
 
 Prospective predictions are registered BEFORE outcomes are known; settlement
 is always manual/human (or OutcomeService) — the system never infers outcomes.
-Schema lives at ``data/benchmarks/l2/predictions.jsonl``.
+The canonical registry lives at ``data/benchmarks/l2/predictions.jsonl``
+(override with ``VENCERTIA_L2_REGISTRY_PATH``).
+
+v1.9 semantics: the JSONL file is a true one-row-per-entry registry — a
+settlement REWRITES the entry's row (instead of appending a stale duplicate),
+and re-registering an existing id is a no-op on the file side.
 """
 
 from __future__ import annotations
 
 import json
+import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
 from vencertia.domain import PredictionEntry, utcnow
 from vencertia.repositories.base import EntityNotFoundError, Repository
 
-# Repository root = parents[3] (benchmark -> vencertia -> src -> repo root)
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-L2_SCHEMA_PATH = _REPO_ROOT / "data" / "benchmarks" / "l2" / "predictions.jsonl"
+_logger = logging.getLogger("vencertia.benchmark.l2")
+
+
+def _default_registry_path() -> Path:
+    """Registry file location.
+
+    ``VENCERTIA_L2_REGISTRY_PATH`` (when set) wins; otherwise the repo-root
+    data path is used. The env override exists because the repo-relative
+    default is only valid in a source checkout, and so CI/installed runs can
+    point the registry away from the tracked file.
+    """
+    env = os.environ.get("VENCERTIA_L2_REGISTRY_PATH")
+    if env:
+        return Path(env)
+    # Repository root = parents[3] (benchmark -> vencertia -> src -> repo root)
+    repo_root = Path(__file__).resolve().parents[3]
+    return repo_root / "data" / "benchmarks" / "l2" / "predictions.jsonl"
+
+
+L2_SCHEMA_PATH = _default_registry_path()
 
 L2_FIELDS = [
     "id",
@@ -46,7 +70,7 @@ class L2Runner:
         if entry.resolution not in ("OPEN", None):
             raise ValueError(f"Prediction {entry.id} is not open; cannot register.")
         self.repo.save_prediction(entry)
-        self._append_line(entry)
+        self._upsert_line(entry)
         return entry
 
     def settle(self, entry_id: str, outcome: bool, source: str) -> PredictionEntry:
@@ -68,7 +92,7 @@ class L2Runner:
             }
         )
         self.repo.save_prediction(settled, expected_version=entry.version)
-        self._append_line(settled)
+        self._upsert_line(settled)
         return settled
 
     def due_report(self, as_of: datetime | None = None) -> list[PredictionEntry]:
@@ -81,13 +105,45 @@ class L2Runner:
     def _all_open(self) -> list[PredictionEntry]:
         return [p for p in self.repo.list_predictions() if p.is_open]
 
-    def _append_line(self, entry: PredictionEntry) -> None:
+    def _upsert_line(self, entry: PredictionEntry) -> None:
+        """Write/refresh the entry's row in the JSONL registry.
+
+        One row per entry id: an existing row (OPEN → settled) is REPLACED in
+        place instead of appending a duplicate, and an id already present
+        during register is not duplicated. Registry write failures are logged
+        (observability must not break the settlement flow), never silent.
+        """
+        payload = {field: getattr(entry, field) for field in L2_FIELDS if hasattr(entry, field)}
+        # registered_at is the L2 schema name for the entry creation time.
+        payload["registered_at"] = entry.created_at
+        line = json.dumps(payload, default=str, ensure_ascii=False)
+
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            payload = {field: getattr(entry, field) for field in L2_FIELDS if hasattr(entry, field)}
-            # registered_at is the L2 schema name for the entry creation time.
-            payload["registered_at"] = entry.created_at
-            with self.path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(payload, default=str, ensure_ascii=False) + "\n")
-        except OSError:  # pragma: no cover - observability must not break flow
-            pass
+            rows: list[dict] = []
+            if self.path.exists():
+                for existing in self.path.read_text(encoding="utf-8").splitlines():
+                    if not existing.strip():
+                        continue
+                    try:
+                        rows.append(json.loads(existing))
+                    except json.JSONDecodeError:
+                        # A corrupt line is preserved verbatim rather than
+                        # silently dropped (audit surface), then the entry is
+                        # appended as a new row below.
+                        rows.append({"__raw__": existing})
+            replaced = False
+            out_lines: list[str] = []
+            for row in rows:
+                if row.get("id") == entry.id:
+                    out_lines.append(line)
+                    replaced = True
+                elif "__raw__" in row:
+                    out_lines.append(row["__raw__"])
+                else:
+                    out_lines.append(json.dumps(row, default=str, ensure_ascii=False))
+            if not replaced:
+                out_lines.append(line)
+            self.path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+        except OSError:
+            _logger.warning("L2 registry write failed for %s (%s)", entry.id, self.path)

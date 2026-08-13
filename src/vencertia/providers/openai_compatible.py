@@ -18,12 +18,23 @@ import httpx
 from vencertia.config import Settings, get_settings
 from vencertia.providers.errors import (
     ProviderEmptyResultError,
+    ProviderError,
     ProviderInvalidJSONError,
     ProviderRateLimitError,
     ProviderSchemaMismatchError,
     ProviderTimeoutError,
     ProviderUnavailableError,
 )
+
+
+def _is_json_schema(schema: dict) -> bool:
+    """A real JSON Schema has structural keywords; mock kind tags do not."""
+    if not isinstance(schema, dict) or not schema:
+        return False
+    return any(
+        key in schema
+        for key in ("type", "properties", "items", "$defs", "definitions", "oneOf", "anyOf")
+    )
 
 
 class OpenAICompatibleProvider:
@@ -67,8 +78,13 @@ class OpenAICompatibleProvider:
             ],
             "temperature": 0.0,
         }
-        # Prefer native json_schema; fall back to prompt constraints.
-        if schema:
+        # Prefer native json_schema — but ONLY when ``schema`` is an actual
+        # JSON Schema. Mock-style kind tags ({"kind": "compile_decision"}) are
+        # dispatch hints, not schemas: sending them as ``json_schema`` makes
+        # OpenAI-compatible endpoints reject the request (400). The kind-tag
+        # path falls back to ``json_object`` + prompt constraints + local
+        # ``_parse_json`` validation (v1.9 fix).
+        if _is_json_schema(schema):
             payload["response_format"] = {"type": "json_schema", "json_schema": schema}
         else:
             payload["response_format"] = {"type": "json_object"}
@@ -82,7 +98,15 @@ class OpenAICompatibleProvider:
             "temperature": 0.0,
         }
         raw = self._chat(payload)
-        return self._parse_json(raw).get("content", "")
+        # ``complete`` asks for free text; a conforming endpoint returns plain
+        # text, NOT JSON. Use the JSON "content" field when the response
+        # happens to be JSON, otherwise return the text verbatim (v1.9 fix —
+        # previously any plain-text reply raised ProviderInvalidJSONError).
+        try:
+            parsed = self._parse_json(raw)
+        except ProviderError:
+            return raw
+        return str(parsed.get("content", raw))
 
     def _chat(self, payload: dict) -> str:
         self.last_request_id = "req_" + uuid4().hex
@@ -111,12 +135,14 @@ class OpenAICompatibleProvider:
         text = raw.strip()
         if not text:
             raise ProviderEmptyResultError("empty provider response")
-        # Strip markdown fences if present.
+        # Strip markdown fences if present (incl. ```json language tags).
         if text.startswith("```"):
-            text = text.strip("`")
+            text = text.lstrip("`")
             first_newline = text.find("\n")
             if first_newline != -1:
                 text = text[first_newline + 1 :]
+            if text.endswith("```"):
+                text = text.rstrip("`")
         try:
             parsed = json.loads(text)
         except json.JSONDecodeError as outer_exc:

@@ -23,10 +23,13 @@ from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     Belief,
     Claim,
+    ClaimBindingInput,
     Decision,
     DecisionOption,
+    DecisionResult,
     Evidence,
     Experiment,
+    PredictionEntry,
     VencertiaBaseModel,
 )
 from vencertia.runtime.belief_engine import BeliefEngine, BeliefUpdateInput
@@ -213,7 +216,7 @@ class L0Runner:
             settings=self.settings,
         )
         output = engine.process(
-            __import__("vencertia.domain", fromlist=["ClaimBindingInput"]).ClaimBindingInput(
+            ClaimBindingInput(
                 research_results=[{"id": "E_L0", "source": source, "scope": "MARKET"}],
                 context={"claims": [existing]},
                 existing_claims=[existing],
@@ -250,7 +253,7 @@ class L0Runner:
             settings=self.settings,
         )
         output = engine.process(
-            __import__("vencertia.domain", fromlist=["ClaimBindingInput"]).ClaimBindingInput(
+            ClaimBindingInput(
                 research_results=[{"id": "E_L0", "source": source, "scope": "MARKET"}],
                 context={"claims": [existing]},
                 existing_claims=[existing],
@@ -288,7 +291,7 @@ class L0Runner:
             settings=self.settings,
         )
         output = engine.process(
-            __import__("vencertia.domain", fromlist=["ClaimBindingInput"]).ClaimBindingInput(
+            ClaimBindingInput(
                 research_results=[{"id": "E_L0", "source": source, "scope": "MARKET"}],
                 context={"claims": claims},
                 existing_claims=claims,
@@ -427,7 +430,7 @@ class L0Runner:
         from vencertia.runtime.uncertainty_engine import compute_option_scores
 
         scores = compute_option_scores(decision, [belief])
-        result = __import__("vencertia.domain", fromlist=["DecisionResult"]).DecisionResult(
+        result = DecisionResult(
             decision_id=decision.id, status="HOLD", recommended_option_id=scores[0].option_id,
             confidence=0.5, decision_margin=scores[0].adjusted_utility - scores[1].adjusted_utility,
             option_scores=scores,
@@ -451,7 +454,7 @@ class L0Runner:
         for i in range(samples):
             prob = 0.6 if i % 2 == 0 else 0.4
             repo.save_prediction(
-                __import__("vencertia.domain", fromlist=["PredictionEntry"]).PredictionEntry(
+                PredictionEntry(
                     id=f"PRD_L0_{i}", project_id="PRJ_L0", target="t",
                     predicted_probability=prob, resolution="TRUE" if prob > 0.5 else "FALSE",
                     outcome=prob > 0.5, domain="general",
@@ -552,7 +555,9 @@ class L0Runner:
         if case.company_case_isolation:
             checks.append(self._check_isolation(case))
 
-        correct = all(checks) if checks else True
+        # A case with NO gold constraints cannot pass: treating it as correct
+        # would silently inflate pass_rate (v1.9 honesty fix).
+        correct = all(checks) if checks else False
         chosen_utility = 0.0
         best_utility = 0.0
         for score in result.option_scores:
@@ -565,7 +570,7 @@ class L0Runner:
 
         notes = []
         if not checks:
-            notes.append("No gold constraints; marked correct.")
+            notes.append("No gold constraints; cannot pass (honest fail).")
         if case.company_case_isolation and not self._check_isolation(case):
             notes.append("Company-case isolation violated: project belief changed.")
 

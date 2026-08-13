@@ -6,6 +6,7 @@ deterministic defaults, so the system runs fully offline out of the box.
 
 from __future__ import annotations
 
+import json
 import os
 import warnings
 from dataclasses import dataclass, field
@@ -42,6 +43,10 @@ def _env_float(name: str, default: float) -> float:
     try:
         return float(raw)
     except ValueError:
+        # v1.9: malformed config is called out instead of silently ignored —
+        # the default still applies (startup must not crash), but the operator
+        # is told their override did not take effect.
+        warnings.warn(f"{name}={raw!r} is not a float; using default {default}", stacklevel=2)
         return default
 
 
@@ -52,6 +57,19 @@ def _env_int(name: str, default: int) -> int:
     try:
         return int(raw)
     except ValueError:
+        warnings.warn(f"{name}={raw!r} is not an int; using default {default}", stacklevel=2)
+        return default
+
+
+def _env_json(name: str, default):
+    """Parse a JSON env var; warn + fall back to ``default`` on malformed input."""
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        warnings.warn(f"{name} is not valid JSON; using built-in default", stacklevel=2)
         return default
 
 
@@ -187,6 +205,28 @@ class Settings:
                 weights.update(parsed)
             except ValueError:  # pragma: no cover - malformed env must not crash
                 weights = dict(DEFAULT_CONTEXT_RANK_WEIGHTS)
+        # v1.9: the stakes/critic knobs were previously env-invisible (only
+        # defaults were ever used). JSON override + simple string override;
+        # parsed bands MERGE over the built-in defaults so a partial override
+        # never drops a band.
+        default_stakes = {
+            "HIGH": {"minimum_margin": 0.12, "max_critical_uncertainty": 0.35},
+            "MEDIUM": {"minimum_margin": 0.08, "max_critical_uncertainty": 0.45},
+            "LOW": {"minimum_margin": 0.04, "max_critical_uncertainty": 0.60},
+        }
+        stakes = dict(default_stakes)
+        parsed_stakes = _env_json("VENCERTIA_STAKES_THRESHOLDS", None)
+        if parsed_stakes is not None:
+            if isinstance(parsed_stakes, dict):
+                for band, values in parsed_stakes.items():
+                    if isinstance(values, dict):
+                        stakes[str(band)] = {str(k): float(v) for k, v in values.items()}
+            else:
+                warnings.warn(
+                    "VENCERTIA_STAKES_THRESHOLDS must be a JSON object; "
+                    "using built-in defaults",
+                    stacklevel=2,
+                )
         return cls(
             db_dsn=os.environ.get("VENCERTIA_DB_DSN", "sqlite:///data/vencertia.db"),
             postgres_dsn=os.environ.get("VENCERTIA_PG_DSN") or None,
@@ -250,6 +290,8 @@ class Settings:
             ),
             call_log_enabled=_env_bool("VENCERTIA_CALL_LOG_ENABLED", True),
             opportunity_cost_enabled=_env_bool("VENCERTIA_OPPORTUNITY_COST_ENABLED", False),
+            stakes_thresholds=stakes,
+            critic_required_stakes=os.environ.get("VENCERTIA_CRITIC_REQUIRED_STAKES", "HIGH"),
         )
 
 

@@ -1,5 +1,7 @@
-/* Vencertia decision workbench — zero-build vanilla JS frontend.
-   Calls the FastAPI /v1/solve endpoint and renders the Chinese 5-section contract. */
+/* Vencertia decision-review workbench — zero-build vanilla JS frontend.
+   Main surface = calibration dashboard + decision ledger (decision quality),
+   with a "start a decision" entry that reuses /v1/solve. v1.9 adds the
+   review loop (resolve open predictions), session history and timing. */
 (function () {
   "use strict";
 
@@ -8,34 +10,56 @@
   const problem = $("problem");
   const mode = $("mode");
   const risk = $("risk");
-  const options = $("options");
   const solveBtn = $("solve-btn");
-  const resultPanel = $("result-panel");
-  const errorBox = $("error");
-  const summaryBox = $("summary");
-  const advancedBox = $("advanced");
-  const advancedToggle = $("advanced-toggle");
+  const solveError = $("solve-error");
+  const solveResult = $("solve-result");
+  const ledgerList = $("ledger-list");
+  const openPredWrap = $("open-predictions");
+  const openPredList = $("open-pred-list");
+  const historySection = $("history-section");
+  const historyList = $("history-list");
+  const historyClear = $("history-clear");
 
-  let lastFull = null; // cached full result for the advanced toggle
-
-  async function loadHealth() {
-    try {
-      const r = await fetch("/health");
-      const j = await r.json();
-      const d = j.data || {};
-      $("health").textContent =
-        "v" + (d.runtime_version || "?") + " · provider " + (d.model_provider || "?");
-    } catch (e) {
-      $("health").textContent = "offline";
-    }
-  }
+  const HISTORY_KEY = "vencertia.history.v1";
+  const HISTORY_MAX = 10;
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])
     );
   }
+  function pct(v) {
+    return v == null ? "—" : Math.round(v * 100) + "%";
+  }
+  function num(v) {
+    return v == null ? "—" : String(parseFloat(v.toFixed(3)));
+  }
+  function fmtDate(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    const pad = (x) => String(x).padStart(2, "0");
+    return (
+      d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      " " + pad(d.getHours()) + ":" + pad(d.getMinutes())
+    );
+  }
 
+  // -- health -------------------------------------------------------------
+  async function loadHealth() {
+    try {
+      const r = await fetch("/health");
+      const j = await r.json();
+      const d = j.data || {};
+      const provider = d.model_provider || "?";
+      const friendly = provider === "mock" ? "本地离线演示模式" : "provider " + provider;
+      $("health").textContent = "v" + (d.runtime_version || "?") + " · " + friendly;
+    } catch (e) {
+      $("health").textContent = "offline";
+    }
+  }
+
+  // -- summary (5-section contract) ---------------------------------------
   function card(title, body, cls) {
     return '<div class="card ' + (cls || "") + '"><h3>' + esc(title) + "</h3>" + body + "</div>";
   }
@@ -43,155 +67,306 @@
     if (!items || !items.length) return "<p>无</p>";
     return "<ul>" + items.map((i) => "<li>" + esc(i) + "</li>").join("") + "</ul>";
   }
-
-  function renderSummary(s) {
+  function renderSummary(s, meta) {
+    if (!s) return;
     const html = [];
-    // 段1 当前判断
+    if (meta && meta.elapsed_ms != null) {
+      html.push('<div class="timing">判断耗时 ' + meta.elapsed_ms + " ms</div>");
+    }
     html.push(
       '<div class="verdict"><span class="pill">' + esc(s.current_judgment_zh || s.current_judgment) +
       '</span><span class="conf">' + esc(s.confidence_phrase || "") + "</span></div>"
     );
-    // 段2 为什么
     html.push(card("为什么", "<p>" + esc(s.rationale || "") + "</p>"));
-    // 段3 最大未知
     html.push(card("最大未知", "<p>" + esc(s.biggest_unknown || "") + "</p>", "warn"));
-    // 段4 下一步
     html.push(card("下一步", "<p>" + esc(s.next_step || "") + "</p>"));
-    // 段5 什么会改变判断
     html.push(card("什么会改变判断", list(s.change_condition)));
-
-    // ABSTAIN 四要素
     if (s.why_not_decide) {
       html.push(
         card(
           "为什么暂不决策",
-          "<p>" + esc(s.why_not_decide) + "</p>" +
-            "<p><b>停止研究条件：</b>" + esc(s.stop_condition || "未设置") + "</p>" +
-            "<p><b>最晚决策点：</b>" + esc(s.deadline || "未设置") + "</p>",
+          "<p>" + esc(s.why_not_decide) + "</p><p><b>停止研究条件：</b>" + esc(s.stop_condition || "未设置") + "</p>",
           "danger"
         )
       );
     }
-    // 模型挑战
-    const mc = s.model_critique || {};
-    if (mc.available) {
-      const tags = (mc.findings_zh || [])
-        .map((f) => '<span class="tag">' + esc(f) + "</span>")
-        .join("");
-      html.push(
-        card("模型挑战（整体风险 " + esc(mc.model_risk_zh || "?") + "）", "<p>" + tags + "</p><p>" + esc(mc.note || "") + "</p>")
+    html.push(renderFullModel(s));
+    solveResult.innerHTML = html.join("");
+  }
+
+  // v1.9: progressive disclosure — the engine has already computed the
+  // belief graph / parameter provenance / VOI / critique; render them with
+  // Chinese labels instead of raw JSON (UX diagnosis items #3/#4/#7).
+  function renderFullModel(s) {
+    const blocks = [];
+
+    const deps = (s.belief_dependencies || []).map(
+      (d) =>
+        "<li>belief " + esc(d.source_belief_id) + " → " + esc(d.target_belief_id) +
+        "（" + esc(d.relation_zh || d.relation || "关系未知") + "）</li>"
+    );
+    if (deps.length) blocks.push(card("信念依赖关系", "<ul>" + deps.join("") + "</ul>"));
+
+    const prov = (s.provenance_summary || [])
+      .filter((p) => p.needs_confirmation)
+      .map(
+        (p) =>
+          "<li>方案 " + esc(p.option_id) + " 的 belief " + esc(p.belief_id) +
+          "：系数 " + num(p.value) + "（" + esc(p.provenance_zh || p.provenance) + "）</li>"
       );
+    if (prov.length) {
+      blocks.push(card("待确认的模型参数", "<ul>" + prov.join("") + "</ul>", "warn"));
     } else {
-      html.push(card("模型挑战", "<p>" + esc(mc.note || "未触发") + "</p>"));
+      blocks.push(
+        card("模型参数来源", "<p>全部参数均有明确来源，无需你确认。</p>")
+      );
     }
-    // 实验价值
-    const ev = s.experiment_voi || {};
-    if (ev.experiment && ev.experiment.name) {
-      html.push(
+
+    const voi = s.experiment_voi || {};
+    if (voi.experiment && voi.experiment.name) {
+      const cond = voi.decision_change_condition || {};
+      blocks.push(
         card(
-          "实验建议",
-          "<p><b>" + esc(ev.experiment.name) + "</b>" + (ev.note ? " · " + esc(ev.note) : "") + "</p>" +
-            "<p><b>停止规则：</b>" + esc(ev.stop_rule || "") + "</p>"
+          "实验的决策价值",
+          "<p><b>" + esc(voi.experiment.name) + "</b>" + (voi.note ? "（" + esc(voi.note) + "）" : "") + "</p>" +
+          "<ul>" +
+          "<li>成功判据：" + esc(cond.success || "—") + "</li>" +
+          "<li>失败判据：" + esc(cond.failure || "—") + "</li>" +
+          "<li>模糊判据：" + esc(cond.ambiguity || "—") + "</li>" +
+          "</ul>" +
+          "<p class='hint'>" + esc(voi.stop_rule || "") + "</p>"
         )
       );
     }
-    // 个性化
-    const per = s.personalization || {};
-    if (per.available) {
-      html.push(card("个性化依据", "<p>" + esc(per.basis || "") + "（最大可承受损失 " + esc(per.max_financial_downside ?? "—") + "）</p>"));
-    }
-    summaryBox.innerHTML = html.join("");
-  }
 
-  function renderAdvanced(full) {
-    const av = full.advanced_view || {};
-    const parts = [];
-    if (av.belief_graph && av.belief_graph.length) {
-      parts.push(
-        "<h3>信念依赖图</h3><div class='list'><ul>" +
-          av.belief_graph
-            .map((e) => "<li>" + esc(e.source_belief_id) + " → " + esc(e.target_belief_id) + "（" + esc(e.relation_zh || e.relation) + "）</li>")
-            .join("") +
-          "</ul></div>"
+    const pers = s.personalization || {};
+    if (pers.available) {
+      blocks.push(
+        card(
+          "个性化依据",
+          "<p>" + esc(pers.basis || "") + "</p><p class='hint'>风险档位：" +
+          esc(pers.stakes_class_zh || pers.stakes_class || "—") + "</p>"
+        )
       );
     }
-    if (av.parameter_provenance && av.parameter_provenance.length) {
-      parts.push(
-        "<h3>参数来源</h3><div class='list'><ul>" +
-          av.parameter_provenance
-            .map((p) => "<li>" + esc(p.belief_id) + " = " + esc(p.value) + " · " + esc(p.provenance_zh || p.provenance) + (p.needs_confirmation ? "（待确认）" : "") + "</li>")
-            .join("") +
-          "</ul></div>"
+
+    const crit = s.model_critique || {};
+    if (crit.available) {
+      blocks.push(
+        card(
+          "模型自检",
+          "<p>" + esc(crit.note || "") + "</p>" +
+          list(crit.findings_zh && crit.findings_zh.length ? crit.findings_zh : ["暂未识别到结构性风险"])
+        )
       );
     }
-    if (av.utility) {
-      parts.push("<h3>效用</h3><pre>" + esc(JSON.stringify(av.utility, null, 2)) + "</pre>");
-    }
-    if (av.sensitivity) {
-      parts.push("<h3>敏感度</h3><pre>" + esc(JSON.stringify(av.sensitivity, null, 2)) + "</pre>");
-    }
-    if (!parts.length) parts.push("<p>暂无完整模型数据（未触发 advanced 视图）</p>");
-    advancedBox.innerHTML = parts.join("");
+
+    if (!blocks.length) return "";
+    return (
+      '<details class="model-details"><summary>展开完整模型</summary>' +
+      '<div class="model-body">' + blocks.join("") + "</div></details>"
+    );
+  }
+  function renderExamplePlaceholder() {
+    solveResult.innerHTML =
+      '<div class="example-note">' +
+      "<h3>示例输出</h3>" +
+      "<p>发起一个决策后，这里会显示 5 段判断合同：当前判断 · 为什么 · 最大未知 · 下一步 · 什么会改变判断。证据不足时会诚实给出「暂不决策」并附上最小验证实验。</p>" +
+      "</div>";
   }
 
+  // -- session history (localStorage) --------------------------------------
+  function loadHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+    } catch (e) {
+      return [];
+    }
+  }
+  function saveHistoryItem(item) {
+    const items = loadHistory();
+    items.unshift(item);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_MAX)));
+    renderHistory();
+  }
+  function renderHistory() {
+    const items = loadHistory();
+    historySection.hidden = items.length === 0;
+    if (!items.length) return;
+    historyList.innerHTML = items
+      .map((item, i) => {
+        const title = esc(item.problem || "（无标题）");
+        const time = fmtDate(item.saved_at);
+        return (
+          '<button type="button" class="history-item" data-i="' + i + '">' +
+          '<span class="hi-title">' + title + "</span>" +
+          '<span class="hi-meta">' + time + " · " + esc(item.verdict || "") + "</span>" +
+          "</button>"
+        );
+      })
+      .join("");
+    historyList.querySelectorAll(".history-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const item = loadHistory()[Number(btn.dataset.i)];
+        if (item && item.summary) {
+          renderSummary(item.summary, null);
+          problem.value = item.problem || "";
+        }
+      });
+    });
+  }
+  historyClear.addEventListener("click", () => {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+  });
+
+  // -- ledger + calibration dashboard --------------------------------------
+  const STATUS_CLS = { RECOMMENDED: "st-rec", ACTED: "st-act", SETTLED: "st-set" };
+  function renderLedger(ledger) {
+    if (!ledger || !ledger.length) {
+      ledgerList.innerHTML =
+        '<div class="empty">还没有决策记录。发起一个决策，它会带着「推荐 → 行动 → 结果」进入台账。</div>';
+      return;
+    }
+    ledgerList.innerHTML = ledger
+      .map((r) => {
+        const outs = (r.outcomes || [])
+          .map(
+            (o) =>
+              '<span class="tag">复盘 ' + esc(o.counterfactual_status_zh || o.counterfactual_status) + "</span>"
+          )
+          .join("");
+        const abstain = r.abstain_reason
+          ? '<div class="lr-abstain">' + esc(r.abstain_reason) + "</div>"
+          : "";
+        return (
+          '<div class="ledger-row">' +
+          '<div class="lr-main">' +
+          '<div class="lr-title">' + esc(r.decision_question || r.recommendation || "（未命名决策）") + "</div>" +
+          '<div class="lr-sub">' + esc(r.decision_id || "") + " · " + esc(fmtDate(r.updated_at)) + "</div>" +
+          "</div>" +
+          '<div class="lr-right">' +
+          '<span class="pill ' + (STATUS_CLS[r.status] || "") + '">' + esc(r.status_zh || r.status) + "</span>" +
+          outs + abstain +
+          "</div>" +
+          "</div>"
+        );
+      })
+      .join("");
+  }
+  function renderOpenPredictions(preds) {
+    openPredWrap.hidden = !preds || preds.length === 0;
+    if (!preds || !preds.length) {
+      openPredList.innerHTML = "";
+      return;
+    }
+    openPredList.innerHTML = preds
+      .map(
+        (p) =>
+          '<div class="pred-row">' +
+          '<div class="pred-main">' +
+          '<div class="pred-target">' + esc(p.target || p.id) + "</div>" +
+          '<div class="pred-meta">' + pct(p.predicted_probability) + " · 到期 " + esc(fmtDate(p.due_at) || "未设") + "</div>" +
+          "</div>" +
+          '<div class="pred-actions">' +
+          '<button type="button" class="btn-small btn-true" data-id="' + esc(p.id) + '" data-outcome="true">成真</button>' +
+          '<button type="button" class="btn-small btn-false" data-id="' + esc(p.id) + '" data-outcome="false">落空</button>' +
+          "</div>" +
+          "</div>"
+      )
+      .join("");
+    openPredList.querySelectorAll(".pred-actions button").forEach((btn) => {
+      btn.addEventListener("click", () => resolvePrediction(btn.dataset.id, btn.dataset.outcome === "true"));
+    });
+  }
+  async function resolvePrediction(id, outcome) {
+    try {
+      const r = await fetch("/v1/predictions/" + encodeURIComponent(id) + "/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ outcome: outcome }),
+      });
+      const j = await r.json();
+      if (!r.ok || j.code !== 0) {
+        solveError.textContent = (j && j.message) || "复盘失败";
+        solveError.hidden = false;
+        return;
+      }
+      loadReview();
+    } catch (err) {
+      solveError.textContent = "网络错误：" + err.message;
+      solveError.hidden = false;
+    }
+  }
+  async function loadReview() {
+    try {
+      const r = await fetch("/v1/review");
+      const j = await r.json();
+      if (!r.ok || j.code !== 0) {
+        ledgerList.innerHTML = '<div class="empty">复盘数据暂不可用。</div>';
+        return;
+      }
+      const d = j.data || {};
+      const cal = d.calibration || {};
+      const fc = cal.forecast_calibration || {};
+      $("stat-open").textContent = (d.open_predictions || []).length;
+      $("stat-n").textContent = cal.n != null ? cal.n : "0";
+      $("stat-hit").textContent = pct(fc.empirical_rate);
+      $("stat-ece").textContent = num(fc.ece);
+      $("stat-brier").textContent = num(fc.brier_score);
+      $("calib-verdict").textContent = cal.verdict || "";
+      renderLedger(d.ledger || []);
+      renderOpenPredictions(d.open_predictions || []);
+    } catch (e) {
+      ledgerList.innerHTML = '<div class="empty">复盘数据暂不可用。</div>';
+    }
+  }
+
+  // -- submit --------------------------------------------------------------
   async function onSubmit(e) {
     e.preventDefault();
-    errorBox.hidden = true;
-    solveBtn.disabled = true;
-    solveBtn.textContent = "判断中…";
+    solveError.hidden = true;
     const body = { project_id: "ui-" + Date.now(), problem_text: problem.value };
     if (mode.value) body.mode = mode.value;
     const rv = risk.value;
     if (rv) body.risk_aversion = parseFloat(rv);
-    if (options.value.trim()) {
-      try { body.options = JSON.parse(options.value); }
-      catch (err) {
-        showError("options 不是合法 JSON：" + err.message);
-        solveBtn.disabled = false; solveBtn.textContent = "开始判断";
-        return;
-      }
-    }
+
+    solveBtn.disabled = true;
+    solveBtn.textContent = "判断中…";
+    const started = performance.now();
     try {
       const r = await fetch("/v1/solve?view=summary", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
+      const elapsed = Math.round(performance.now() - started);
       const j = await r.json();
-      if (!r.ok || j.code !== 0) { showError((j && j.message) || "请求失败"); return; }
-      renderSummary(j.data);
-      // fetch full for the advanced toggle
-      const rf = await fetch("/v1/solve?advanced=true", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      if (!r.ok || j.code !== 0) {
+        solveError.textContent = (j && j.message) || "请求失败";
+        solveError.hidden = false;
+        return;
+      }
+      renderSummary(j.data, { elapsed_ms: elapsed });
+      saveHistoryItem({
+        problem: problem.value,
+        verdict: (j.data || {}).current_judgment_zh || "",
+        saved_at: new Date().toISOString(),
+        summary: j.data,
       });
-      const jf = await rf.json();
-      lastFull = jf.data || null;
-      renderAdvanced(lastFull || {});
-      advancedBox.hidden = true;
-      advancedToggle.textContent = "展开完整模型";
-      resultPanel.hidden = false;
-      resultPanel.scrollIntoView({ behavior: "smooth" });
+      loadReview();
     } catch (err) {
-      showError("网络错误：" + err.message);
+      solveError.textContent = "网络错误：" + err.message;
+      solveError.hidden = false;
     } finally {
       solveBtn.disabled = false;
       solveBtn.textContent = "开始判断";
     }
   }
 
-  function showError(msg) {
-    errorBox.textContent = msg;
-    errorBox.hidden = false;
-    resultPanel.hidden = false;
-  }
-
-  advancedToggle.addEventListener("click", () => {
-    const hidden = advancedBox.hidden;
-    advancedBox.hidden = !hidden;
-    advancedToggle.textContent = hidden ? "收起完整模型" : "展开完整模型";
-  });
-  $("reset-btn").addEventListener("click", () => {
-    resultPanel.hidden = true; errorBox.hidden = true; lastFull = null;
-    problem.focus();
-  });
   form.addEventListener("submit", onSubmit);
+  renderExamplePlaceholder();
+  renderHistory();
   loadHealth();
+  loadReview();
 })();

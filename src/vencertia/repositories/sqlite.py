@@ -50,6 +50,21 @@ class SQLiteRepository(EntityStoreMixin):
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         run_migrations(self.conn, "sqlite")
+        self._closed = False
+
+    # -- lifecycle (v1.9) ------------------------------------------------------
+
+    def close(self) -> None:
+        """Close the underlying connection (idempotent)."""
+        if not getattr(self, "_closed", False):
+            self.conn.close()
+            self._closed = True
+
+    def __enter__(self) -> SQLiteRepository:
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
 
     # -- primitives ----------------------------------------------------------
 
@@ -62,6 +77,13 @@ class SQLiteRepository(EntityStoreMixin):
         """
         if getattr(self, "_txn_depth", 0) == 0:
             self.conn.commit()
+
+    def _rollback_implicit(self) -> None:
+        """Roll back the driver's implicit transaction on a loud failure path
+        (stale write / create-version mismatch). Inside an explicit batch
+        (``in_transaction``, depth > 0) the outer ``_txn`` owns rollback."""
+        if getattr(self, "_txn_depth", 0) == 0:
+            self.conn.rollback()
 
     def _load(self, entity_type: str, entity_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -92,13 +114,20 @@ class SQLiteRepository(EntityStoreMixin):
                     (entity_type, obj.id),
                 ).fetchone()
                 if existing is None:
+                    # v1.9: parity with InMemoryRepository — creating a NEW row
+                    # through the optimistic-lock path requires version 1.
+                    if expected_version != 1:
+                        self._rollback_implicit()
+                        raise StaleWriteError(entity_type, obj.id, expected_version)
                     self.conn.execute(
                         "INSERT INTO entities(entity_type,id,payload,version,updated_at) "
                         "VALUES(?,?,?,?,?)",
                         (entity_type, obj.id, payload, obj.version, now),
                     )
                 else:
-                    self._maybe_commit()
+                    # v1.9: a stale write must not commit the implicit
+                    # transaction it opened (previously _maybe_commit()).
+                    self._rollback_implicit()
                     raise StaleWriteError(entity_type, obj.id, expected_version)
         else:
             self.conn.execute(
@@ -203,6 +232,9 @@ class SQLiteRepository(EntityStoreMixin):
                     "SELECT version FROM claim_bindings WHERE id=?", (binding.id,)
                 ).fetchone()
                 if existing is None:
+                    if expected_version != 1:
+                        self._rollback_implicit()
+                        raise StaleWriteError("binding", binding.id, expected_version)
                     self.conn.execute(
                         "INSERT INTO claim_bindings(id,evidence_id,claim_id,binding_confidence,"
                         "binding_method,status,model,provider,matched_at,retry_count,version,payload) "
@@ -227,7 +259,7 @@ class SQLiteRepository(EntityStoreMixin):
                         ),
                     )
                 else:
-                    self._maybe_commit()
+                    self._rollback_implicit()
                     raise StaleWriteError("binding", binding.id, expected_version)
         else:
             self.conn.execute(

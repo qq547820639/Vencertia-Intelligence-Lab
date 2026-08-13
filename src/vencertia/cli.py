@@ -11,12 +11,15 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 from vencertia.config import Settings, get_settings
 from vencertia.domain import Decision, Evidence, OutcomeType
 from vencertia.repositories.base import EntityNotFoundError, Repository
 from vencertia.runtime import SolveOrchestrator, SolveRequest
+from vencertia.runtime.decision_engine import DecisionEngineInput
 
 app = typer.Typer(help="Vencertia Adaptive Decision System v1.1")
 console = Console()
@@ -28,6 +31,50 @@ def _load_json(path: Path) -> dict:
 
 def _dump(data, label: str = "result") -> None:
     console.print_json(json.dumps(data, ensure_ascii=False, default=str))
+
+
+def _print_summary_panel(summary: dict) -> None:
+    """Render the 5-section contract as a human-readable rich panel (v1.9).
+
+    Default ``solve`` output is now the readable contract, not raw JSON; the
+    machine-readable payload stays available via ``--json`` / ``--advanced``.
+    """
+
+    def row(label: str, value, style: str = "") -> Text:
+        text = Text()
+        text.append(f"{label} ", style="bold cyan")
+        text.append(str(value), style=style)
+        return text
+
+    body = Text()
+    body.append(row("当前判断", summary.get("current_judgment_zh") or "—", "bold"))
+    body.append("\n")
+    body.append(row("置信度", summary.get("confidence_phrase") or "—"))
+    body.append("\n")
+    body.append(row("为什么", summary.get("rationale") or "—"))
+    body.append("\n")
+    body.append(row("最大未知", summary.get("biggest_unknown") or "—", "yellow"))
+    body.append("\n")
+    body.append(row("下一步", summary.get("next_step") or "—", "green"))
+    changes = summary.get("change_condition") or []
+    body.append("\n")
+    body.append(row("什么会改变判断", "；".join(changes) if changes else "—"))
+    if summary.get("why_not_decide"):
+        body.append("\n")
+        body.append(row("为什么暂不决策", summary["why_not_decide"], "red"))
+        body.append("\n")
+        body.append(row("停止研究条件", summary.get("stop_condition") or "未设置"))
+    if summary.get("lightweight"):
+        body.append("\n")
+        body.append(row("模式", "轻量模式（一次性内存运行，未写决策台账）", "dim"))
+    console.print(
+        Panel(
+            body,
+            title="[bold]Vencertia 决策合同[/bold]",
+            subtitle=f"决策状态：{summary.get('decision_status') or '—'}",
+            border_style="blue",
+        )
+    )
 
 
 def _settings_with_db(db: str | None) -> Settings:
@@ -50,18 +97,27 @@ def _default_runtime(settings: Settings) -> tuple[SolveOrchestrator, Repository]
 
 
 @app.command()
-def solve(request_path: Path, db: str | None = None, advanced: bool = False) -> None:
-    """Run the full solve loop; default prints the 5-section summary contract."""
+def solve(
+    request_path: Path,
+    db: str | None = None,
+    advanced: bool = False,
+    json_out: bool = typer.Option(False, "--json", help="输出 5 段合同原始 JSON（机器可读）"),
+) -> None:
+    """Run the full solve loop; default prints the readable 5-section contract."""
     settings = _settings_with_db(db)
     runtime, _ = _default_runtime(settings)
     request = SolveRequest.model_validate(_load_json(request_path))
     result = runtime.solve(request)
     if advanced:
         _dump(result.model_dump(mode="json"))  # 全量（含 advanced_view）
-    else:
-        from vencertia.presentation import solve_summary
+        return
+    from vencertia.presentation import solve_summary
 
-        _dump(solve_summary(result), "summary")  # 默认 5 段合同
+    summary = solve_summary(result)
+    if json_out:
+        _dump(summary, "summary")
+    else:
+        _print_summary_panel(summary)
 
 
 @app.command()
@@ -74,12 +130,20 @@ def demo() -> None:
 
 
 @app.command("quick-solve")
-def quick_solve(problem: str | None = None, options_json: str | None = None) -> None:
+def quick_solve(
+    problem: str | None = None,
+    options_json: str | None = None,
+    json_out: bool = typer.Option(False, "--json", help="输出 5 段合同原始 JSON（机器可读）"),
+) -> None:
     """三分钟快速决策：一条命令端到端，输出 5 段合同（轻量模式）。"""
     from vencertia.quick_solve import run_quick_solve
 
     opts = json.loads(options_json) if options_json else None
-    _dump(run_quick_solve(problem_text=problem, options=opts), "summary")
+    summary = run_quick_solve(problem_text=problem, options=opts)
+    if json_out:
+        _dump(summary, "summary")
+    else:
+        _print_summary_panel(summary)
 
 
 # -- decision ---------------------------------------------------------------
@@ -134,9 +198,7 @@ def decision_sensitivity(decision_id: str, db: str | None = None) -> None:
         raise EntityNotFoundError("decision", decision_id)
     beliefs = repo.get_beliefs(decision.project_id)
     result = runtime.engines.decision_engine.evaluate(
-        __import__(
-            "vencertia.runtime.decision_engine", fromlist=["DecisionEngineInput"]
-        ).DecisionEngineInput(
+        DecisionEngineInput(
             decision=decision,
             beliefs=beliefs,
             risk_aversion=settings.risk_aversion,

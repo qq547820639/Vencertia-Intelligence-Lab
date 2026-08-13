@@ -41,6 +41,7 @@ from vencertia.events.bus import EventBus
 from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import SolveOrchestrator, SolveRequest, default_engine_bundle
+from vencertia.runtime.belief_engine import BeliefUpdateInput
 
 PROJECT_ID = "PRJ_B2B_SAAS"
 USER_ID = "USR_FOUNDER"
@@ -179,7 +180,7 @@ def run_demo(console=None) -> dict[str, Any]:
     evidence = repo.list_evidence(claim_ids=["CLM_PROBLEM", "CLM_WTP"])
     beliefs = repo.get_beliefs(PROJECT_ID)
     output = engines.belief_engine.update(
-        __import__("vencertia.runtime.belief_engine", fromlist=["BeliefUpdateInput"]).BeliefUpdateInput(
+        BeliefUpdateInput(
             beliefs=beliefs, evidence=evidence, policy=engines.evidence_policy
         )
     )

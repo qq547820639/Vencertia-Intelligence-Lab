@@ -73,3 +73,27 @@ def test_register_writes_schema_file(tmp_path):
         "due_at",
     ):
         assert field in payload
+
+
+def test_registry_is_one_row_per_entry_idempotent(tmp_path):
+    """v1.9: re-register must not duplicate rows; settle rewrites in place."""
+    repo = InMemoryRepository()
+    path = tmp_path / "predictions.jsonl"
+    runner = L2Runner(repo=repo, path=path)
+    entry = _entry("PRD_L2_IDEM")
+    runner.register(entry)
+    runner.register(entry)  # same id — file side must stay one row
+    settled = runner.settle("PRD_L2_IDEM", True, "user")
+    assert settled.resolution == "TRUE"
+
+    import json
+
+    rows = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").strip().splitlines()
+        if line.strip()
+    ]
+    assert len(rows) == 1
+    assert rows[0]["id"] == "PRD_L2_IDEM"
+    assert rows[0]["outcome"] is True
+    assert rows[0]["resolution_source"] == "user"

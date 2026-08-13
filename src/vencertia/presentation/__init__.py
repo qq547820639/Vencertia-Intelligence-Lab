@@ -113,6 +113,19 @@ CRITIQUE_FINDING_ZH = {
 # 与 domain.calibration.classify_calibration 的默认 min_samples 保持一致。
 CALIBRATION_MIN_SAMPLES: int = 20
 
+# ---- v1.9 decision-review projection mappings ----
+DECISION_RECORD_STATUS_ZH = {
+    "RECOMMENDED": "已推荐",
+    "ACTED": "已行动",
+    "SETTLED": "已复盘",
+}
+COUNTERFACTUAL_STATUS_ZH = {
+    "NOT_IDENTIFIABLE": "无法识别",
+    "LOW_CONFIDENCE_ESTIMATE": "低置信估计",
+    "ESTIMATED": "已估计",
+    "OBSERVED": "已观测",
+}
+
 
 def _enum_value(x) -> str:
     """enum or plain string -> canonical value (runtime values are strings)."""
@@ -473,8 +486,82 @@ def critique_summary(critique) -> dict:
     }
 
 
+def review_summary(
+    decision_records,
+    outcome_records,
+    open_predictions,
+    calibration_profile,
+    decision_questions: dict[str, str] | None = None,
+) -> dict:
+    """v1.9: decision-review dashboard projection (read-only aggregation).
+
+    Reads existing ledgers (DecisionRecord / DecisionOutcomeRecord / open
+    PredictionEntry / CalibrationProfile) and projects them into a Chinese-
+    labeled dashboard structure. Zero engine recomputation, zero writes.
+
+    ``decision_questions`` (decision_id -> question text) enriches each ledger
+    row with a human-readable title; callers without it still get a valid
+    projection (question falls back to the decision id).
+    """
+    questions = decision_questions or {}
+    outcomes_by_dr: dict[str, list] = {}
+    for o in outcome_records:
+        outcomes_by_dr.setdefault(o.decision_record_id, []).append(o)
+
+    ledger = []
+    for dr in decision_records:
+        outs = outcomes_by_dr.get(dr.id, [])
+        status = _enum_value(dr.status)
+        ledger.append(
+            {
+                "decision_record_id": dr.id,
+                "decision_id": dr.decision_id,
+                "decision_question": questions.get(dr.decision_id, dr.decision_id),
+                "recommendation": dr.recommendation,
+                "action_taken": dr.action_taken,
+                "status": status,
+                "status_zh": DECISION_RECORD_STATUS_ZH.get(status, status),
+                "abstain_reason": dr.abstain_reason,
+                "created_at": dr.created_at.isoformat() if dr.created_at else None,
+                "updated_at": dr.updated_at.isoformat() if dr.updated_at else None,
+                "outcomes": [
+                    {
+                        "id": o.id,
+                        "regret_estimate": o.regret_estimate,
+                        "counterfactual_status": _enum_value(o.counterfactual_status),
+                        "counterfactual_status_zh": COUNTERFACTUAL_STATUS_ZH.get(
+                            _enum_value(o.counterfactual_status),
+                            _enum_value(o.counterfactual_status),
+                        ),
+                    }
+                    for o in outs
+                ],
+            }
+        )
+
+    preds = [
+        {
+            "id": p.id,
+            "target": p.target,
+            "predicted_probability": p.predicted_probability,
+            "due_at": p.due_at.isoformat() if p.due_at else None,
+        }
+        for p in open_predictions
+    ]
+
+    return {
+        "ledger": ledger,
+        "open_predictions": preds,
+        "calibration": (
+            calibration_summary(calibration_profile)
+            if calibration_profile is not None
+            else None
+        ),
+    }
+
+
 __all__ = [
-    # 13 mapping / config constants
+    # 15 mapping / config constants
     "PROBABILITY_BANDS",
     "ACTION_STATE_ZH",
     "DECISION_TYPE_ZH",
@@ -488,7 +575,9 @@ __all__ = [
     "MODEL_RISK_ZH",
     "CRITIQUE_FINDING_ZH",
     "CALIBRATION_MIN_SAMPLES",
-    # 9 pure functions
+    "DECISION_RECORD_STATUS_ZH",
+    "COUNTERFACTUAL_STATUS_ZH",
+    # 10 pure functions
     "probability_level",
     "estimate_phrase",
     "localize_error_message",
@@ -498,4 +587,5 @@ __all__ = [
     "solve_summary",
     "project_advanced_view",
     "critique_summary",
+    "review_summary",
 ]

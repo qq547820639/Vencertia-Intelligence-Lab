@@ -27,6 +27,7 @@ from vencertia.domain import (
     OutcomeType,
     VencertiaBaseModel,
 )
+from vencertia.events.types import EventType, make_event
 from vencertia.providers.errors import ProviderError
 from vencertia.repositories.base import EntityNotFoundError, Repository, StaleWriteError
 from vencertia.runtime import EvidenceImporter, SolveOrchestrator, SolveRequest
@@ -311,6 +312,19 @@ def create_app(
             if decision is not None:
                 action.project_id = decision.project_id
         repo.save_action(action)
+        # v1.9: emit the previously-unused lifecycle events at their real
+        # boundaries (audit trail for experiment execution).
+        runtime.bus.publish(
+            make_event(EventType.ACTION_CREATED, "action", action.id, {"kind": action.kind})
+        )
+        runtime.bus.publish(
+            make_event(
+                EventType.EXPERIMENT_STARTED,
+                "experiment",
+                experiment.id,
+                {"action_id": action.id},
+            )
+        )
         result = runtime.record_outcome(
             action.id,
             req.result,
@@ -324,6 +338,14 @@ def create_app(
         experiment.resolved_at = result.outcome.observed_at
         experiment.version += 1
         repo.save_experiment(experiment, expected_version=experiment.version - 1)
+        runtime.bus.publish(
+            make_event(
+                EventType.EXPERIMENT_RESOLVED,
+                "experiment",
+                experiment.id,
+                {"status": experiment.status, "outcome_id": result.outcome.id},
+            )
+        )
         return ok(result.model_dump(mode="json"))
 
     # -- predictions -----------------------------------------------------------------
@@ -347,8 +369,6 @@ def create_app(
 
     @app.post("/v1/predictions/{prediction_id}/correct", response_model=ApiResponse)
     def correct_prediction(prediction_id: str, req: PredictionCorrectRequest) -> ApiResponse:
-        from vencertia.events.types import EventType, make_event
-
         entry = runtime.engines.prediction_ledger.correct(
             prediction_id, req.new_outcome, req.source
         )
@@ -378,6 +398,37 @@ def create_app(
             CalibrationInput(predictions, cal_scope, key, settings.ece_bins)
         )
         return ok(profile.model_dump(mode="json"))
+
+    # -- review (v1.9 decision-review dashboard) -------------------------------------------
+
+    @app.get("/v1/review", response_model=ApiResponse)
+    def review(project_id: str | None = None) -> ApiResponse:
+        """Read-only decision-review aggregation over existing ledgers.
+
+        Combines the decision ledger (recommendation → action → outcome), the
+        open predictions awaiting review, and the calibration overview into one
+        payload for the review workbench. No engine recomputation, no writes.
+        """
+        from vencertia.domain import CalibrationScope
+        from vencertia.presentation import review_summary
+        from vencertia.runtime.calibration_engine import CalibrationInput
+
+        records = repo.list_decision_records(project_id)
+        # v1.9: enrich ledger rows with the human-readable decision question —
+        # the raw option id is not a useful title for a review workbench.
+        questions: dict[str, str] = {}
+        for decision in repo.list_decisions(project_id):
+            questions[decision.id] = decision.decision_question
+        outcomes: list = []
+        for r in records:
+            outcomes.extend(repo.list_decision_outcome_records(r.id))
+        open_preds = [p for p in repo.list_predictions(project_id) if p.is_open]
+        profile = runtime.engines.calibration_engine.report(
+            CalibrationInput(
+                repo.list_predictions(), CalibrationScope("ALL"), "ALL", settings.ece_bins
+            )
+        )
+        return ok(review_summary(records, outcomes, open_preds, profile, questions))
 
     # -- projects ------------------------------------------------------------------------
 
@@ -561,5 +612,19 @@ def create_app(
     return app
 
 
-_container = build_container()
-app = _container.fastapi_app()
+# -- module-level app (lazy) ----------------------------------------------------
+# v1.9: the ``app`` singleton is built on FIRST ATTRIBUTE ACCESS instead of at
+# import time. ``uvicorn vencertia.api:app`` and ``from vencertia.api import
+# app`` both trigger attribute lookup, so the documented run path is unchanged;
+# importing the module for ``create_app`` (tests, tooling) no longer pays the
+# side effect of constructing a repository + opening a database connection.
+_app: FastAPI | None = None
+
+
+def __getattr__(name: str) -> FastAPI:
+    if name == "app":
+        global _app
+        if _app is None:
+            _app = build_container().fastapi_app()
+        return _app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

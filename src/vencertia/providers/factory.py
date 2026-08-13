@@ -74,6 +74,38 @@ def classify_provider_error(exc: Exception) -> ProviderError:
     return ProviderUnavailableError(str(exc))
 
 
+# Transient failures worth retrying (ADR-012). Deterministic failures (invalid
+# JSON / schema mismatch / empty / partial results) will NEVER succeed on
+# retry — retrying them only burns latency and hides the real error.
+_RETRYABLE_ERRORS = (ProviderTimeoutError, ProviderRateLimitError, ProviderUnavailableError)
+
+
+def _is_retryable(exc: Exception) -> bool:
+    if isinstance(exc, ProviderError):
+        return isinstance(exc, _RETRYABLE_ERRORS)
+    return True  # undecorated low-level exception: retry (bounded), classify after
+
+
+def _retry_call(
+    attempts: int, backoff_base: float, call, *args, **kwargs
+) -> tuple[Any, int]:
+    """Run ``call`` with bounded retry on transient failures only (v1.9).
+
+    Returns ``(result, attempts_used)`` or raises the classified ProviderError.
+    """
+    attempts = max(1, attempts)
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            return call(*args, **kwargs), attempt + 1
+        except Exception as exc:  # noqa: BLE001 - provider boundary
+            last_error = exc
+            if not _is_retryable(exc) or attempt >= attempts - 1:
+                break
+            time.sleep(backoff_base * (2**attempt))
+    raise classify_provider_error(cast(Exception, last_error))
+
+
 # ---------------------------------------------------------------------------
 # Resilience wrapper (ADR-012) + recording (P1-7)
 # ---------------------------------------------------------------------------
@@ -98,17 +130,14 @@ class _ResilientModelProvider:
     def _generate_structured_with_retries(
         self, task: str, schema: dict, context: dict
     ) -> tuple[dict, int]:
-        last_error: Exception | None = None
-        attempts = self.settings.provider_max_retries + 1
-        for attempt in range(attempts):
-            try:
-                return self._inner.generate_structured(task, schema, context), attempt + 1
-            except Exception as exc:  # noqa: BLE001 - provider boundary
-                last_error = exc
-                if attempt < attempts - 1:
-                    delay = self.settings.provider_retry_backoff_base * (2**attempt)
-                    time.sleep(delay)
-        raise classify_provider_error(cast(Exception, last_error))
+        return _retry_call(
+            self.settings.provider_max_retries + 1,
+            self.settings.provider_retry_backoff_base,
+            self._inner.generate_structured,
+            task,
+            schema,
+            context,
+        )
 
     def generate_structured(self, task: str, schema: dict, context: dict) -> dict:
         if self.recorder is None:
@@ -130,17 +159,12 @@ class _ResilientModelProvider:
         )
 
     def _complete_with_retries(self, prompt: str) -> tuple[str, int]:
-        last_error: Exception | None = None
-        attempts = self.settings.provider_max_retries + 1
-        for attempt in range(attempts):
-            try:
-                return self._inner.complete(prompt), attempt + 1
-            except Exception as exc:  # noqa: BLE001 - provider boundary
-                last_error = exc
-                if attempt < attempts - 1:
-                    delay = self.settings.provider_retry_backoff_base * (2**attempt)
-                    time.sleep(delay)
-        raise classify_provider_error(cast(Exception, last_error))
+        return _retry_call(
+            self.settings.provider_max_retries + 1,
+            self.settings.provider_retry_backoff_base,
+            self._inner.complete,
+            prompt,
+        )
 
     def complete(self, prompt: str) -> str:
         if self.recorder is None:
@@ -173,16 +197,13 @@ class _ResilientSearchProvider:
         self._model_name = getattr(inner, "model", "") or ""
 
     def _search_with_retries(self, query: str, k: int) -> tuple[Any, int]:
-        last_error: Exception | None = None
-        attempts = self.settings.provider_max_retries + 1
-        for attempt in range(attempts):
-            try:
-                return self._inner.search(query, k=k), attempt + 1
-            except Exception as exc:  # noqa: BLE001 - provider boundary
-                last_error = exc
-                if attempt < attempts - 1:
-                    time.sleep(self.settings.provider_retry_backoff_base * (2**attempt))
-        raise classify_provider_error(cast(Exception, last_error))
+        return _retry_call(
+            self.settings.provider_max_retries + 1,
+            self.settings.provider_retry_backoff_base,
+            self._inner.search,
+            query,
+            k,
+        )
 
     def search(self, query: str, k: int = 5):
         if self.recorder is None:
@@ -215,16 +236,13 @@ class _ResilientRetrievalProvider:
         self._model_name = getattr(inner, "model", "") or ""
 
     def _retrieve_with_retries(self, query: str, k: int) -> tuple[Any, int]:
-        last_error: Exception | None = None
-        attempts = self.settings.provider_max_retries + 1
-        for attempt in range(attempts):
-            try:
-                return self._inner.retrieve(query, k=k), attempt + 1
-            except Exception as exc:  # noqa: BLE001 - provider boundary
-                last_error = exc
-                if attempt < attempts - 1:
-                    time.sleep(self.settings.provider_retry_backoff_base * (2**attempt))
-        raise classify_provider_error(cast(Exception, last_error))
+        return _retry_call(
+            self.settings.provider_max_retries + 1,
+            self.settings.provider_retry_backoff_base,
+            self._inner.retrieve,
+            query,
+            k,
+        )
 
     def retrieve(self, query: str, k: int = 5):
         if self.recorder is None:

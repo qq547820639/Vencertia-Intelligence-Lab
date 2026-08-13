@@ -6,7 +6,7 @@ from __future__ import annotations
 def test_index_serves_workbench(api_client):
     r = api_client.get("/")
     assert r.status_code == 200
-    assert "决策工作台" in r.text
+    assert "决策复盘器" in r.text
     assert "solve-form" in r.text
 
 

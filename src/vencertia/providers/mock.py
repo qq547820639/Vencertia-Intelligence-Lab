@@ -385,5 +385,7 @@ class MockRetrievalProvider:
             ),
         ]
         q = query.lower()
-        matched = [d for d in corpus if any(t in q for t in d.metadata["topic"])] or corpus
+        # v1.9: no silent fallback to the whole corpus — a query that matches
+        # nothing returns nothing (fail honest, never fabricate matches).
+        matched = [d for d in corpus if any(t in q for t in d.metadata["topic"])]
         return matched[:k]
