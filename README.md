@@ -31,7 +31,7 @@ make release          # 打包 Vencertia_Intelligence_Lab_v1.1.2.zip
 ```
 
 > 测试数字为 v1.2.1 最后一次干净回归（1 skipped 为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
-> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506，各状态不混数字）。
+> `docs/BASELINE_V1_0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506，各状态不混数字）。
 
 CLI 也可直接使用：
 
@@ -49,25 +49,25 @@ PYTHONPATH=src python -m vencertia.cli belief history <belief_id>
 
 | 文档 | 内容 |
 |---|---|
-| `docs/architecture.md` | 三层架构 + Mermaid 图 + 权力边界 + 不变式（含 v1.1 节） |
+| `docs/ARCHITECTURE.md` | 三层架构 + Mermaid 图 + 权力边界 + 不变式（含 v1.1 节） |
 | `docs/v1.1-design.md` | v1.1 增量架构设计（1086 行，权威） |
 | `docs/architecture-decisions-next.md` | ADR-008~012 |
 | `docs/domain-model.md` | 域对象字段级定义（权威，小写连字符 canonical） |
-| `docs/intelligence-ingestion.md` | 智能摄取总览（v1.1） |
-| `docs/claim-binding.md` | Claim Binding 流水线（v1.1） |
-| `docs/research-runtime.md` | Research Planner/Stop（v1.1） |
-| `docs/evidence-pipeline.md` | dedup / conflict / freshness（v1.1） |
-| `docs/belief-update-trace.md` | BeliefUpdateRecord + 版本化（v1.1） |
-| `docs/decision-sensitivity.md` | DecisionTrace / Sensitivity（v1.1） |
-| `docs/providers.md` | Provider Composition Root + 韧性（v1.1） |
+| `docs/INTELLIGENCE_INGESTION.md` | 智能摄取总览（v1.1） |
+| `docs/CLAIM_BINDING.md` | Claim Binding 流水线（v1.1） |
+| `docs/RESEARCH_RUNTIME.md` | Research Planner/Stop（v1.1） |
+| `docs/EVIDENCE_PIPELINE.md` | dedup / conflict / freshness（v1.1） |
+| `docs/BELIEF_UPDATE_TRACE.md` | BeliefUpdateRecord + 版本化（v1.1） |
+| `docs/DECISION_SENSITIVITY.md` | DecisionTrace / Sensitivity（v1.1） |
+| `docs/PROVIDERS.md` | Provider Composition Root + 韧性（v1.1） |
 | `docs/{decision,belief,evidence-policy,experiment-optimizer,calibration}-engine.md` | 引擎算法 |
 | `docs/architecture-decisions.md` | ADR-001~007 |
 | `docs/migration-v10.2-to-decision-runtime.md` | V10.2 映射 |
-| `docs/api.md` / `docs/cli.md` | 接口文档 |
-| `docs/benchmark.md` | 基准分层/指标/防泄漏 |
-| `docs/oss-admission-policy.md` | OSS/模型准入策略 |
-| `docs/iteration-log.md` | v1.0 + v1.1 迭代记录 |
-| `docs/implementation-report-next.md` | v1.1 交付报告 |
+| `docs/API.md` / `docs/CLI.md` | 接口文档 |
+| `docs/BENCHMARK.md` | 基准分层/指标/防泄漏 |
+| `docs/OSS_ADMISSION_POLICY.md` | OSS/模型准入策略 |
+| `docs/ITERATION_LOG.md` | v1.0 + v1.1 迭代记录 |
+| `docs/IMPLEMENTATION_REPORT_NEXT.md` | v1.1 交付报告 |
 | `docs/v1.2-construction-plan.md` | v1.2 施工图（M0 + V-1~V-5） |
 | `docs/implementation-plan-v12-2026-08-13.md` | v1.2 实施计划（范围/裁决） |
 | `docs/agentv11-v112-mapping-review.md` | AgentV11 → v1.1.2 映射评审（V-6/V-7 落地建议） |

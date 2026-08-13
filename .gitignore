@@ -29,6 +29,9 @@ coverage/
 .coverage
 htmlcov/
 
+# Synthetic review-analysis material (PRD data, not committed)
+data/reviews_analysis/
+
 # WorkBuddy project data
 .workbuddy/
 
