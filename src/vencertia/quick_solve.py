@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from vencertia.domain import DecisionOption, SolveMode
 from vencertia.events.bus import EventBus
+from vencertia.presentation import solve_summary
 from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import SolveOrchestrator, SolveRequest, default_engine_bundle
-from vencertia.runtime.presentation import solve_summary
 
 QUICK_PROBLEM = "Should we commit six weeks to building the MVP now?"
 QUICK_OPTIONS = [

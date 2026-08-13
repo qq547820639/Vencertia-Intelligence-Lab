@@ -176,7 +176,7 @@ class CalibrationEngine:
         raw: float,
         calibration_group: str = "default",
         predictions: list[PredictionEntry] | None = None,
-        min_samples: int = 20,
+        min_samples: int | None = None,
     ) -> CalibratedConfidence:
         """Map a raw confidence to a calibrated value (v1.1).
 
@@ -186,6 +186,8 @@ class CalibrationEngine:
         — the system never fabricates calibration it cannot support.
         """
         raw = max(0.0, min(1.0, float(raw)))
+        if min_samples is None:
+            min_samples = self.settings.calibration_min_samples
         if predictions is None:
             return CalibratedConfidence(raw=raw, calibrated=None, status="UNCALIBRATED", n=0)
         settled = [

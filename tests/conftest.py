@@ -5,11 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
+from vencertia.api import create_app
 from vencertia.config import Settings
 from vencertia.domain import Belief
 from vencertia.events.bus import EventBus
+from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.memory import InMemoryRepository
+from vencertia.runtime import SolveOrchestrator, default_engine_bundle
 from vencertia.runtime.evidence_policy import EvidencePolicy
 
 
@@ -65,3 +69,41 @@ def tmp_db(tmp_path: Path) -> Path:
 @pytest.fixture
 def project_root() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+# Five-section solve_summary contract keys (shared across v1.3/v1.4 tests).
+FIVE_KEYS = {"current_judgment", "rationale", "biggest_unknown", "next_step", "change_condition"}
+
+
+@pytest.fixture
+def orchestrator() -> SolveOrchestrator:
+    """A bare SolveOrchestrator wired to mock providers (no persistent store)."""
+    repo = InMemoryRepository()
+    bus = EventBus(sink=repo.append_event)
+    return SolveOrchestrator(
+        repo=repo,
+        bus=bus,
+        model=MockProvider(),
+        search=MockSearchProvider(),
+        retrieval=MockRetrievalProvider(),
+    )
+
+
+@pytest.fixture
+def api_client() -> TestClient:
+    """A TestClient over a fully-wired in-memory app (API-layer contract tests)."""
+    settings = Settings(db_dsn="sqlite:///:memory:")
+    repo = InMemoryRepository()
+    bus = EventBus(sink=repo.append_event)
+    engines = default_engine_bundle(repo, settings, bus)
+    runtime = SolveOrchestrator(
+        repo=repo,
+        policy=engines.evidence_policy,
+        engines=engines,
+        model=MockProvider(),
+        search=MockSearchProvider(),
+        retrieval=MockRetrievalProvider(),
+        bus=bus,
+        settings=settings,
+    )
+    return TestClient(create_app(settings, repo, runtime))

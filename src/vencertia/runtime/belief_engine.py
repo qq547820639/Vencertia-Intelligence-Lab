@@ -12,6 +12,7 @@ orchestrator persists them (single persistence entry point, ADR-002).
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from uuid import uuid4
 
@@ -326,8 +327,8 @@ class BeliefEngine:
                     sign = -1.0
                 elif evidence.supports_or_contradicts == Direction.NEUTRAL.value:
                     sign = 0.0
-                new_log_odds = __import__("math").log(odds) + sign * grade.effective_weight
-                new_p = 1.0 / (1.0 + __import__("math").exp(-new_log_odds))
+                new_log_odds = math.log(odds) + sign * grade.effective_weight
+                new_p = 1.0 / (1.0 + math.exp(-new_log_odds))
                 belief.prior = belief.posterior
                 object.__setattr__(belief, "posterior", new_p)
                 object.__setattr__(belief, "probability", new_p)

@@ -10,32 +10,16 @@ import json
 
 from typer.testing import CliRunner
 
+from tests.conftest import FIVE_KEYS
 from vencertia.cli import app
 from vencertia.domain import CalibrationProfile, ConvergenceReport, DecisionResult
-from vencertia.events.bus import EventBus
-from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
-from vencertia.repositories.memory import InMemoryRepository
-from vencertia.runtime import SolveOrchestrator, SolveRequest, SolveResultV11
+from vencertia.runtime import SolveRequest, SolveResultV11
 from vencertia.runtime.presentation import (
     calibration_summary,
     experiment_voi_summary,
     personalization_summary,
     solve_summary,
 )
-
-FIVE_KEYS = {"current_judgment", "rationale", "biggest_unknown", "next_step", "change_condition"}
-
-
-def _orchestrator() -> SolveOrchestrator:
-    repo = InMemoryRepository()
-    bus = EventBus(sink=repo.append_event)
-    return SolveOrchestrator(
-        repo=repo,
-        bus=bus,
-        model=MockProvider(),
-        search=MockSearchProvider(),
-        retrieval=MockRetrievalProvider(),
-    )
 
 
 def test_experiment_voi_field_defaults():
@@ -55,9 +39,8 @@ def test_experiment_voi_field_defaults():
     assert result.research_stop is None
 
 
-def test_solve_projects_experiment_voi_and_research_stop():
+def test_solve_projects_experiment_voi_and_research_stop(orchestrator):
     """P1-1：ABSTAIN solve() 后投影 decision_change_condition 与 stop signals。"""
-    orchestrator = _orchestrator()
     result = orchestrator.solve(
         SolveRequest(
             project_id="PRJ_V14_1",
@@ -79,9 +62,8 @@ def test_solve_projects_experiment_voi_and_research_stop():
     assert "decision_sensitivity_signal" in result.research_stop["signals"]
 
 
-def test_solve_summary_experiment_voi_section():
+def test_solve_summary_experiment_voi_section(orchestrator):
     """P1-1：solve_summary 的 experiment_voi 段含 decision_change_condition 与 stop_rule。"""
-    orchestrator = _orchestrator()
     result = orchestrator.solve(
         SolveRequest(
             project_id="PRJ_V14_2",
@@ -134,9 +116,8 @@ def test_personalization_summary_unavailable():
     assert s_empty["available"] is False
 
 
-def test_solve_summary_zero_regression():
+def test_solve_summary_zero_regression(orchestrator):
     """v1.3 既有 FIVE_KEYS 断言继续成立（新键纯追加）。"""
-    orchestrator = _orchestrator()
     result = orchestrator.solve(
         SolveRequest(project_id="PRJ_V14_3", problem_text="Should we commit?", user_id="u1")
     )

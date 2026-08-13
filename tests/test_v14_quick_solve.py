@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+from tests.conftest import FIVE_KEYS
 from vencertia.cli import app
 from vencertia.quick_solve import run_quick_solve
-
-FIVE_KEYS = {"current_judgment", "rationale", "biggest_unknown", "next_step", "change_condition"}
 
 
 def test_quick_solve_default_no_args():

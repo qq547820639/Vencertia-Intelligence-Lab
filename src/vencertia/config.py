@@ -93,6 +93,7 @@ class Settings:
     transferability_threshold: float = 0.6
     experiment_max_results: int = 5
     ece_bins: int = 10
+    calibration_min_samples: int = 20
 
     # -- v1.1 research pipeline ----------------------------------------------
     research_max_questions: int = 3
@@ -207,6 +208,7 @@ class Settings:
             transferability_threshold=_env_float("VENCERTIA_TRANSFERABILITY_THRESHOLD", 0.6),
             experiment_max_results=_env_int("VENCERTIA_EXPERIMENT_MAX_RESULTS", 5),
             ece_bins=_env_int("VENCERTIA_ECE_BINS", 10),
+            calibration_min_samples=_env_int("VENCERTIA_CALIBRATION_MIN_SAMPLES", 20),
             research_max_questions=_env_int("VENCERTIA_RESEARCH_MAX_QUESTIONS", 3),
             research_max_rounds=_env_int("VENCERTIA_RESEARCH_MAX_ROUNDS", 3),
             research_queries_per_round=_env_int("VENCERTIA_RESEARCH_QUERIES_PER_ROUND", 3),

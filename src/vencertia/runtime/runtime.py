@@ -909,7 +909,7 @@ class SolveOrchestrator:
             ),
             has_next_experiment=(next_experiment is not None),
         )
-        from vencertia.runtime.presentation import BELIEF_RELATION_ZH, PROVENANCE_ZH
+        from vencertia.presentation import BELIEF_RELATION_ZH, PROVENANCE_ZH
 
         belief_graph: list[dict] = []
         for e in self.repo.list_belief_edges(project.id):

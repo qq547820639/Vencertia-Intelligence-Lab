@@ -2,37 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
-from vencertia.api import create_app
-from vencertia.config import Settings
-from vencertia.events.bus import EventBus
-from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
-from vencertia.repositories.memory import InMemoryRepository
-from vencertia.runtime import (
-    SolveOrchestrator,
-    SolveRequest,
-    default_engine_bundle,
-)
+from tests.conftest import FIVE_KEYS
+from vencertia.runtime import SolveRequest
 from vencertia.runtime.presentation import solve_summary
 
-FIVE_KEYS = {"current_judgment", "rationale", "biggest_unknown", "next_step", "change_condition"}
 
-
-def _orchestrator() -> SolveOrchestrator:
-    repo = InMemoryRepository()
-    bus = EventBus(sink=repo.append_event)
-    return SolveOrchestrator(
-        repo=repo,
-        bus=bus,
-        model=MockProvider(),
-        search=MockSearchProvider(),
-        retrieval=MockRetrievalProvider(),
-    )
-
-
-def test_solve_summary_five_key_contract():
-    orchestrator = _orchestrator()
+def test_solve_summary_five_key_contract(orchestrator):
     result = orchestrator.solve(
         SolveRequest(
             project_id="PRJ_S1",
@@ -47,8 +22,7 @@ def test_solve_summary_five_key_contract():
     assert len(s["change_condition"]) >= 1
 
 
-def test_solve_summary_abstain_current_judgment():
-    orchestrator = _orchestrator()
+def test_solve_summary_abstain_current_judgment(orchestrator):
     result = orchestrator.solve(
         SolveRequest(project_id="PRJ_S2", problem_text="Should we commit?", user_id="u1")
     )
@@ -60,8 +34,7 @@ def test_solve_summary_abstain_current_judgment():
     assert s["decision_status"] == "ABSTAIN"
 
 
-def test_solve_summary_abstain_four_elements():
-    orchestrator = _orchestrator()
+def test_solve_summary_abstain_four_elements(orchestrator):
     result = orchestrator.solve(
         SolveRequest(project_id="PRJ_S3", problem_text="Should we commit?", user_id="u1")
     )
@@ -74,8 +47,7 @@ def test_solve_summary_abstain_four_elements():
     assert s["stakes_class_zh"]
 
 
-def test_solve_summary_mode_wording_switch():
-    orchestrator = _orchestrator()
+def test_solve_summary_mode_wording_switch(orchestrator):
     explore = orchestrator.solve(
         SolveRequest(
             project_id="PRJ_S4", problem_text="Should we commit?", user_id="u1", mode="EXPLORE"
@@ -93,8 +65,7 @@ def test_solve_summary_mode_wording_switch():
     assert s_operate["next_step"].startswith("下一步行动")
 
 
-def test_solve_summary_confidence_phrase_from_template():
-    orchestrator = _orchestrator()
+def test_solve_summary_confidence_phrase_from_template(orchestrator):
     result = orchestrator.solve(
         SolveRequest(project_id="PRJ_S6", problem_text="Should we commit?", user_id="u1")
     )
@@ -105,27 +76,8 @@ def test_solve_summary_confidence_phrase_from_template():
 # --- API view param ---------------------------------------------------------------
 
 
-def _client() -> TestClient:
-    settings = Settings(db_dsn="sqlite:///:memory:")
-    repo = InMemoryRepository()
-    bus = EventBus(sink=repo.append_event)
-    engines = default_engine_bundle(repo, settings, bus)
-    runtime = SolveOrchestrator(
-        repo=repo,
-        policy=engines.evidence_policy,
-        engines=engines,
-        model=MockProvider(),
-        search=MockSearchProvider(),
-        retrieval=MockRetrievalProvider(),
-        bus=bus,
-        settings=settings,
-    )
-    return TestClient(create_app(settings, repo, runtime))
-
-
-def test_solve_api_view_summary():
-    tc = _client()
-    r = tc.post(
+def test_solve_api_view_summary(api_client):
+    r = api_client.post(
         "/v1/solve?view=summary",
         json={"project_id": "PRJ_VS", "problem_text": "Should we commit?", "user_id": "u1"},
     )
@@ -137,19 +89,17 @@ def test_solve_api_view_summary():
     assert "belief_snapshot" not in data
 
 
-def test_solve_api_view_rejects_bogus():
+def test_solve_api_view_rejects_bogus(api_client):
     """v1.3: view is a strict enum; an unknown value is rejected with 422."""
-    tc = _client()
-    r = tc.post(
+    r = api_client.post(
         "/v1/solve?view=bogus",
         json={"project_id": "PRJ_VB", "problem_text": "Should we commit?", "user_id": "u1"},
     )
     assert r.status_code == 422
 
 
-def test_solve_api_default_full_unchanged():
-    tc = _client()
-    r = tc.post(
+def test_solve_api_default_full_unchanged(api_client):
+    r = api_client.post(
         "/v1/solve",
         json={"project_id": "PRJ_VF", "problem_text": "Should we commit?", "user_id": "u1"},
     )
@@ -160,9 +110,8 @@ def test_solve_api_default_full_unchanged():
     assert data["next_experiment"] is not None
 
 
-def test_solve_api_advanced_still_full():
-    tc = _client()
-    r = tc.post(
+def test_solve_api_advanced_still_full(api_client):
+    r = api_client.post(
         "/v1/solve?advanced=true",
         json={"project_id": "PRJ_VA", "problem_text": "Should we commit?", "user_id": "u1"},
     )

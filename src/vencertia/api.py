@@ -129,7 +129,7 @@ def _register_exception_handlers(app: FastAPI, fail) -> None:
     """
     from fastapi.responses import JSONResponse
 
-    from vencertia.runtime.presentation import localize_error_message
+    from vencertia.presentation import localize_error_message
 
     def _response(status_code: int, exc: Exception) -> JSONResponse:
         return JSONResponse(
@@ -530,7 +530,7 @@ def create_app(
     ) -> ApiResponse:
         result = runtime.solve(req)
         if view == "summary":
-            from vencertia.runtime.presentation import solve_summary
+            from vencertia.presentation import solve_summary
 
             return ok(solve_summary(result))
         if not advanced:

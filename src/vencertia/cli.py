@@ -59,7 +59,7 @@ def solve(request_path: Path, db: str | None = None, advanced: bool = False) -> 
     if advanced:
         _dump(result.model_dump(mode="json"))  # 全量（含 advanced_view）
     else:
-        from vencertia.runtime.presentation import solve_summary
+        from vencertia.presentation import solve_summary
 
         _dump(solve_summary(result), "summary")  # 默认 5 段合同
 
@@ -400,8 +400,8 @@ app.add_typer(calibration_app, name="calibration")
 def calibration_report(scope: str = "ALL", key: str = "ALL", db: str | None = None) -> None:
     """Print the calibration report (scope: ALL|MODEL|DOMAIN|MODULE)."""
     from vencertia.domain import CalibrationScope
+    from vencertia.presentation import calibration_summary
     from vencertia.runtime.calibration_engine import CalibrationInput
-    from vencertia.runtime.presentation import calibration_summary
 
     settings = _settings_with_db(db)
     _, repo = _default_runtime(settings)

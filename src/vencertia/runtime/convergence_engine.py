@@ -47,7 +47,7 @@ class ConvergenceEngine:
             executable = [
                 e
                 for e in experiments
-                if e.status in (None, "PROPOSED", "RUNNING") or e.status == "PROPOSED"
+                if e.status in (None, "PROPOSED", "RUNNING")
             ]
             if not executable:
                 return ConvergenceReport(
@@ -127,7 +127,7 @@ class ConvergenceEngine:
         executable = [
             e
             for e in experiments
-            if e.status in (None, "PROPOSED", "RUNNING") or e.status == "PROPOSED"
+            if e.status in (None, "PROPOSED", "RUNNING")
         ]
         if executable:
             return ConvergenceReport(

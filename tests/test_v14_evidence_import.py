@@ -5,20 +5,14 @@ from __future__ import annotations
 import json
 
 import pytest
-from fastapi.testclient import TestClient
 
-from vencertia.api import create_app
 from vencertia.config import Settings
 from vencertia.domain import AuthorityLevel, Direction, Evidence
-from vencertia.events.bus import EventBus
 from vencertia.providers.search import content_fingerprint
-from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import (
     EvidenceDedupEngine,
     EvidenceImporter,
     EvidenceImportReport,
-    SolveOrchestrator,
-    default_engine_bundle,
 )
 from vencertia.runtime.evidence_policy import EvidenceGrade
 
@@ -218,23 +212,8 @@ def test_load_file_jsonl(tmp_path):
     assert len(invalid) == 1
 
 
-def _client():
-    settings = Settings(db_dsn="sqlite:///:memory:")
-    repo = InMemoryRepository()
-    bus = EventBus(sink=repo.append_event)
-    engines = default_engine_bundle(repo, settings, bus)
-    runtime = SolveOrchestrator(
-        repo=repo,
-        policy=engines.evidence_policy,
-        engines=engines,
-        bus=bus,
-        settings=settings,
-    )
-    return TestClient(create_app(settings, repo, runtime))
-
-
-def test_api_evidence_import():
-    client = _client()
+def test_api_evidence_import(api_client):
+    client = api_client
     items = [
         {
             "id": "E_1",
@@ -262,8 +241,8 @@ def test_api_evidence_import():
     assert data["unbound"] == 1
 
 
-def test_api_evidence_import_empty():
-    client = _client()
+def test_api_evidence_import_empty(api_client):
+    client = api_client
     r = client.post("/v1/evidence/import", json={"items": []})
     assert r.status_code == 200
     data = r.json()["data"]

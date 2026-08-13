@@ -25,6 +25,7 @@ from vencertia.domain import (
 )
 from vencertia.domain.context import ContextBundleV11
 from vencertia.repositories.base import Repository
+from vencertia.runtime.evidence_policy import AUTHORITY_TABLE
 
 
 @dataclass
@@ -130,19 +131,8 @@ class ContextRanker:
 
     @staticmethod
     def _authority(evidence: Evidence) -> float:
-        table = {
-            "PROJECT_REALITY": 1.0,
-            "PROJECT_DIRECT_BEHAVIOR": 0.95,
-            "PROJECT_EXPERIMENT_RESULT": 0.9,
-            "CUSTOMER_COMMITMENT_OR_PAYMENT": 0.88,
-            "ELIGIBLE_EXTERNAL_CASE_FACT": 0.75,
-            "REVIEWED_EXTERNAL_RESEARCH": 0.65,
-            "FOUNDER_STATEMENT": 0.45,
-            "LLM_INFERENCE": 0.2,
-            "MODEL_PRIOR": 0.1,
-        }
         key = evidence.authority_level.value if hasattr(evidence.authority_level, "value") else str(evidence.authority_level)
-        return table.get(key, 0.1)
+        return AUTHORITY_TABLE.get(key, 0.1)
 
     @staticmethod
     def _temporal_validity(evidence: Evidence, now: datetime | None = None) -> float:

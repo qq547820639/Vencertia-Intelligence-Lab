@@ -6,6 +6,7 @@ and computes effective weights. Versioned per policy_version (docs/evidence-poli
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import UTC
 from typing import Any
@@ -111,7 +112,7 @@ class EvidencePolicy:
             return 1.0
         age_days = max(0.0, (now - reference).total_seconds() / 86400.0)
         half_life = max(1.0, float(self.settings.freshness_half_life_days))
-        return round(max(0.0, min(1.0, __import__("math").exp(-age_days / half_life))), 6)
+        return round(max(0.0, min(1.0, math.exp(-age_days / half_life))), 6)
 
     # -- grading -------------------------------------------------------------
 

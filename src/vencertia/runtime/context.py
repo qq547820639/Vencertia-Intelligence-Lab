@@ -13,6 +13,7 @@ from __future__ import annotations
 from vencertia.domain import Evidence
 from vencertia.domain.context import ContextBundle, ContextBundleV11  # noqa: F401  (re-export)
 from vencertia.repositories.base import Repository
+from vencertia.runtime.evidence_policy import AUTHORITY_TABLE
 
 
 class ContextBuilder:
@@ -37,17 +38,7 @@ class ContextBuilder:
 
         # Sort evidence by authority weight then recency (approximation).
         def evidence_key(e: Evidence) -> tuple[float, str]:
-            authority_weight = {
-                "PROJECT_REALITY": 1.0,
-                "PROJECT_DIRECT_BEHAVIOR": 0.95,
-                "PROJECT_EXPERIMENT_RESULT": 0.9,
-                "CUSTOMER_COMMITMENT_OR_PAYMENT": 0.88,
-                "ELIGIBLE_EXTERNAL_CASE_FACT": 0.75,
-                "REVIEWED_EXTERNAL_RESEARCH": 0.65,
-                "FOUNDER_STATEMENT": 0.45,
-                "LLM_INFERENCE": 0.2,
-                "MODEL_PRIOR": 0.1,
-            }.get(e.authority_level, 0.0)
+            authority_weight = AUTHORITY_TABLE.get(e.authority_level, 0.0)
             return (authority_weight, e.observed_at.isoformat())
 
         evidence_sorted = sorted(evidence, key=evidence_key, reverse=True)
