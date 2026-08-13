@@ -32,6 +32,36 @@ def test_cli_solve(tmp_path):
     assert r.exit_code == 0, r.output
 
 
+def test_cli_solve_default_prints_summary(tmp_path):
+    """T2: default CLI solve prints the 5-section summary contract."""
+    req = {
+        "project_id": "PRJ_CLI_SUM", "problem_text": "Should we commit six weeks to the MVP?",
+        "user_id": "u1",
+    }
+    req_path = tmp_path / "req.json"
+    req_path.write_text(json.dumps(req))
+    r = runner.invoke(app, ["solve", str(req_path), "--db", _tmp_db(tmp_path)])
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    assert "current_judgment" in payload
+
+
+def test_cli_solve_advanced_prints_full(tmp_path):
+    """T2: --advanced still dumps the full projection including advanced_view."""
+    req = {
+        "project_id": "PRJ_CLI_ADV", "problem_text": "Should we commit six weeks to the MVP?",
+        "user_id": "u1",
+    }
+    req_path = tmp_path / "req.json"
+    req_path.write_text(json.dumps(req))
+    r = runner.invoke(
+        app, ["solve", str(req_path), "--db", _tmp_db(tmp_path), "--advanced"]
+    )
+    assert r.exit_code == 0, r.output
+    payload = json.loads(r.output)
+    assert "advanced_view" in payload
+
+
 def test_cli_decision_compile(tmp_path):
     problem = {"problem_text": "Should we build the MVP?", "project_id": "PRJ_CLI", "user_id": "u1"}
     p = tmp_path / "problem.json"
@@ -89,3 +119,44 @@ def test_cli_migrate_dry_run(tmp_path):
         source = real
     r = runner.invoke(app, ["migrate-v10.2", str(source), "--db", _tmp_db(tmp_path), "--dry-run"])
     assert r.exit_code == 0, r.output
+
+
+def test_cli_l2_empty_hint(tmp_path):
+    """T4: empty L2 registry prints a "需先 register" hint, not a bare []."""
+    r = runner.invoke(app, ["benchmark", "run", "--level", "L2", "--db", _tmp_db(tmp_path)])
+    assert r.exit_code == 0, r.output
+    assert "需先 register" in r.output
+
+
+def test_cli_l2_with_due_prediction(tmp_path):
+    """T4: with a due prediction, L2 outputs the real due_report (contains id)."""
+    from vencertia.config import Settings
+    from vencertia.container import build_container
+    from vencertia.domain import PredictionEntry
+
+    db = _tmp_db(tmp_path)
+    repo = build_container(Settings(db_dsn=f"sqlite:///{db}")).repository
+    repo.save_prediction(
+        PredictionEntry(
+            id="PRD_DUE", project_id="PRJ_L2", target="will we ship?",
+            predicted_probability=0.6,
+        )
+    )
+    r = runner.invoke(app, ["benchmark", "run", "--level", "L2", "--db", db])
+    assert r.exit_code == 0, r.output
+    assert "PRD_DUE" in r.output
+
+
+def test_python_m_vencertia_help():
+    """T4: ``python -m vencertia --help`` is equivalent to the CLI entry point."""
+    import subprocess
+    import sys
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "vencertia", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "Vencertia" in proc.stdout

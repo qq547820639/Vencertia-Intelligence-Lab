@@ -148,4 +148,7 @@ def test_solve_api_advanced_includes_projection():
     assert isinstance(advanced.get("utility"), dict)
     assert "sensitivity" in advanced
     assert "trace" in advanced
+    # v1.3 T3: every belief_graph edge carries a Chinese relation label.
+    for edge in advanced.get("belief_graph", []):
+        assert "relation_zh" in edge
     assert data["mode"] == "EXPLORE"

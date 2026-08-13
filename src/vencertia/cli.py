@@ -50,13 +50,18 @@ def _default_runtime(settings: Settings) -> tuple[SolveOrchestrator, Repository]
 
 
 @app.command()
-def solve(request_path: Path, db: str | None = None) -> None:
-    """Run the full solve loop from a request JSON file."""
+def solve(request_path: Path, db: str | None = None, advanced: bool = False) -> None:
+    """Run the full solve loop; default prints the 5-section summary contract."""
     settings = _settings_with_db(db)
     runtime, _ = _default_runtime(settings)
     request = SolveRequest.model_validate(_load_json(request_path))
     result = runtime.solve(request)
-    _dump(result.model_dump(mode="json"))
+    if advanced:
+        _dump(result.model_dump(mode="json"))  # 全量（含 advanced_view）
+    else:
+        from vencertia.runtime.presentation import solve_summary
+
+        _dump(solve_summary(result), "summary")  # 默认 5 段合同
 
 
 @app.command()
@@ -397,7 +402,7 @@ app.add_typer(benchmark_app, name="benchmark")
 
 
 @benchmark_app.command("run")
-def benchmark_run(level: str = "L0", path: Path | None = None) -> None:
+def benchmark_run(level: str = "L0", path: Path | None = None, db: str | None = None) -> None:
     """Run L0, L1, L2 or CLAIM_BINDING benchmarks."""
     from vencertia.benchmark.claim_binding import ClaimBindingBenchmarkRunner
     from vencertia.benchmark.l0 import L0Runner
@@ -426,8 +431,15 @@ def benchmark_run(level: str = "L0", path: Path | None = None) -> None:
     elif level.upper() == "L2":
         from vencertia.benchmark.l2 import L2Runner
 
-        runner = L2Runner()
+        settings = _settings_with_db(db)
+        _, repo = _default_runtime(settings)  # 复用 container 单根接线
+        runner = L2Runner(repo=repo)  # repo 非 None → 真实 due_report
         report = runner.due_report()
+        if not report:
+            console.print(
+                "[yellow]L2 前瞻预测库为空：需先 register 前瞻预测（参见 docs/BENCHMARK.md）。[/yellow]"
+            )
+            return
         _dump([e.model_dump(mode="json") for e in report])
     elif level.upper() in ("BINDING", "CLAIM_BINDING", "CB"):
         runner = ClaimBindingBenchmarkRunner()

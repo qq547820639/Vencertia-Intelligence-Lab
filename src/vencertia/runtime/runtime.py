@@ -129,6 +129,9 @@ class SolveResultAdvancedView(VencertiaBaseModel):
     sensitivity: DecisionSensitivity | None = None
     trace: DecisionTrace | None = None
     stakes: dict | None = None  # StakesProfile projection
+    # v1.3 P0-4: key coefficient provenance summary (six-state Chinese projection;
+    # data source for the summary transparency section).
+    parameter_provenance: list[dict] = Field(default_factory=list)
 
 
 class SolveResultV11(SolveResult):
@@ -876,14 +879,38 @@ class SolveOrchestrator:
             ),
             has_next_experiment=(next_experiment is not None),
         )
+        from vencertia.runtime.presentation import BELIEF_RELATION_ZH, PROVENANCE_ZH
+
+        belief_graph: list[dict] = []
+        for e in self.repo.list_belief_edges(project.id):
+            row = e.model_dump(mode="json")
+            row["relation_zh"] = BELIEF_RELATION_ZH.get(row.get("relation", ""), "关系未知")
+            belief_graph.append(row)
+
+        # v1.3 P0-4: key coefficient provenance summary (six-state Chinese projection).
+        parameter_provenance: list[dict] = []
+        for option in decision.options:
+            for belief_id, param in (option.belief_parameters or {}).items():
+                prov = param.provenance.value if hasattr(param.provenance, "value") else str(param.provenance)
+                parameter_provenance.append(
+                    {
+                        "option_id": option.id,
+                        "belief_id": belief_id,
+                        "value": param.value,
+                        "provenance": prov,
+                        "provenance_zh": PROVENANCE_ZH.get(prov, prov),
+                        "status": param.status.value if hasattr(param.status, "value") else str(param.status),
+                        "needs_confirmation": prov == "LLM_PROPOSED",
+                    }
+                )
+
         advanced_view = SolveResultAdvancedView(
-            belief_graph=[
-                e.model_dump(mode="json") for e in self.repo.list_belief_edges(project.id)
-            ],
+            belief_graph=belief_graph,
             utility={s.option_id: s.adjusted_utility for s in decision_result.option_scores},
             sensitivity=sensitivity,
             trace=decision_trace,
             stakes=decision.stakes.model_dump(mode="json") if decision.stakes else None,
+            parameter_provenance=parameter_provenance,
         )
 
         return SolveResultV11(

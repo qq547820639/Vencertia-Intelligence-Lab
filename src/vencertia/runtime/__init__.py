@@ -38,6 +38,11 @@ from vencertia.runtime.observability import CallRecorder
 from vencertia.runtime.opportunity_cost import OpportunityCostEngine
 from vencertia.runtime.outcome_settlement_service import OutcomeSettlementService
 from vencertia.runtime.prediction_ledger import PredictionLedger
+from vencertia.runtime.presentation import (
+    estimate_phrase,
+    localize_error_message,
+    probability_level,
+)
 from vencertia.runtime.research_planner import ResearchPlanner
 from vencertia.runtime.research_service import (
     ResearchExecutionResult,
@@ -50,6 +55,7 @@ from vencertia.runtime.runtime import (
     SolveOrchestrator,
     SolveRequest,
     SolveResult,
+    SolveResultAdvancedView,
     SolveResultV11,
     default_engine_bundle,
 )
@@ -102,8 +108,12 @@ __all__ = [
     "SolveOrchestrator",
     "SolveRequest",
     "SolveResult",
+    "SolveResultAdvancedView",
     "SolveResultV11",
     "UncertaintyEngine",
     "default_engine_bundle",
+    "estimate_phrase",
+    "localize_error_message",
+    "probability_level",
     "validate_experiment",
 ]

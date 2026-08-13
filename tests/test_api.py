@@ -40,7 +40,7 @@ def test_health(client):
     tc, _ = client
     r = tc.get("/health")
     assert r.status_code == 200
-    assert r.json()["data"]["version"] == "1.2.1"
+    assert r.json()["data"]["version"] == "1.3.0"
 
 
 def test_compile(client):
@@ -173,3 +173,21 @@ def test_404_on_missing_decision(client):
     tc, _ = client
     r = tc.get("/v1/decisions/DEC_MISSING")
     assert r.status_code == 404
+
+
+def test_404_message_localized(client):
+    """T4: EntityNotFoundError envelope message is localized Chinese."""
+    tc, _ = client
+    r = tc.get("/v1/decisions/DEC_MISSING")
+    assert r.status_code == 404
+    assert r.json()["message"] == "未找到决策：DEC_MISSING"
+
+
+def test_400_message_localized(client):
+    """T4: ValueError envelope message is localized Chinese (参数错误 prefix)."""
+    tc, _ = client
+    r = tc.post("/v1/evidence", json={
+        "evidence": {"id": "E_API_NOPID2", "scope": "PROJECT", "evidence_type": "REAL_PAYMENT",
+                     "source": "paid 200 EUR", "claim_ids": ["CLM_MISSING"]}})
+    assert r.status_code == 400
+    assert r.json()["message"].startswith("参数错误")

@@ -122,27 +122,29 @@ def _register_exception_handlers(app: FastAPI, fail) -> None:
     """
     from fastapi.responses import JSONResponse
 
-    def _response(status_code: int, message: str) -> JSONResponse:
+    from vencertia.runtime.presentation import localize_error_message
+
+    def _response(status_code: int, exc: Exception) -> JSONResponse:
         return JSONResponse(
             status_code=status_code,
-            content=fail(status_code, message).model_dump(mode="json"),
+            content=fail(status_code, localize_error_message(exc)).model_dump(mode="json"),
         )
 
     @app.exception_handler(EntityNotFoundError)
     async def entity_not_found_handler(_, exc: EntityNotFoundError):
-        return _response(404, str(exc))
+        return _response(404, exc)
 
     @app.exception_handler(StaleWriteError)
     async def stale_write_handler(_, exc: StaleWriteError):
-        return _response(409, str(exc))
+        return _response(409, exc)
 
     @app.exception_handler(ValueError)
     async def value_error_handler(_, exc: ValueError):
-        return _response(400, str(exc))
+        return _response(400, exc)
 
     @app.exception_handler(ProviderError)
     async def provider_error_handler(_, exc: ProviderError):
-        return _response(502, str(exc))
+        return _response(502, exc)
 
 
 def create_app(
@@ -506,8 +508,12 @@ def create_app(
     # -- solve ----------------------------------------------------------------------------
 
     @app.post("/v1/solve", response_model=ApiResponse)
-    def solve(req: SolveRequest, advanced: bool = False) -> ApiResponse:
+    def solve(req: SolveRequest, advanced: bool = False, view: str = "full") -> ApiResponse:
         result = runtime.solve(req)
+        if view == "summary":
+            from vencertia.runtime.presentation import solve_summary
+
+            return ok(solve_summary(result))
         if not advanced:
             # V-7 Progressive Disclosure: Default returns the 5-section contract;
             # Advanced (?advanced=true) expands the structured advanced_view.
