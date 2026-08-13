@@ -137,6 +137,16 @@ def test_solve_api_view_summary():
     assert "belief_snapshot" not in data
 
 
+def test_solve_api_view_rejects_bogus():
+    """v1.3: view is a strict enum; an unknown value is rejected with 422."""
+    tc = _client()
+    r = tc.post(
+        "/v1/solve?view=bogus",
+        json={"project_id": "PRJ_VB", "problem_text": "Should we commit?", "user_id": "u1"},
+    )
+    assert r.status_code == 422
+
+
 def test_solve_api_default_full_unchanged():
     tc = _client()
     r = tc.post(

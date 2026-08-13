@@ -11,7 +11,7 @@ repositories/runtimes.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -508,7 +508,11 @@ def create_app(
     # -- solve ----------------------------------------------------------------------------
 
     @app.post("/v1/solve", response_model=ApiResponse)
-    def solve(req: SolveRequest, advanced: bool = False, view: str = "full") -> ApiResponse:
+    def solve(
+        req: SolveRequest,
+        advanced: bool = False,
+        view: Literal["full", "summary"] = "full",
+    ) -> ApiResponse:
         result = runtime.solve(req)
         if view == "summary":
             from vencertia.runtime.presentation import solve_summary

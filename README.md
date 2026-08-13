@@ -1,4 +1,4 @@
-# Vencertia Adaptive Decision System v1.2.1
+# Vencertia Adaptive Decision System v1.3.0
 
 > 一个"校准优先"的决策运行时：在高度不确定的创业语境中，把"该不该做"变成
 > 有据可依的判断——并在证据不足时诚实地告诉你"现在还下不了结论"（ABSTAIN）。
@@ -18,7 +18,7 @@ v1.1（Intelligence Ingestion）把研究证据真正接进判断闭环：Claim 
 
 ```bash
 make install          # pip install -e ".[dev]"
-make test             # pytest（506 passed / 1 skipped）—— v1.2.1 V-6/V-7 + critic gate + PG CI 最终回归
+make test             # pytest（532 passed / 1 skipped）—— v1.3.0 最终回归（默认 5 段合同 + 概率文案 + 透明度 + UX 技术债批次一）
 make demo             # B2B SaaS MVP 6 周决策闭环演示
 make benchmark        # L0 基准（36/36）+ legacy 参考
 make benchmark-binding  # Synthetic Claim Binding Benchmark（GAP-04，独立）
@@ -30,8 +30,8 @@ make verify           # test + benchmark + import 检查
 make release          # 打包 Vencertia_Intelligence_Lab_v1.1.2.zip
 ```
 
-> 测试数字为 v1.2.1 最后一次干净回归（1 skipped 为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
-> `docs/BASELINE_V1_0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506，各状态不混数字）。
+> 测试数字为 v1.3.0 最后一次干净回归（1 skipped 为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
+> `docs/BASELINE_V1_0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532，各状态不混数字）。
 
 CLI 也可直接使用：
 
