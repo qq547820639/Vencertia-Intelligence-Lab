@@ -29,7 +29,7 @@ from vencertia.domain import (
 )
 from vencertia.providers.errors import ProviderError
 from vencertia.repositories.base import EntityNotFoundError, Repository, StaleWriteError
-from vencertia.runtime import SolveOrchestrator, SolveRequest
+from vencertia.runtime import EvidenceImporter, SolveOrchestrator, SolveRequest
 
 
 class ApiResponse(BaseModel):
@@ -54,6 +54,13 @@ class EvaluateRequest(VencertiaBaseModel):
 
 class EvidenceRequest(VencertiaBaseModel):
     evidence: Evidence
+
+
+class EvidenceImportRequest(VencertiaBaseModel):
+    """P1-2: batch evidence import — full ``Evidence`` objects, optional owner."""
+
+    items: list[Evidence]
+    project_id: str | None = None
 
 
 class OutcomeRequest(VencertiaBaseModel):
@@ -233,6 +240,14 @@ def create_app(
         graded = runtime.policy.apply_authority(evidence, settings.policy_version)
         repo.add_evidence(graded)
         return ok(graded.model_dump(mode="json"), message=grade.reason)
+
+    @app.post("/v1/evidence/import", response_model=ApiResponse)
+    def evidence_import(req: EvidenceImportRequest) -> ApiResponse:
+        importer = EvidenceImporter(
+            repo=repo, policy=runtime.policy, dedup=runtime.engines.dedup_engine
+        )
+        report = importer.import_batch(req.items, project_id=req.project_id)
+        return ok(report.model_dump(mode="json"))
 
     # -- outcomes ----------------------------------------------------------------
 

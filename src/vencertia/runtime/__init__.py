@@ -26,6 +26,7 @@ from vencertia.runtime.decision_engine import DecisionEngine, DecisionEngineInpu
 from vencertia.runtime.decision_evaluation_service import DecisionEvaluationService
 from vencertia.runtime.decision_sensitivity import DecisionSensitivityEngine
 from vencertia.runtime.evidence_dedup import DedupGroup, DedupResult, EvidenceDedupEngine
+from vencertia.runtime.evidence_import import EvidenceImporter, EvidenceImportReport
 from vencertia.runtime.evidence_policy import EvidenceGrade, EvidencePolicy
 from vencertia.runtime.experiment_optimizer import (
     ExperimentOptimizer,
@@ -90,6 +91,8 @@ __all__ = [
     "EvidenceClaimLinker",
     "EvidenceDedupEngine",
     "EvidenceGrade",
+    "EvidenceImporter",
+    "EvidenceImportReport",
     "EvidencePolicy",
     "ExperimentOptimizer",
     "ExperimentProposalInput",

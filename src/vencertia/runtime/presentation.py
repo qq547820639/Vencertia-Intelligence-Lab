@@ -91,6 +91,14 @@ PROVIDER_ERROR_ZH = {
     "PARTIAL_RESULT": "提供方返回部分结果",
     "PROVIDER_ERROR": "提供方错误",
 }
+RESEARCH_STOP_STATUS_ZH = {
+    "SEARCH_EXHAUSTED": "已搜索穷尽：桌面研究不再能改变判断，可停止或转入真实实验",
+    "EXPERIMENT_REQUIRED": "需要真实实验：仅剩真实世界观测能降低关键不确定，做实验后再决定",
+    "RESEARCH_MORE": "继续研究：边际证据价值仍高于阈值，再多查证几轮",
+}
+
+# 与 domain.calibration.classify_calibration 的默认 min_samples 保持一致。
+CALIBRATION_MIN_SAMPLES: int = 20
 
 
 def _enum_value(x) -> str:
@@ -145,6 +153,109 @@ def localize_error_message(exc: Exception) -> str:
     if isinstance(exc, ValueError):
         return f"参数错误：{exc}"
     return str(exc)
+
+
+def _stop_rule_phrase(stop: dict | None) -> str:
+    """研究停止规则 -> 中文「何时算研究够了」描述（纯函数，永不返回空串）。"""
+    if not stop:
+        return "未运行停止评估（研究轮未启动，或本轮未触发停止规则）"
+    status = _enum_value(stop.get("status"))
+    return RESEARCH_STOP_STATUS_ZH.get(status, f"停止状态：{status}")
+
+
+def experiment_voi_summary(voi: dict | None, stop: dict | None) -> dict:
+    """P1-1: 实验决策价值（VOI）投影 + 停止规则投影（纯函数，不重算）。
+
+    读取 solve() 已组装的 ``experiment_voi`` / ``research_stop`` 投影字典，
+    输出：``decision_change_condition``（成功/失败/模糊三态判据）、
+    ``stop_rule``（何时算研究够了的中文描述）、实验身份与降级标注。
+    """
+    decision_change_condition: dict = {}
+    experiment: dict | None = None
+    degraded = False
+    if voi is not None:
+        decision_change_condition = voi.get("decision_change_condition") or {}
+        experiment = {
+            "experiment_id": voi.get("experiment_id"),
+            "name": voi.get("name"),
+            "priority_score": voi.get("priority_score"),
+            "decision_impact": voi.get("decision_impact"),
+            "expected_information_gain": voi.get("expected_information_gain"),
+        }
+        decision_impact = voi.get("decision_impact")
+        priority_score = voi.get("priority_score")
+        # P1-1 裁决：不改排序算法，只做投影层标注——低决策影响实验明确降级提示。
+        if (decision_impact is not None and float(decision_impact) <= 0) or (
+            priority_score is not None and float(priority_score) == 0
+        ):
+            degraded = True
+    note = "该实验不改变决策，已降级" if degraded else ""
+    return {
+        "decision_change_condition": decision_change_condition,
+        "stop_rule": _stop_rule_phrase(stop),
+        "experiment": experiment,
+        "note": note,
+    }
+
+
+def personalization_summary(stakes: dict | None) -> dict:
+    """P1-3: 用户风险偏好投影（读取 StakesProfile，不重算任何引擎状态）。"""
+    if not stakes:
+        return {"available": False, "note": "未设置风险偏好档案"}
+    risk_tolerance = stakes.get("risk_tolerance")
+    risk_tolerance_value = risk_tolerance if isinstance(risk_tolerance, (int, float)) else 0.5
+    if risk_tolerance_value < 0.4:
+        risk_level = "风险厌恶"
+    elif risk_tolerance_value < 0.6:
+        risk_level = "风险中性"
+    else:
+        risk_level = "风险偏好"
+    stakes_class = stakes.get("stakes_class")
+    return {
+        "available": True,
+        "risk_tolerance": risk_tolerance_value,
+        "risk_profile_zh": risk_level,
+        "max_financial_downside": stakes.get("financial_downside"),
+        "reversibility": stakes.get("reversibility"),
+        "time_to_recover": stakes.get("time_to_recover"),
+        "stakes_class": stakes_class,
+        "stakes_class_zh": STAKES_CLASS_ZH.get(_enum_value(stakes_class), ""),
+        "basis": f"本建议基于你的{risk_level}偏好（风险容忍度 {risk_tolerance_value:.2f}）",
+    }
+
+
+def calibration_summary(profile) -> dict:
+    """P1-5: 校准复盘中文解读（读取 CalibrationProfile，纯投影零重算）。
+
+    预测校准（Brier/ECE）与决策表现（regret）拆分呈现；regret 需 outcome
+    复盘结算后计算，本轮诚实标注为「本轮不展示」而非伪造数字。
+    """
+    from vencertia.domain.calibration import classify_calibration
+
+    status = classify_calibration(profile.n, CALIBRATION_MIN_SAMPLES)
+    sufficient = _enum_value(status) not in ("UNCALIBRATED", "LOW_SAMPLE")
+    return {
+        "scope": _enum_value(profile.scope),
+        "scope_key": profile.scope_key,
+        "n": profile.n,
+        "sufficient": sufficient,
+        "verdict": (
+            "样本不足，结论不可用" if not sufficient
+            else f"校准可用（已结算样本 {profile.n}）"
+        ),
+        "forecast_calibration": {
+            "brier_score": profile.brier_score,
+            "brier_zh": "布赖尔分数（预测与事实的均方误差，0=完美，0.25=随机猜测）",
+            "ece": profile.expected_calibration_error,
+            "ece_zh": "期望校准误差（置信度与实际命中率的平均绝对偏差，越低越准）",
+            "mean_confidence": profile.mean_confidence,
+            "empirical_rate": profile.empirical_rate,
+        },
+        "buckets": profile.bins,
+        "decision_performance": {
+            "note": "决策表现（regret）需 outcome 复盘结算后计算，本轮不展示",
+        },
+    }
 
 
 def solve_summary(result: SolveResultV11) -> dict:
@@ -260,4 +371,9 @@ def solve_summary(result: SolveResultV11) -> dict:
         # 透明度
         "belief_dependencies": belief_deps,
         "provenance_summary": provenance,
+        # v1.4 P1-1/P1-3: 实验 VOI + 个性化依据（键恒在，无数据时给空结构/占位文案）
+        "experiment_voi": experiment_voi_summary(result.experiment_voi, result.research_stop),
+        "personalization": personalization_summary(
+            (result.advanced_view.stakes if result.advanced_view else None) or {}
+        ),
     }

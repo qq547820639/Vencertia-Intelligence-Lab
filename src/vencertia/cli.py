@@ -73,6 +73,15 @@ def demo() -> None:
     _dump(summary)
 
 
+@app.command("quick-solve")
+def quick_solve(problem: str | None = None, options_json: str | None = None) -> None:
+    """三分钟快速决策：一条命令端到端，输出 5 段合同（轻量模式）。"""
+    from vencertia.quick_solve import run_quick_solve
+
+    opts = json.loads(options_json) if options_json else None
+    _dump(run_quick_solve(problem_text=problem, options=opts), "summary")
+
+
 # -- decision ---------------------------------------------------------------
 
 decision_app = typer.Typer(help="Decision sub-commands")
@@ -218,6 +227,21 @@ def evidence_bind(evidence_id: str, db: str | None = None, auto_extract: bool = 
         )
     )
     _dump(output.model_dump(mode="json"))
+
+
+@evidence_app.command("import")
+def evidence_import(path: Path, project: str | None = None, db: str | None = None) -> None:
+    """Batch import evidence from a JSON array or JSONL file (policy-graded)."""
+    from vencertia.runtime import EvidenceImporter
+
+    settings = _settings_with_db(db)
+    runtime, repo = _default_runtime(settings)
+    importer = EvidenceImporter(
+        repo=repo, policy=runtime.policy, dedup=runtime.engines.dedup_engine
+    )
+    items, invalid = EvidenceImporter.load_file(path)
+    report = importer.import_batch(items, project_id=project)
+    _dump({**report.model_dump(mode="json"), "invalid": invalid}, "evidence_import")
 
 
 # -- research ---------------------------------------------------------------
@@ -377,6 +401,7 @@ def calibration_report(scope: str = "ALL", key: str = "ALL", db: str | None = No
     """Print the calibration report (scope: ALL|MODEL|DOMAIN|MODULE)."""
     from vencertia.domain import CalibrationScope
     from vencertia.runtime.calibration_engine import CalibrationInput
+    from vencertia.runtime.presentation import calibration_summary
 
     settings = _settings_with_db(db)
     _, repo = _default_runtime(settings)
@@ -384,15 +409,7 @@ def calibration_report(scope: str = "ALL", key: str = "ALL", db: str | None = No
     profile = runtime.engines.calibration_engine.report(
         CalibrationInput(repo.list_predictions(), CalibrationScope(scope.upper()), key, settings.ece_bins)
     )
-    table = Table(title=f"Calibration {scope}:{key}")
-    table.add_column("Metric")
-    table.add_column("Value")
-    table.add_row("n", str(profile.n))
-    table.add_row("Brier", f"{profile.brier_score}" if profile.brier_score is not None else "-")
-    table.add_row("ECE", f"{profile.expected_calibration_error}" if profile.expected_calibration_error is not None else "-")
-    table.add_row("Mean confidence", f"{profile.mean_confidence}" if profile.mean_confidence is not None else "-")
-    table.add_row("Empirical rate", f"{profile.empirical_rate}" if profile.empirical_rate is not None else "-")
-    console.print(table)
+    _dump(calibration_summary(profile), "calibration")
 
 
 # -- benchmark ------------------------------------------------------------------

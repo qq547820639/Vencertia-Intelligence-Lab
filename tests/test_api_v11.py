@@ -40,10 +40,10 @@ def test_health_reports_api_version(client):
     assert r.status_code == 200
     data = r.json()["data"]
     # v1.2 (P1-12): single source of truth + legacy derived aliases.
-    assert data["runtime_version"] == "1.3.0"
-    assert data["api_contract_version"] == "1.3"
-    assert data["version"] == "1.3.0"  # derived from vencertia.__version__
-    assert data["api_version"] == "1.3.0"  # derived from api_contract_version
+    assert data["runtime_version"] == "1.4.0"
+    assert data["api_contract_version"] == "1.4"
+    assert data["version"] == "1.4.0"  # derived from vencertia.__version__
+    assert data["api_version"] == "1.4.0"  # derived from api_contract_version
 
 
 def test_research_plan_endpoint(client):

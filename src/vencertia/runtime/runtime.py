@@ -155,6 +155,10 @@ class SolveResultV11(SolveResult):
     advanced_view: SolveResultAdvancedView | None = None
     # V-3 (T3 wiring): structured model critique, optional, default None.
     model_critique: ModelCritique | None = None
+    # v1.4 P1-1: experiment decision-value projection + research stop projection
+    # (optional, default None — backward compatible with v1.3 construction).
+    experiment_voi: dict | None = None
+    research_stop: dict | None = None
 
 
 class OutcomeRecordedResult(VencertiaBaseModel):
@@ -867,6 +871,32 @@ class SolveOrchestrator:
                 "ambiguity_criteria": exp.ambiguity_criteria,
             }
 
+        # v1.4 P1-1: project experiment decision value + research stop signals
+        # (presentation-layer inputs; read-only projection of already-computed
+        # engine state — never recomputed here).
+        research_stop_proj: dict | None = None
+        if stop_report is not None:
+            research_stop_proj = {
+                "status": stop_report.status,
+                "reason": stop_report.reason,
+                "signals": stop_report.signals,
+            }
+        experiment_voi_proj: dict | None = None
+        if next_experiment is not None:
+            exp = next_experiment.experiment
+            experiment_voi_proj = {
+                "experiment_id": exp.id,
+                "name": exp.name,
+                "priority_score": next_experiment.priority_score,
+                "decision_impact": exp.decision_impact,
+                "expected_information_gain": exp.expected_information_gain,
+                "decision_change_condition": {
+                    "success": exp.success_criteria,
+                    "failure": exp.failure_criteria,
+                    "ambiguity": exp.ambiguity_criteria,
+                },
+            }
+
         # V-7: presentation-layer action projection + advanced view. Both are
         # additive; Default callers simply see the new (optional) fields, and
         # ``advanced_view`` is stripped at the API layer unless ``advanced=true``.
@@ -937,6 +967,8 @@ class SolveOrchestrator:
             mode=request.mode,
             advanced_view=advanced_view,
             model_critique=model_critique,
+            experiment_voi=experiment_voi_proj,
+            research_stop=research_stop_proj,
         )
 
     # -- outcome closed loop -----------------------------------------------------
