@@ -1,4 +1,4 @@
-# Vencertia Adaptive Decision System v1.8.0
+# Vencertia Adaptive Decision System v1.9.0
 
 > 一个"校准优先"的决策运行时：在高度不确定的创业语境中，把"该不该做"变成
 > 有据可依的判断——并在证据不足时诚实地告诉你"现在还下不了结论"（ABSTAIN）。
@@ -18,7 +18,7 @@ v1.1（Intelligence Ingestion）把研究证据真正接进判断闭环：Claim 
 
 ```bash
 make install          # pip install -e ".[dev]"
-make test             # pytest（569 passed / 1 skipped）—— v1.8.0 最终回归（Web 决策工作台）
+make test             # pytest（588 passed / 1 skipped）—— v1.9.0 最终回归（决策复盘器）
 make demo             # B2B SaaS MVP 6 周决策闭环演示
 make benchmark        # L0 基准（36/36）+ legacy 参考
 make benchmark-binding  # Synthetic Claim Binding Benchmark（GAP-04，独立）
@@ -27,11 +27,11 @@ make lint             # ruff check（0 error）
 make ci               # lint → test → benchmark → API/CLI smoke
 make api              # FastAPI: http://localhost:8000
 make verify           # test + benchmark + import 检查
-make release          # 打包 Vencertia_Intelligence_Lab_v1.1.2.zip
+make release          # 打包 Vencertia_Intelligence_Lab_v<__version__>.zip（版本号自动派生）
 ```
 
-> 测试数字为 v1.8.0 最后一次干净回归（1 skipped 为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
-> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532 / v1.4.0 559 / v1.5.0 559 / v1.6.0 560 / v1.7.0 565 / v1.8.0 569，各状态不混数字）。
+> 测试数字为 v1.9.0 最后一次干净回归（1 skipped 为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
+> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532 / v1.4.0 559 / v1.5.0 559 / v1.6.0 560 / v1.7.0 565 / v1.8.0 569 / v1.9.0 588，各状态不混数字）。
 
 CLI 也可直接使用：
 
@@ -45,11 +45,13 @@ PYTHONPATH=src python -m vencertia.cli decision sensitivity <decision_id>
 PYTHONPATH=src python -m vencertia.cli belief history <belief_id>
 ```
 
-## Web 决策工作台（v1.8）
+## Web 决策工作台（v1.8 → v1.9 决策复盘器）
 
-`make api` 后浏览器打开 **http://localhost:8000/** 即是零构建链的决策工作台：
-输入「你要做什么决定」→ 得到默认 5 段合同（当前判断 / 为什么 / 最大未知 / 下一步 /
-什么会改变判断），点「展开完整模型」再看信念依赖图、参数来源、效用与敏感度。
+`make api` 后浏览器打开 **http://localhost:8000/** 即是零构建链的决策复盘器：
+左侧「发起一个新决策」→ 得到默认 5 段合同（当前判断 / 为什么 / 最大未知 / 下一步 /
+什么会改变判断），右侧「校准仪表盘 + 决策台账」追踪你的判断准不准。
+v1.9 补上复盘闭环：待复盘预测可一键「成真/落空」结算并实时刷新命中率/ECE/布赖尔分；
+最近 10 条判断保存在浏览器本地（localStorage）可回看；判断耗时可见。
 无需安装 Node，前端直接复用后端已计算好的中文投影层。
 
 ## 文档索引
@@ -122,3 +124,24 @@ PYTHONPATH=src python -m vencertia.cli belief history <belief_id>
 - **PG CI（Release Gate I）**：`.github/workflows/ci.yml` 起 `postgres:16`
   service + `VENCERTIA_PG_DSN`，`pip install -e ".[postgres,dev]"`，真跑
   `test_postgres_parity.py`（本机无 PG 时该测试诚实 skip，由 CI 兑现）。
+
+## v1.9 差异
+
+- **代码质量批次（5 P0 / 14 P1 全修）**：L2 registry 一行一条 upsert + 跟踪文件清零；
+  L0/L1 无 gold/无 T0 决策诚实失败；`list_bindings` `use_enum_values` 崩溃修复；
+  PG stale-write 事务泄漏 + 三后端 create-version 统一；乐观锁 `+1` 约定回写修复；
+  `make_release` 版本号从 `__version__` 派生（不再漂移）；`openai_compatible` kind-tag
+  误当 JSON Schema 修复 + `complete()` 纯文本回退；工厂重试只重试 transient 错误；
+  EventBus 逐 handler 异常隔离；`api.py` 模块级 `app` 惰性化（import 零副作用）；
+  `call_recorder` 缓存；`VENCERTIA_STAKES_THRESHOLDS`/`VENCERTIA_CRITIC_REQUIRED_STAKES`
+  环境变量 + 解析失败告警；9 处字符串 `__import__` 全部清除。
+- **UX 批次**：`/v1/review` 台账行带决策问题标题；Web 工作台补复盘闭环（预测
+  成真/落空结算 + 会话历史 + 耗时 + 示例占位 + 错误态）；CLI `solve`/`quick-solve`
+  默认输出 rich 中文面板（`--json` 保留机器可读）；设计令牌补全 `--on-accent`。
+- **评审**：`CODE_ARCHITECTURE_REVIEW.md`（§1–§10 全量走读评审 + 历史对比）与
+  `docs/implementation-plan-v19-2026-08-14.md`（本轮施工图，含 Round 2）。
+- **Round 2 技术债清理**：4 个 EventType 接真实生命周期点（实验执行/上下文失效审计）；
+  L1 运行时 JSON-Schema 校验（schema-invalid 拒绝不执行，jsonschema 缺失优雅跳过）；
+  `claim_binding` 未知 scope fail-loud；仓储 `close()`/上下文管理器；
+  `make_release` 覆盖率产物排除；Web 工作台「展开完整模型」渐进披露
+  （信念依赖中文关系 / 待确认参数 / 实验 VOI / 个性化 / 模型自检）。
