@@ -663,7 +663,7 @@ def test_version_single_source(project_root):
 
     import vencertia
 
-    assert vencertia.__version__ == "1.6.0"
+    assert vencertia.__version__ == "1.7.0"
     assert vencertia.__api_contract_version__ == "1.4"
     assert importlib.metadata.version("vencertia-decision-runtime") == vencertia.__version__
     pyproject = tomllib.loads((project_root / "pyproject.toml").read_text(encoding="utf-8"))
@@ -674,9 +674,9 @@ def test_health_exposes_runtime_and_api_contract_versions():
     """P1-12: /health exposes runtime_version + api_contract_version + legacy."""
     tc, _, _, _ = _solved_client()
     data = tc.get("/health").json()["data"]
-    assert data["runtime_version"] == "1.6.0"
+    assert data["runtime_version"] == "1.7.0"
     assert data["api_contract_version"] == "1.4"
-    assert data["version"] == "1.6.0"
+    assert data["version"] == "1.7.0"
     assert data["api_version"] == "1.4.0"
 
 

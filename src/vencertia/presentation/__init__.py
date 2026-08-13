@@ -96,6 +96,19 @@ RESEARCH_STOP_STATUS_ZH = {
     "EXPERIMENT_REQUIRED": "需要真实实验：仅剩真实世界观测能降低关键不确定，做实验后再决定",
     "RESEARCH_MORE": "继续研究：边际证据价值仍高于阈值，再多查证几轮",
 }
+MODEL_RISK_ZH = {
+    "LOW": "低",
+    "MEDIUM": "中",
+    "HIGH": "高",
+}
+CRITIQUE_FINDING_ZH = {
+    "MISSING_VARIABLE": "遗漏变量",
+    "HIDDEN_DEPENDENCY": "隐藏依赖",
+    "REGIME_RISK": "制度/环境变化风险",
+    "DOUBLE_COUNTING": "证据重复计算",
+    "TAIL_RISK": "尾部风险",
+    "MODEL_MISSPECIFICATION": "模型设定错误",
+}
 
 # 与 domain.calibration.classify_calibration 的默认 min_samples 保持一致。
 CALIBRATION_MIN_SAMPLES: int = 20
@@ -371,6 +384,8 @@ def solve_summary(result: SolveResultV11) -> dict:
         # 透明度
         "belief_dependencies": belief_deps,
         "provenance_summary": provenance,
+        # v1.7: model-critique projection (V11 §3.8) — key always present
+        "model_critique": critique_summary(result.model_critique),
         # v1.4 P1-1/P1-3: 实验 VOI + 个性化依据（键恒在，无数据时给空结构/占位文案）
         "experiment_voi": experiment_voi_summary(result.experiment_voi, result.research_stop),
         "personalization": personalization_summary(
@@ -424,8 +439,42 @@ def project_advanced_view(
     return belief_graph, parameter_provenance
 
 
+def critique_summary(critique) -> dict:
+    """v1.7: model-critique Chinese projection (V11 §3.8 Model Critic protocol).
+
+    Projects the structured ``ModelCritique`` into readable Chinese copy so the
+    default 5-section output surfaces "what could be wrong with the model
+    itself" — not just the project assumptions. Key is always present; a
+    ``None`` critique (LOW/MEDIUM stakes, critic not triggered) returns an
+    explicit placeholder instead of being silently omitted.
+    """
+    if critique is None:
+        return {"available": False, "note": "未触发模型挑战（低/中风险决策默认跳过）"}
+    risk = _enum_value(critique.model_risk)
+    findings_zh = [
+        CRITIQUE_FINDING_ZH.get(_enum_value(f), _enum_value(f)) for f in (critique.findings or [])
+    ]
+    return {
+        "available": True,
+        "model_risk": risk,
+        "model_risk_zh": MODEL_RISK_ZH.get(risk, risk),
+        "model_risk_high": risk == "HIGH",
+        "findings": [_enum_value(f) for f in (critique.findings or [])],
+        "findings_zh": findings_zh,
+        "missing_variables": list(critique.missing_variables or []),
+        "hidden_dependencies": list(critique.hidden_dependencies or []),
+        "regime_risks": list(critique.regime_risks or []),
+        "double_counting": list(critique.double_counting or []),
+        "recommendation": critique.recommendation or "",
+        "note": (
+            "模型整体可能错在："
+            + ("；".join(findings_zh) if findings_zh else "暂未识别到结构性风险")
+        ),
+    }
+
+
 __all__ = [
-    # 11 mapping / config constants
+    # 13 mapping / config constants
     "PROBABILITY_BANDS",
     "ACTION_STATE_ZH",
     "DECISION_TYPE_ZH",
@@ -436,8 +485,10 @@ __all__ = [
     "ENTITY_ZH",
     "PROVIDER_ERROR_ZH",
     "RESEARCH_STOP_STATUS_ZH",
+    "MODEL_RISK_ZH",
+    "CRITIQUE_FINDING_ZH",
     "CALIBRATION_MIN_SAMPLES",
-    # 8 pure functions
+    # 9 pure functions
     "probability_level",
     "estimate_phrase",
     "localize_error_message",
@@ -446,4 +497,5 @@ __all__ = [
     "calibration_summary",
     "solve_summary",
     "project_advanced_view",
+    "critique_summary",
 ]
