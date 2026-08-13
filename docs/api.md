@@ -35,6 +35,13 @@ Returns the persisted Decision (with recommendation/confidence/convergence).
 Body: `{ "evidence": { ...Evidence } }` — graded by EvidencePolicy and stored.
 Company-case evidence without transferability is gated (never updates project beliefs).
 
+### `POST /v1/evidence/import`（v1.4）
+Body: `{ "items": [ { ...Evidence }, ... ], "project_id": "..."? }` — batch import.
+Each item runs the full pipeline: dedup → content-fingerprint idempotency → policy grade
+→ authority apply → persist. Returns `EvidenceImportReport`
+（`total`/`imported`/`deduplicated`/`conflicts`/`bound`/`unbound`/`imported_ids`/
+`dropped_ids`/`rejected`）。
+
 ## Outcomes
 
 ### `POST /v1/outcomes`
@@ -75,7 +82,14 @@ Returns `CalibrationProfile` (Brier/ECE/buckets). Scopes: ALL/MODEL/DOMAIN/MODUL
 ### `POST /v1/solve`
 Body: `SolveRequest` → full pipeline:
 compile → research → evidence → belief → convergence → evaluate → (ABSTAIN →
-experiment) → predictions. Returns `SolveResult`:
+experiment) → predictions. Returns `SolveResult`.
+
+Query params (v1.3):
+- `view=summary`：返回 5 段合同（`current_judgment` / `rationale` /
+  `biggest_unknown` / `next_step` / `change_condition`）+ ABSTAIN 四要素 +
+  透明度段；`view=full`（默认）返回完整 `SolveResult`。
+- `advanced=true`：默认（`view=full` 且未指定 `advanced`）会剥掉
+  `advanced_view`；`advanced=true` 展开结构化 `SolveResultAdvancedView`。
 
 ```json
 {

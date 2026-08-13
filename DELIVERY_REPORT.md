@@ -170,3 +170,71 @@ v1.1 closes the v1.0 gap where research evidence never reached the judgment loop
 - PG parity：**诚实声明** —— 本机无 PostgreSQL/docker，`test_postgres_parity.py`
   维持 skip；Release Gate I 由 CI（`postgres:16` service）兑现。
 
+---
+
+# v1.3 Delivery Report — 展示层投影（默认 5 段合同）
+
+## Delivered (v1.3, incremental)
+
+- **展示层归位雏形**：`runtime/presentation.py` 集中中文文案映射 + 纯函数模板
+  （`ACTION_STATE_ZH`/`DECISION_TYPE_ZH`/`PROVENANCE_ZH`/`BELIEF_RELATION_ZH` 等），
+  引擎层不新增中文常量。
+- **默认 5 段合同**：`solve_summary(result)` 输出 `current_judgment` / `rationale` /
+  `biggest_unknown` / `next_step` / `change_condition` 五段 + ABSTAIN 四要素 +
+  透明度段（belief graph / parameter provenance）。
+- **概率文案与状态词表**：`probability_level` 概率带（Low/Moderate/High）、
+  `estimate_phrase` 校准置信措辞、`localize_error_message` 异常中文化。
+- **`/v1/solve` 双层投影**：`view=summary`（5 段合同）/ `advanced=true`（展开
+  `SolveResultAdvancedView`）/ 默认 `full` 逐字节不变。
+
+## Verification at delivery (v1.3)
+
+- pytest：**532 passed / 1 skipped / 0 failed**（506 基线 + 26 新增，零回归）。
+- ruff：0 error。
+
+---
+
+# v1.4 Delivery Report — 实验 VOI + 个性化 + 校准复盘 + 证据导入 + 快速求解
+
+## Delivered (v1.4, incremental)
+
+- **P1-1 实验 VOI 投影**：`experiment_voi_summary` 输出 `decision_change_condition`
+  （成功/失败/模糊三态）+ `stop_rule` + 低决策影响实验降级标注。
+- **P1-3 个性化投影**：`personalization_summary` 读取 StakesProfile，输出风险偏好
+  中文档案（风险厌恶/中性/偏好）+ stakes_class 词表。
+- **P1-5 校准复盘**：`calibration_summary` 拆分 forecast_calibration（Brier/ECE）
+  与 decision_performance（regret 诚实标 N/A）；CLI `calibration report` 中文输出。
+- **P1-2 证据批量导入**：`/v1/evidence/import` + `EvidenceImporter.import_batch`
+  完整走 Candidate→Validation→持久化（dedup → 幂等 → grade → apply_authority → 入库）。
+- **P1-4 快速求解**：`quick-solve` CLI 命令 + `run_quick_solve`（InMemory 一次性
+  端到端，`lightweight=True` 轻量模式）。
+
+## Verification at delivery (v1.4)
+
+- pytest：**559 passed / 1 skipped / 0 failed**（532 基线 + 27 新增，零回归）。
+- ruff：0 error。
+
+---
+
+# v1.5 Delivery Report — 结构性重构（零行为变更）
+
+## Delivered (v1.5, refactor)
+
+- **T01 引擎 DRY 收敛**：authority 权重表收敛到 `evidence_policy.AUTHORITY_TABLE`
+  单一来源（各调用点保留各自 fallback：`context.py=0.0`，其余 `=0.1`）；校准
+  bins/piecewise 收敛到 `CalibrationEngine`（`ConfidenceCalibrator` 委托）；死条件
+  清理；`__import__("math")` 内联改顶部 `import math`。
+- **T02 展示层归位**：`runtime/presentation.py` 迁移到独立 `vencertia.presentation`
+  包；`runtime/presentation.py` 保留 deprecated re-export shim（既有 import 零破坏）；
+  解除 `runtime.py` 反向 import 展示常量的边界渗漏。
+- **T03 测试 helper 抽提**：`_orchestrator`/`_client`/`FIVE_KEYS` 复制粘贴收敛到
+  `tests/conftest.py` 共享 fixture/常量。
+- **T04 版本 + 文档漂移修复**：`__version__ = "1.5.0"`（`__api_contract_version__`
+  维持 `"1.4"`，无 API 契约变更）；README/DELIVERY/iteration-log 补齐 v1.3/v1.4 段。
+
+## Verification at delivery (v1.5)
+
+- pytest：**559 passed / 1 skipped / 0 failed**（零回归，重构不改行为）。
+- ruff：0 error。
+
+

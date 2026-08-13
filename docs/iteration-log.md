@@ -321,3 +321,67 @@ V-6 BeliefEdge 因果图、V-7 ActionState/modes、critic gate solve 接线、PG
 - pytest：**506 passed / 1 skipped / 0 failed**（483 基线 + 23 新增，零回归）。
 - ruff：0 error。
 - PG parity：本机无 PG 维持 skip + 诚实声明；Release Gate I 由 CI 兑现。
+
+---
+
+# ITERATION_LOG — v1.3 / v1.4（展示层投影 + 增量能力）
+
+诚实记录 v1.3（默认 5 段合同 + 中文文案投影）与 v1.4（实验 VOI + 个性化 +
+校准复盘 + 证据导入 + 快速求解）两轮增量。
+
+## 迭代 — v1.3 展示层投影
+
+### 目标
+落地默认 5 段合同（`solve_summary`）与集中中文文案投影，`/v1/solve` 增加
+`view=summary` / `advanced=true` 双层投影。
+
+### 完成内容
+- `runtime/presentation.py`：集中 `*_ZH` 词表 + 纯函数模板（probability_level /
+  estimate_phrase / localize_error_message / solve_summary）。
+- `solve_summary`：5 段合同 + ABSTAIN 四要素 + 透明度段。
+- `/v1/solve` `view` / `advanced` 查询参数（Default/Advanced 投影）。
+
+### 指标
+- pytest：**532 passed / 1 skipped / 0 failed**（506 基线 + 26 新增）。
+
+## 迭代 — v1.4 增量能力
+
+### 目标
+实验 VOI、个性化、校准复盘、证据批量导入、快速求解五组能力落地。
+
+### 完成内容
+- `experiment_voi_summary` / `personalization_summary` / `calibration_summary`
+  三个纯函数投影；`calibration report` CLI 中文输出。
+- `EvidenceImporter.import_batch` + `/v1/evidence/import` + `evidence import` CLI。
+- `quick-solve` CLI + `run_quick_solve`（InMemory 一次性端到端）。
+
+### 指标
+- pytest：**559 passed / 1 skipped / 0 failed**（532 基线 + 27 新增）。
+
+---
+
+# ITERATION_LOG — v1.5（结构性重构，零行为变更）
+
+## 迭代 — v1.5 重构
+
+### 目标
+在不改变任何行为的前提下兑现三层边界与 DRY 愿景：引擎 DRY 收敛（T01）、
+展示层归位（T02）、测试 helper 抽提（T03）、文档漂移修复 + 版本 1.5.0（T04）。
+
+### 完成内容
+- **T01**：authority 权重表 4 处内联收敛到 `evidence_policy.AUTHORITY_TABLE`
+  （fallback 逐调用点保留：context=0.0，其余=0.1）；校准 bins/piecewise 收敛到
+  `CalibrationEngine`，`ConfidenceCalibrator` 薄门面委托；删除 convergence 冗余
+  死条件；`__import__("math")` → 顶部 `import math`。
+- **T02**：`presentation.py` 迁移到 `vencertia.presentation` 包；`runtime/presentation.py`
+  保留 re-export shim；api/cli/quick_solve/runtime 的 import 路径切到新包。
+- **T03**：`_orchestrator`/`_client`/`FIVE_KEYS` 抽提到 `tests/conftest.py` 共享
+  fixture/常量，4 个测试文件去复制。
+- **T04**：`__version__="1.5.0"`（`__api_contract_version__` 维持 "1.4"）；
+  pyproject 同步；README/DELIVERY/iteration-log/api/cli 去漂移。
+
+### 指标
+- pytest：**559 passed / 1 skipped / 0 failed**（重构零回归）。
+- ruff：0 error。
+- 全局一致性审查：**IS_PASS: YES**。
+
