@@ -38,3 +38,7 @@ htmlcov/
 
 # Benchmark temporary output
 data/benchmarks/output/
+
+# Legacy prompt-architecture extracted text (docx originals are committed;
+# extracted .txt are derived artifacts and ignored)
+legacy/agent_v11/_extracted_txt/

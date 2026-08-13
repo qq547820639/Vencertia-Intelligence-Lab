@@ -1,4 +1,4 @@
-# Vencertia Adaptive Decision System v1.1
+# Vencertia Adaptive Decision System v1.2.1
 
 > 一个"校准优先"的决策运行时：在高度不确定的创业语境中，把"该不该做"变成
 > 有据可依的判断——并在证据不足时诚实地告诉你"现在还下不了结论"（ABSTAIN）。
@@ -18,7 +18,7 @@ v1.1（Intelligence Ingestion）把研究证据真正接进判断闭环：Claim 
 
 ```bash
 make install          # pip install -e ".[dev]"
-make test             # pytest（417 passed / 0 skipped）—— v1.1.2 Runtime Integrity Hardening 最终回归
+make test             # pytest（506 passed / 1 skipped）—— v1.2.1 V-6/V-7 + critic gate + PG CI 最终回归
 make demo             # B2B SaaS MVP 6 周决策闭环演示
 make benchmark        # L0 基准（36/36）+ legacy 参考
 make benchmark-binding  # Synthetic Claim Binding Benchmark（GAP-04，独立）
@@ -30,8 +30,8 @@ make verify           # test + benchmark + import 检查
 make release          # 打包 Vencertia_Intelligence_Lab_v1.1.2.zip
 ```
 
-> 测试数字为 v1.1.2 最后一次干净回归（0 skipped）；历史数字对照见
-> `docs/BASELINE_V1_0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417，各状态不混数字）。
+> 测试数字为 v1.2.1 最后一次干净回归（1 skipped 为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
+> `docs/BASELINE_V1_0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506，各状态不混数字）。
 
 CLI 也可直接使用：
 
@@ -68,6 +68,10 @@ PYTHONPATH=src python -m vencertia.cli belief history <belief_id>
 | `docs/OSS_ADMISSION_POLICY.md` | OSS/模型准入策略 |
 | `docs/ITERATION_LOG.md` | v1.0 + v1.1 迭代记录 |
 | `docs/IMPLEMENTATION_REPORT_NEXT.md` | v1.1 交付报告 |
+| `docs/v1.2-construction-plan.md` | v1.2 施工图（M0 + V-1~V-5） |
+| `docs/implementation-plan-v12-2026-08-13.md` | v1.2 实施计划（范围/裁决） |
+| `docs/agentv11-v112-mapping-review.md` | AgentV11 → v1.1.2 映射评审（V-6/V-7 落地建议） |
+| `docs/v1.1.2-code-walkthrough-review.md` | v1.1.2 代码走查评审 |
 | `TASK_BREAKDOWN.md` / `TASK_BREAKDOWN_NEXT.md` | 工程师施工图 |
 
 ## v1.1 与 v1.0 差异
@@ -90,3 +94,24 @@ PYTHONPATH=src python -m vencertia.cli belief history <belief_id>
 - PostgreSQL 为可选后端（`VENCERTIA_PG_DSN` 门控）。
 - 真实 Web Search/LLM 未配置时如实声明（"Adapter implemented, live provider
   unavailable without credentials"）；数据不足标 N/A，不伪造。
+
+## v1.2 / v1.2.1 差异
+
+- **v1.2 语义协议（M0 + V-1~V-5）**：M0 止血 5 项；V-1 provenance/calibration
+  （`ModelParameter` 提议≠批准）；V-2 Decision Ledger（`DecisionRecord` →
+  `DecisionOutcomeRecord` 推荐→行动→结果）；V-3 Model Critic（`ModelCritique`
+  结构化审查）；V-4 Stakes 三档自适应 ABSTAIN（`StakesClass`）；V-5 Utility
+  关系类型（`UtilityRelationType`）。
+- **V-6 BeliefEdge 因果图**：9 类 `BeliefRelationType` 声明式信念关系 +
+  `Evidence.shared_signal_group` 跨信念共享信号防 double counting（独立于
+  `dedup_discount`）。
+- **V-7 ActionState + mode**：展示层 `ActionState`（ACT/TEST/HOLD/WAIT/STOP）
+  与引擎 `DecisionType` 双词表并存；`SolveRequest.mode`（EXPLORE/OPERATE）；
+  `/v1/solve` Default（5 段合同）/ Advanced（`?advanced=true` 展开
+  `SolveResultAdvancedView`）两层投影。
+- **critic gate 接线**：solve 主链路按 `ModelCriticGate.should_require` 在
+  decision 评估前跑 ChallengerCapability，`ModelCritique` 附入 SolveResult；
+  失败/None 一律降级放行，永不阻塞决策。
+- **PG CI（Release Gate I）**：`.github/workflows/ci.yml` 起 `postgres:16`
+  service + `VENCERTIA_PG_DSN`，`pip install -e ".[postgres,dev]"`，真跑
+  `test_postgres_parity.py`（本机无 PG 时该测试诚实 skip，由 CI 兑现）。

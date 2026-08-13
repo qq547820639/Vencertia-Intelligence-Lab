@@ -114,3 +114,59 @@ v1.1 closes the v1.0 gap where research evidence never reached the judgment loop
   Belief Delta Quality / Decision Change Precision) are N/A until labeled or
   prospective data accumulates.
 - Semantic rankers/matchers are protocol-only (no vector DB dependency).
+
+---
+
+# v1.2 Delivery Report — Semantic Protocols
+
+## Delivered (v1.2, incremental)
+
+- **M0 hardening（5 项）**：PG 后端 DSN 门控（`PostgresDisabledError`）、
+  乐观锁单写入口、错误信封统一、prediction 单持久化点、审计留痕。
+- **V-1 provenance/calibration**：`ModelParameter`（LLM 提议≠批准，PROPOSED/APPROVED
+  语义）+ `ProvenanceType`；`Belief` 携带 `estimate_type` / `calibration_status`。
+- **V-2 Decision Ledger**：`DecisionRecord`（推荐→行动→结果）+ `DecisionOutcomeRecord`
+  持久化，`status=RECOMMENDED` + `abstain_reason`。
+- **V-3 Model Critic**：`ModelCritique`（`ModelRisk`/`CritiqueFindingType` 结构化审查）+
+  `ModelCriticGate.should_require` 纯字符串序值门控；`ChallengerCapability` 产出结构化 critique。
+- **V-4 Stakes / 自适应 ABSTAIN**：`StakesClass`（LOW/MEDIUM/HIGH）三档阈值
+  （`Settings.stakes_thresholds`），默认 MEDIUM 精确复现 v1.1.2 全局带。
+- **V-5 Utility 关系类型**：`UtilityComponent` + `UtilityRelationType`
+  （ADDITIVE/THRESHOLD/AND_GATE），非线性能利用关系。
+
+## Verification at delivery (v1.2)
+
+- pytest：**483 passed / 1 skipped / 0 failed**；ruff 0 error。
+
+---
+
+# v1.2.1 Delivery Report — BeliefEdge + ActionState + critic gate + PG CI
+
+## Delivered (v1.2.1, incremental)
+
+- **V-6 BeliefEdge 因果图**：9 类 `BeliefRelationType` + `BeliefEdge`
+  （generic `entities` 表，无新迁移）；`Evidence.shared_signal_group` +
+  `EvidenceApplication.signal_discount` 跨信念共享信号防 double counting
+  （独立于 `dedup_discount`）。
+- **V-7 ActionState + mode + 5 段投影**：展示层 `ActionState`
+  （ACT/TEST/HOLD/WAIT/STOP）与引擎 `DecisionType` 双词表并存；
+  `SolveRequest.mode`（EXPLORE/OPERATE）；`DecisionOption.option_kind`；
+  `/v1/solve` Default（5 段合同）/ Advanced（`?advanced=true`）两层投影。
+- **critic gate solve 接线**：solve 主链路在 decision 评估前按
+  `ModelCriticGate.should_require` 跑 ChallengerCapability，`ModelCritique`
+  附入 `SolveResultV11`；失败/None 降级放行（warn + `PROVIDER_FAILED`，永不阻塞）。
+- **PG CI（Release Gate I）**：`ci.yml` 起 `postgres:16` service +
+  `VENCERTIA_PG_DSN`，`pip install -e ".[postgres,dev]"`，真跑
+  `test_postgres_parity.py`；`test_m05_postgres_repository_disabled_without_dsn`
+  改为 hermetic（`monkeypatch.delenv` + `get_settings.cache_clear()`），
+  本机（无 DSN）与 CI（有 DSN）双环境皆绿。
+
+## Verification at delivery (v1.2.1)
+
+- pytest：**506 passed / 1 skipped / 0 failed**（483 基线 + 23 新增，零回归）。
+- ruff：0 error。
+- 版本号：`__version__ = "1.2.1"`（`__api_contract_version__ = "1.2"` 不动）；
+  `pyproject.toml` version 同步 1.2.1。
+- PG parity：**诚实声明** —— 本机无 PostgreSQL/docker，`test_postgres_parity.py`
+  维持 skip；Release Gate I 由 CI（`postgres:16` service）兑现。
+

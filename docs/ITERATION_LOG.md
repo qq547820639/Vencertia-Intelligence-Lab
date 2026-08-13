@@ -287,3 +287,37 @@ QA 独立对抗验证（tests/qa_v11/，38 条）发现 2 个 MAJOR 源码缺陷
 - **数据流**：SolveResultV11 字段与 API/CLI/测试消费方一致；
   ClaimBindingOutput.applied_evidence 以 dict 传递（pydantic 序列化）。
 - **IS_PASS: YES**
+
+---
+
+# ITERATION_LOG — v1.2 / v1.2.1（语义协议 + 因果图 + 展示词表）
+
+诚实记录 v1.2（M0 + V-1~V-5 语义协议）与 v1.2.1（V-6/V-7 + critic gate + PG CI）两轮增量。
+
+## 迭代 N — v1.2 / v1.2.1 语义协议 + 因果图 + 展示词表
+
+### 目标
+在 v1.1.2（417 passed）之上落地 M0 止血 + V-1~V-5 语义协议（v1.2），再增量落地
+V-6 BeliefEdge 因果图、V-7 ActionState/modes、critic gate solve 接线、PG CI（v1.2.1）。
+
+### 完成内容（T1~T6）
+- T1（V-6）：`domain/belief_edge.py`（9 类 `BeliefRelationType` + `BeliefEdge`）；
+  `Evidence.shared_signal_group` + `EvidenceApplication.signal_discount`；
+  `belief_engine` 跨信念共享信号折扣（独立于 dedup）；repository 增
+  `save/get/list_belief_edges`（generic `entities` 表，无新迁移）。
+- T2（V-7）：`ActionState`/`SolveMode` + `map_decision_type_to_action_state` 纯函数；
+  `DecisionOption.option_kind`；`SolveRequest.mode`；`SolveResultV11` 增
+  `action_state/mode/advanced_view`；`/v1/solve` `advanced` 查询参数（Default/Advanced 投影）。
+- T3（critic gate）：solve 主链路在 decision 评估前按 `ModelCriticGate.should_require`
+  跑 `ChallengerCapability`，`ModelCritique` 附入结果；失败/None 降级放行。
+- T4（PG CI）：`ci.yml` 加 `postgres:16` service + `VENCERTIA_PG_DSN` +
+  `.[postgres,dev]` 安装 + PG parity step；`test_postgres_parity.py` 的
+  `test_m05_postgres_repository_disabled_without_dsn` 改 hermetic。
+- T5（文档 + 版本号）：`__version__`/`pyproject.toml` 升 1.2.1；README/DELIVERY_REPORT/
+  ITERATION_LOG 收尾。
+- T6（git）：三笔本地提交（不 push）。
+
+### 指标
+- pytest：**506 passed / 1 skipped / 0 failed**（483 基线 + 23 新增，零回归）。
+- ruff：0 error。
+- PG parity：本机无 PG 维持 skip + 诚实声明；Release Gate I 由 CI 兑现。
