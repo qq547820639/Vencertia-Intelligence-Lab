@@ -1,4 +1,4 @@
-# Vencertia Adaptive Decision System v1.9.1
+# Vencertia Adaptive Decision System v2.0.0
 
 > 一个"校准优先"的决策运行时：在高度不确定的创业语境中，把"该不该做"变成
 > 有据可依的判断——并在证据不足时诚实地告诉你"现在还下不了结论"（ABSTAIN）。
@@ -18,7 +18,7 @@ v1.1（Intelligence Ingestion）把研究证据真正接进判断闭环：Claim 
 
 ```bash
 make install          # pip install -e ".[dev]"
-make test             # pytest（611 passed / 9 skipped）—— v1.9.1 最终回归（决策复盘器闭环）
+make test             # pytest（621 passed / 9 skipped）—— v2.0.0 最终回归（想法→决策→BP 全路径）
 make demo             # B2B SaaS MVP 6 周决策闭环演示
 make benchmark        # L0 基准（36/36）+ legacy 参考
 make benchmark-binding  # Synthetic Claim Binding Benchmark（GAP-04，独立）
@@ -30,8 +30,8 @@ make verify           # test + benchmark + import 检查
 make release          # 打包 Vencertia_Intelligence_Lab_v<__version__>.zip（版本号自动派生）
 ```
 
-> 测试数字为 v1.9.1 最后一次干净回归（9 skipped 均为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
-> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532 / v1.4.0 559 / v1.5.0 559 / v1.6.0 560 / v1.7.0 565 / v1.8.0 569 / v1.9.0 597 / v1.9.1 611，各状态不混数字）。
+> 测试数字为 v2.0.0 最后一次干净回归（9 skipped 均为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
+> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532 / v1.4.0 559 / v1.5.0 559 / v1.6.0 560 / v1.7.0 565 / v1.8.0 569 / v1.9.0 597 / v1.9.1 611 / v2.0.0 621，各状态不混数字）。
 
 CLI 也可直接使用：
 
@@ -140,6 +140,7 @@ v1.9 补上复盘闭环：待复盘预测可一键「成真/落空」结算并�
   默认输出 rich 中文面板（`--json` 保留机器可读）；设计令牌补全 `--on-accent`。
 - **评审**：`CODE_ARCHITECTURE_REVIEW.md`（§1–§10 全量走读评审 + 历史对比）与
   `docs/implementation-plan-v19-2026-08-14.md`（本轮施工图，含 Round 2）。
+- **v2.0**：`docs/implementation-plan-v20-2026-08-14.md`（想法→决策→BP 全路径 + Skill 层施工图）。
 - **Round 2 技术债清理**：4 个 EventType 接真实生命周期点（实验执行/上下文失效审计）；
   L1 运行时 JSON-Schema 校验（schema-invalid 拒绝不执行，jsonschema 缺失优雅跳过）；
   `claim_binding` 未知 scope fail-loud；仓储 `close()`/上下文管理器；
@@ -156,3 +157,19 @@ v1.9 补上复盘闭环：待复盘预测可一键「成真/落空」结算并�
 - **PG 行为级 parity 套件**：`tests/test_postgres_parity_behavior.py` 双后端参数化
   （CRUD/乐观锁/事务原子性/绑定与更新记录热表/事件日志回放），本机无 DSN 诚实 skip，
   CI `postgres:16` service 真实兑现。
+
+## v2.0 差异（想法 → 决策 → 商业计划 全路径）
+
+- **入口层**：`POST /v1/ideas/assess` —— 想法 → 决策问题 + 假设清单（模型提议，显式标注
+  待确认）+ 最大未知 + 就绪的 solve 请求；CLI `vencertia idea`；Web「从想法开始」面板
+  一键转入决策判断。
+- **出口层**：`POST /v1/bp` —— 已持久化决策 → 七章商业计划（执行摘要/市场机会/为什么
+  是我们/关键假设与风险/计划与里程碑/什么会推翻/复盘与校准）+ Markdown 全文；市场数据
+  不足的章节诚实 N/A，不伪造；CLI `vencertia bp [--out]`；Web 台账「生成 BP」+「复制全文」。
+- **Skill 层（V11 经验资产迁移）**：`vencertia/skills/` —— 5 个 legacy V11 专家提示词
+  迁移为版本化 skill（market/financial/plan/founder/execution，谱系指向源 docx），
+  输出走 pydantic 契约 + 引用校验门（数字必须有 source_claim_id，禁止无出处数据），
+  编排路由按阶段调度；mock 模式确定性模板回退、真实 LLM 即插即用；
+  `GET /v1/skills` 资产目录 + CLI `vencertia skills`。
+- **定位**：规则拥有状态（脊椎），skill 承载经验（肌肉）——不是回到 prompt 驱动的旧路，
+  也不是停在硬编码程序。详见 `docs/implementation-plan-v20-2026-08-14.md`。

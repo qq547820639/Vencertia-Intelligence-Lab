@@ -392,11 +392,18 @@ POST /v1/outcomes → OutcomeSettlementService.record_outcome
 （`tests/test_postgres_parity_behavior.py`：CRUD/乐观锁/事务原子性/热表/事件日志双后端参数化，
 本机无 DSN 诚实 skip，CI postgres:16 兑现）。
 
+**v2.0.0（2026-08-14）增量**：全路径 + 第四层。入口层 `IdeaIntakeService`（想法→决策问题+假设清单+
+最大未知，复用编译器+不确定性引擎，零持久化）；出口层 `BusinessPlanComposer`（持久化决策→七章 BP，
+市场无证据诚实 N/A）；**SKILLS 层** `vencertia/skills/`（legacy V11 专家提示词迁移为版本化 skill +
+pydantic 契约 + 引用校验门「数字必须有 source_claim_id」+ 阶段路由 SkillRouter + mock 确定性回退），
+`/v1/ideas/assess`、`/v1/bp`、`/v1/skills` 三端点 + CLI idea/bp/skills + Web 面板。
+架构立场修正为「规则拥有状态（脊椎）、skill 承载经验（肌肉）」——回应对"做成硬性规定程序"的质疑：
+确定性脊椎是校准护城河，经验资产以提示词+契约形式成为一等公民，而非硬编码 Python 分支。
+
 **仍可深化迭代（按优先级，超出本轮范围）：**
 
-1. **真实用户闭环（产品层）**：接入真实 LLM/Search 凭据，跑通一个垂直场景（投资评估 / go-no-go 复盘）的真实数据闭环 —— 转型 MVP 的 P1 目标（`docs/mvp-transition-plan`）。
+1. **真实用户闭环（产品层）**：接入真实 LLM/Search 凭据，跑通一个垂直场景（投资评估 / go-no-go 复盘）的真实数据闭环 —— 转型 MVP 的 P1 目标（`docs/mvp-transition-plan`）。skill 层管道已就绪，接入后逐 skill 过 benchmark 门槛。
 2. **`/v1/solve` 流式 SSE + 真实 LLM 延迟补偿**（诊断报告建议后置项，接真模型后上）。
-3. **PG 行为级 parity 套件**：现有 parity 测试只验 schema，不验 CRUD/乐观锁/事务语义（本轮修的三处分叉正说明该盲区）。
-4. **展示层深化**：校准曲线 SVG（现在只有数字卡片）、信念依赖图可视化（需引入布局库，突破零构建约束前不做）。
-5. **技术债清单**（§7 P2 未动项）：`use_enum_values` 异构收敛、连接生命周期管理、migrations 版本化、L1 泄漏运行时扫描、6 个骨架 capability 的 LLM 实现。
-6. **发布流水线**：`make release` 现按 `__version__` 派生包名；建议顺手把 4 个历史 `.zip` 移出仓库（gitignore 已排除再打包）。
+3. **展示层深化**：信念依赖图可视化（需引入布局库，突破零构建约束前不做）；校准曲线已落地（v1.9.1）。
+4. **技术债清单**（§7 P2 未动项）：`use_enum_values` 异构收敛、连接生命周期（已加 close()，PG 池化留待 CI 观察）、migrations 版本化、L1 泄漏运行时扫描、6 个骨架 capability 的 LLM 实现（skill 层为其后继）。
+5. **发布流水线**：`make release` 现按 `__version__` 派生包名（v2.0.0 验证通过）；建议顺手把 4 个历史 `.zip` 移出仓库（gitignore 已排除再打包）。
