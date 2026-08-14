@@ -133,7 +133,7 @@ flowchart TB
 - API 面：`/health` + `/`(静态 UI) + 28 个 `/v1/*` 端点（decisions/evidence/outcomes/experiments/predictions/calibration/review/projects/research/beliefs/claims/solve）。统一信封 `{code,data,message}` + 异常处理器（`_register_exception_handlers`，api.py:120-154）映射 EntityNotFound→404 / StaleWrite→409 / ValueError→400 / ProviderError→502（v1.1.2 评审 P0 已修复）。
 - CLI 面：顶层命令 `solve/demo/quick-solve/uncertainties/migrate-v10.2` + 10 个子命令组（decision/evidence/research/experiment/outcome/prediction/belief/calibration/benchmark/project）。
 
-**config.py（259 行）**：frozen dataclass `Settings`，40+ 字段全量 `VENCERTIA_*` 环境变量映射（含 legacy `MODEL_PROVIDER` 兼容 + DeprecationWarning，config.py:169-178）；默认全离线（model/search=mock）。**发现**：`stakes_thresholds`/`critic_required_stakes`（:155-161）在 `from_env()` 无对应环境变量映射，永远用默认值；`_env_float/_env_int` 解析失败静默回退（:38-55）。
+**config.py（259 行）**：frozen dataclass `Settings`，40+ 字段全量 `VENCERTIA_*` 环境变量映射（含 legacy `MODEL_PROVIDER` 兼容 + DeprecationWarning，config.py:169-178）；**v2.0.1 产品裁决：默认为真实 AI 路径（model=openai_compatible / search=http），mock 仅为测试/开发显式开关，产品路径零静默 mock 回退（compile/idea/skill/quick-solve 全链 fail-loud）**。**已修复**：`stakes_thresholds`/`critic_required_stakes` 环境变量映射（v1.9）；`_env_float/_env_int` 解析失败告警（v1.9）。
 
 **container.py（151 行）**：组合根。`_build_repository` 按 DSN 三分支（PG DSN 有值→Postgres；`:memory:`→InMemory；否则 SQLite）。**发现**：:45-51 `except PostgresDisabledError: raise` 是空转 try/except；`call_recorder` 属性不缓存（每次访问新建实例，:75-83）。
 
