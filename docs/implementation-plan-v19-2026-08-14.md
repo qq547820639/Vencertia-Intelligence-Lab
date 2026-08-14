@@ -97,3 +97,18 @@ L2 registry 数据完整性、OpenAI 适配器失效、版本漂移等）。
 **验收（Round 2）**：pytest 全量 597 passed / 1 skipped、ruff 0 error、L0 36/36、L1 6/6 + 1 泄漏拒绝、CB 33/34、API/CLI smoke OK。
 
 **未动项（有明确理由）**：`harness.comparison_report`（docstring 即标注 Skeleton，冻结案例门已由 `oss_admission_experiment` 负责）；L1 泄漏运行时内容扫描（flag 为作者自审契约，见 MINOR-L1-004）；CB coverage 死指标（数据集扩展前保留）。
+
+---
+
+## 5. Round 3（v1.9.1，复盘闭环补全）
+
+| # | 项 | 落地 |
+|---|----|------|
+| R3-1 | 复盘闭环补全（产品 3 步循环第②③步的决策侧） | `POST /v1/decisions/{id}/act`：RECOMMENDED→ACTED（建 Action + 台账反写 + `DECISION_ACTED` 事件）；带 `result` 即走既有 outcome 结算闭环 → SETTLED + DecisionOutcomeRecord；SETTLED 重复提交 400；批内 `in_transaction` 原子 |
+| R3-2 | 台账 UI 闭环 | 「标记行动 / 记录结果」内联表单（行动内容 + 成功/失败/部分成功），成功后刷新台账与仪表盘 |
+| R3-3 | 校准曲线可视化 | 零依赖 SVG 可靠性图：置信度桶 vs 实际命中率 + 完美校准对角线 + 悬停明细（`<title>`），无样本桶诚实显示 |
+| R3-4 | PG 行为级 parity 套件 | `tests/test_postgres_parity_behavior.py` 双后端参数化：CRUD 往返 / 乐观锁（stale + create-version 守卫）/ 嵌套事务原子性（rollback/commit）/ 绑定与更新记录热表 / 事件日志回放；本机无 DSN 诚实 skip（8 条），CI `postgres:16` 真实兑现 |
+| R3-5 | 版本 + 提交推送 | `__version__=1.9.1`（`__api_contract_version__` 维持 1.4，纯增量端点）；4 个测试文件版本钉同步；commit + push main |
+
+**验收（Round 3 / v1.9.1）**：pytest **611 passed / 9 skipped**（9 skip 全部为 PG parity，CI 兑现）、
+ruff 0 error、L0 36/36、L1 6/6 + 1 泄漏拒绝、CB 33/34、API/CLI smoke OK、`make release` 派生 v1.9.1。

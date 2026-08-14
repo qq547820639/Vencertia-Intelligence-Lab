@@ -12,6 +12,7 @@ repositories/runtimes.
 from __future__ import annotations
 
 from typing import Any, Literal
+from uuid import uuid4
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -51,6 +52,15 @@ class CompileRequest(VencertiaBaseModel):
 
 class EvaluateRequest(VencertiaBaseModel):
     decision_id: str
+
+
+class DecisionActRequest(VencertiaBaseModel):
+    """v1.9.1: close the review loop on a ledger row (RECOMMENDED → ACTED → SETTLED)."""
+
+    action_taken: str  # what the owner actually did
+    result: str | None = None  # set to settle immediately (→ SETTLED)
+    outcome_type: OutcomeType | str = OutcomeType.PARTIAL
+    quantitative: dict[str, float] = Field(default_factory=dict)
 
 
 class EvidenceRequest(VencertiaBaseModel):
@@ -221,6 +231,85 @@ def create_app(
         if decision is None:
             raise EntityNotFoundError("decision", decision_id)
         return ok(decision.model_dump(mode="json"))
+
+    @app.post("/v1/decisions/{decision_id}/act", response_model=ApiResponse)
+    def act_on_decision(decision_id: str, req: DecisionActRequest) -> ApiResponse:
+        """v1.9.1: close the review loop — RECOMMENDED → ACTED (→ SETTLED).
+
+        Marks the decision-ledger row as acted with what the owner actually
+        did. When ``result`` is provided, the action is settled immediately
+        through the existing outcome closed loop (outcome evidence → belief
+        updates → prediction settlement → calibration → decision re-evaluation
+        → DecisionOutcomeRecord backfill).
+        """
+        from vencertia.domain import Action, utcnow
+        from vencertia.presentation import (
+            DECISION_RECORD_STATUS_ZH,
+        )
+
+        decision = repo.get_decision(decision_id)
+        if decision is None:
+            raise EntityNotFoundError("decision", decision_id)
+        record = repo.get_decision_record(decision_id)
+        if record is None:
+            raise EntityNotFoundError("decision_record", decision_id)
+        if record.status == "SETTLED":
+            raise ValueError("该决策已复盘（SETTLED），不能重复标记行动")
+
+        holder: dict = {}
+
+        def _batch() -> None:
+            if record.status == "RECOMMENDED":
+                action = Action(
+                    id="ACT_" + uuid4().hex,
+                    project_id=decision.project_id,
+                    kind="DECISION",
+                    description=req.action_taken,
+                    decision_id=decision.id,
+                    status="RUNNING",
+                )
+                repo.save_action(action)
+                runtime.bus.publish(
+                    make_event(
+                        EventType.ACTION_CREATED, "action", action.id, {"kind": action.kind}
+                    )
+                )
+                record.action_taken = action.id
+                record.status = "ACTED"
+                record.updated_at = utcnow()
+                record.version += 1
+                repo.save_decision_record(record, expected_version=record.version - 1)
+                runtime.bus.publish(
+                    make_event(EventType.DECISION_ACTED, "decision_record", record.id, {})
+                )
+                holder["action_id"] = action.id
+            else:  # ACTED — reuse the stored action for settlement
+                action = repo.get_action(record.action_taken) if record.action_taken else None
+                if action is None:
+                    raise ValueError("台账已行动但没有对应 Action 记录，无法复盘")
+                holder["action_id"] = action.id
+            if req.result is not None:
+                holder["settlement"] = runtime.record_outcome(
+                    holder["action_id"],
+                    req.result,
+                    quantitative=req.quantitative,
+                    outcome_type=req.outcome_type,
+                )
+
+        repo.in_transaction(_batch)
+        settlement = holder.get("settlement")
+        data: dict = {
+            "decision_record_id": record.id,
+            "decision_id": decision_id,
+            "action_id": holder["action_id"],
+            "status": "SETTLED" if settlement is not None else "ACTED",
+            "status_zh": DECISION_RECORD_STATUS_ZH.get(
+                "SETTLED" if settlement is not None else "ACTED"
+            ),
+        }
+        if settlement is not None:
+            data["settlement"] = settlement.model_dump(mode="json")
+        return ok(data)
 
     # -- evidence ----------------------------------------------------------------
 

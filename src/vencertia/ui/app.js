@@ -16,6 +16,8 @@
   const ledgerList = $("ledger-list");
   const openPredWrap = $("open-predictions");
   const openPredList = $("open-pred-list");
+  const calibChartWrap = $("calib-chart");
+  const calibChartBox = $("calib-chart-box");
   const historySection = $("history-section");
   const historyList = $("history-list");
   const historyClear = $("history-clear");
@@ -222,7 +224,15 @@
 
   // -- ledger + calibration dashboard --------------------------------------
   const STATUS_CLS = { RECOMMENDED: "st-rec", ACTED: "st-act", SETTLED: "st-set" };
+  let ledgerCache = [];
+  const RESULT_OPTIONS = [
+    ["", "仅标记行动"],
+    ["SUCCESS", "成功"],
+    ["FAILURE", "失败"],
+    ["PARTIAL", "部分成功"],
+  ];
   function renderLedger(ledger) {
+    ledgerCache = ledger || [];
     if (!ledger || !ledger.length) {
       ledgerList.innerHTML =
         '<div class="empty">还没有决策记录。发起一个决策，它会带着「推荐 → 行动 → 结果」进入台账。</div>';
@@ -239,6 +249,14 @@
         const abstain = r.abstain_reason
           ? '<div class="lr-abstain">' + esc(r.abstain_reason) + "</div>"
           : "";
+        const actions =
+          r.status === "RECOMMENDED" || r.status === "ACTED"
+            ? '<div class="lr-actions" data-row="' + esc(r.decision_record_id) + '">' +
+              (r.status === "RECOMMENDED"
+                ? '<button type="button" class="btn-small act-btn" data-mode="act">标记行动</button>'
+                : '<button type="button" class="btn-small act-btn" data-mode="settle">记录结果</button>') +
+              "</div>"
+            : "";
         return (
           '<div class="ledger-row">' +
           '<div class="lr-main">' +
@@ -249,10 +267,78 @@
           '<span class="pill ' + (STATUS_CLS[r.status] || "") + '">' + esc(r.status_zh || r.status) + "</span>" +
           outs + abstain +
           "</div>" +
+          actions +
           "</div>"
         );
       })
       .join("");
+    ledgerList.querySelectorAll(".act-btn").forEach((btn) => {
+      btn.addEventListener("click", () =>
+        showActForm(btn.closest(".lr-actions"), btn.dataset.mode)
+      );
+    });
+  }
+
+  function showActForm(container, mode) {
+    if (!container) return;
+    const row = ledgerCache.find((r) => r.decision_record_id === container.dataset.row);
+    if (!row) return;
+    const actionValue = row.action_taken || "";
+    const form = document.createElement("div");
+    form.className = "act-form";
+    form.innerHTML =
+      (mode === "act"
+        ? '<input type="text" class="act-input" placeholder="你实际做了什么？（一句话）" value="" />'
+        : '<input type="text" class="act-input" disabled value="' + esc(actionValue) + '" />') +
+      '<select class="act-result">' +
+      RESULT_OPTIONS.map(
+        (o) =>
+          '<option value="' + o[0] + '"' + (o[0] === "" ? " selected" : "") + ">" + o[1] + "</option>"
+      ).join("") +
+      "</select>" +
+      '<div class="act-btns">' +
+      '<button type="button" class="btn-small act-confirm">确认</button>' +
+      '<button type="button" class="btn-small btn-false act-cancel">取消</button>' +
+      "</div>";
+    container.replaceWith(form);
+    form.querySelector(".act-cancel").addEventListener("click", () => loadReview());
+    form.querySelector(".act-confirm").addEventListener("click", () => {
+      const input = form.querySelector(".act-input");
+      const sel = form.querySelector(".act-result");
+      submitAct(row.decision_id, mode === "act" ? input.value.trim() : (row.action_taken || ""), sel.value);
+    });
+    if (mode === "act") form.querySelector(".act-input").focus();
+  }
+
+  async function submitAct(decisionId, actionTaken, outcomeType) {
+    if (!actionTaken) {
+      solveError.textContent = "请先填写行动内容";
+      solveError.hidden = false;
+      return;
+    }
+    const body = { action_taken: actionTaken };
+    if (outcomeType) {
+      body.outcome_type = outcomeType;
+      body.result = "已按「" + outcomeType + "」复盘（Web 工作台记录）";
+    }
+    try {
+      const r = await fetch("/v1/decisions/" + encodeURIComponent(decisionId) + "/act", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      if (!r.ok || j.code !== 0) {
+        solveError.textContent = (j && j.message) || "标记行动失败";
+        solveError.hidden = false;
+        return;
+      }
+      solveError.hidden = true;
+      loadReview();
+    } catch (err) {
+      solveError.textContent = "网络错误：" + err.message;
+      solveError.hidden = false;
+    }
   }
   function renderOpenPredictions(preds) {
     openPredWrap.hidden = !preds || preds.length === 0;
@@ -279,6 +365,59 @@
       btn.addEventListener("click", () => resolvePrediction(btn.dataset.id, btn.dataset.outcome === "true"));
     });
   }
+  // v1.9.1: zero-dependency reliability diagram — predicted-confidence buckets
+  // vs empirical hit rate, with the perfect-calibration diagonal.
+  function renderCalibChart(buckets) {
+    const usable = (buckets || []).filter(
+      (b) => b && b.mean_confidence != null && b.lo != null && b.hi != null
+    );
+    calibChartWrap.hidden = usable.length === 0;
+    if (!usable.length) {
+      calibChartBox.innerHTML = "";
+      return;
+    }
+    const W = 320;
+    const H = 190;
+    const left = 26;
+    const right = 312;
+    const top = 14;
+    const bottom = 170;
+    const px = (v) => left + (right - left) * Math.max(0, Math.min(1, Number(v)));
+    const py = (v) => bottom - (bottom - top) * Math.max(0, Math.min(1, Number(v) || 0));
+    const parts = [];
+    parts.push(
+      '<rect x="' + left + '" y="' + top + '" width="' + (right - left) + '" height="' + (bottom - top) +
+      '" fill="var(--bg)" stroke="var(--line)"/>'
+    );
+    parts.push(
+      '<line x1="' + left + '" y1="' + bottom + '" x2="' + right + '" y2="' + top +
+      '" stroke="var(--ink-3)" stroke-dasharray="4 3" stroke-width="1.5"/>'
+    );
+    [0, 0.5, 1].forEach((t) => {
+      const x = px(t);
+      parts.push(
+        '<text x="' + x + '" y="' + (bottom + 12) + '" font-size="9" fill="var(--ink-3)" text-anchor="middle">' +
+        Math.round(t * 100) + "%</text>"
+      );
+    });
+    usable.forEach((b) => {
+      const x = px(b.lo);
+      const w = Math.max(2, px(b.hi) - px(b.lo) - 2);
+      const h = Math.max(0, bottom - py(b.empirical_rate));
+      const y = bottom - h;
+      const rate = b.empirical_rate == null ? "无样本" : Math.round(b.empirical_rate * 100) + "%";
+      parts.push(
+        '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) +
+        '" height="' + h.toFixed(1) + '" fill="var(--accent)" opacity="0.75">' +
+        '<title>置信度 ' + Math.round(b.lo * 100) + "–" + Math.round(b.hi * 100) +
+        "%：实际命中 " + rate + "</title></rect>"
+      );
+    });
+    calibChartBox.innerHTML =
+      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="校准曲线" style="width:100%;height:auto">' +
+      parts.join("") + "</svg>";
+  }
+
   async function resolvePrediction(id, outcome) {
     try {
       const r = await fetch("/v1/predictions/" + encodeURIComponent(id) + "/resolve", {
@@ -315,6 +454,7 @@
       $("stat-ece").textContent = num(fc.ece);
       $("stat-brier").textContent = num(fc.brier_score);
       $("calib-verdict").textContent = cal.verdict || "";
+      renderCalibChart(cal.buckets || []);
       renderLedger(d.ledger || []);
       renderOpenPredictions(d.open_predictions || []);
     } catch (e) {

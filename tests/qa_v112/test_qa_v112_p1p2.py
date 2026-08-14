@@ -261,7 +261,7 @@ def test_qa_p112_version_four_places_consistent():
     pyproject = tomllib.loads(
         Path(__file__).resolve().parents[2].joinpath("pyproject.toml").read_text(encoding="utf-8")
     )
-    assert vencertia.__version__ == "1.9.0"
+    assert vencertia.__version__ == "1.9.1"
     assert pyproject["project"]["version"] == vencertia.__version__
     assert app.version == vencertia.__version__
 

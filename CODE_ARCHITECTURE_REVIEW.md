@@ -137,7 +137,7 @@ flowchart TB
 
 **container.py（151 行）**：组合根。`_build_repository` 按 DSN 三分支（PG DSN 有值→Postgres；`:memory:`→InMemory；否则 SQLite）。**发现**：:45-51 `except PostgresDisabledError: raise` 是空转 try/except；`call_recorder` 属性不缓存（每次访问新建实例，:75-83）。
 
-**events/**：进程内同步 `EventBus`（sink=repo.append_event 持久化 audit 日志）+ `EventType` 31 种 + `DomainEvent`（seq/actor/occurred_at）。不做 Event Sourcing（ADR）。**发现**：`bus.py:40-46` publish 无 handler 异常隔离——sink 已写后某 handler 抛异常会跳过后续 handler 并上抛。
+**events/**：进程内同步 `EventBus`（sink=repo.append_event 持久化 audit 日志）+ `EventType` 32 种 + `DomainEvent`（seq/actor/occurred_at）。不做 Event Sourcing（ADR）。**已修复**：`bus.py:40-46` 原本无 handler 异常隔离（sink 已写后某 handler 抛异常会跳过后续 handler 并上抛）——v1.9 已加逐 handler try/except + logging。
 
 **presentation/**（580 行，单 `__init__.py`）：中文投影层（唯一文案源），15 个映射常量 + 10 个纯函数；`solve_summary` 生成 5 段合同（当前判断/为什么/最大未知/下一步/什么会改变判断 + ABSTAIN 四要素）；`localize_error_message` 供 API 错误中文化。v1.5 从 runtime 抽离（runtime/presentation.py 仅存 re-export shim）。
 
@@ -384,7 +384,13 @@ POST /v1/outcomes → OutcomeSettlementService.record_outcome
 
 ## 10. 结论与剩余建议
 
-**总体判断：达成预期。** 代码层面从 v0.1 内核到 v1.9 的既定工程目标（三层架构、确定性引擎集、智能摄取、语义协议、展示层、零构建 Web 工作台、复盘闭环）已全部落地并被 571+ 测试与 L0/L1/CB 基准锁定；本轮走读发现的 5 项 P0 与 14 项 P1 已全部修复。
+**总体判断：达成预期。** 代码层面从 v0.1 内核到 v1.9.1 的既定工程目标（三层架构、确定性引擎集、智能摄取、语义协议、展示层、零构建 Web 工作台、复盘闭环）已全部落地并被 600+ 测试与 L0/L1/CB 基准锁定；三轮走读发现的 5 项 P0 与 14 项 P1 已全部修复，纯代码侧技术债在 v1.9 Round 2 / v1.9.1 两轮清空。
+
+**v1.9.1（2026-08-14）增量**：复盘闭环补全——`POST /v1/decisions/{id}/act`（RECOMMENDED→ACTED→SETTLED，
+带 result 即走既有 outcome 结算闭环）+ 台账「标记行动/记录结果」UI + `DECISION_ACTED` 事件；校准曲线
+零依赖 SVG（置信度桶 vs 实际命中率 + 完美校准对角线）；PG 行为级 parity 套件
+（`tests/test_postgres_parity_behavior.py`：CRUD/乐观锁/事务原子性/热表/事件日志双后端参数化，
+本机无 DSN 诚实 skip，CI postgres:16 兑现）。
 
 **仍可深化迭代（按优先级，超出本轮范围）：**
 

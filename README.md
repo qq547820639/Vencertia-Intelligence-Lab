@@ -1,4 +1,4 @@
-# Vencertia Adaptive Decision System v1.9.0
+# Vencertia Adaptive Decision System v1.9.1
 
 > 一个"校准优先"的决策运行时：在高度不确定的创业语境中，把"该不该做"变成
 > 有据可依的判断——并在证据不足时诚实地告诉你"现在还下不了结论"（ABSTAIN）。
@@ -18,7 +18,7 @@ v1.1（Intelligence Ingestion）把研究证据真正接进判断闭环：Claim 
 
 ```bash
 make install          # pip install -e ".[dev]"
-make test             # pytest（588 passed / 1 skipped）—— v1.9.0 最终回归（决策复盘器）
+make test             # pytest（611 passed / 9 skipped）—— v1.9.1 最终回归（决策复盘器闭环）
 make demo             # B2B SaaS MVP 6 周决策闭环演示
 make benchmark        # L0 基准（36/36）+ legacy 参考
 make benchmark-binding  # Synthetic Claim Binding Benchmark（GAP-04，独立）
@@ -30,8 +30,8 @@ make verify           # test + benchmark + import 检查
 make release          # 打包 Vencertia_Intelligence_Lab_v<__version__>.zip（版本号自动派生）
 ```
 
-> 测试数字为 v1.9.0 最后一次干净回归（1 skipped 为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
-> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532 / v1.4.0 559 / v1.5.0 559 / v1.6.0 560 / v1.7.0 565 / v1.8.0 569 / v1.9.0 588，各状态不混数字）。
+> 测试数字为 v1.9.1 最后一次干净回归（9 skipped 均为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
+> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532 / v1.4.0 559 / v1.5.0 559 / v1.6.0 560 / v1.7.0 565 / v1.8.0 569 / v1.9.0 597 / v1.9.1 611，各状态不混数字）。
 
 CLI 也可直接使用：
 
@@ -145,3 +145,14 @@ v1.9 补上复盘闭环：待复盘预测可一键「成真/落空」结算并�
   `claim_binding` 未知 scope fail-loud；仓储 `close()`/上下文管理器；
   `make_release` 覆盖率产物排除；Web 工作台「展开完整模型」渐进披露
   （信念依赖中文关系 / 待确认参数 / 实验 VOI / 个性化 / 模型自检）。
+
+## v1.9.1 差异
+
+- **复盘闭环补全**：`POST /v1/decisions/{id}/act` —— 台账 RECOMMENDED→ACTED→SETTLED；
+  带 `result` 即走既有 outcome 结算闭环（证据→信念→预测→校准→决策再评估→复盘记录）；
+  `DECISION_ACTED` 事件留痕；Web 台账「标记行动 / 记录结果」内联表单。
+- **校准曲线可视化**：仪表盘零依赖 SVG 可靠性图（置信度桶 vs 实际命中率 + 完美校准对角线），
+  数字卡片之外的第一张图。
+- **PG 行为级 parity 套件**：`tests/test_postgres_parity_behavior.py` 双后端参数化
+  （CRUD/乐观锁/事务原子性/绑定与更新记录热表/事件日志回放），本机无 DSN 诚实 skip，
+  CI `postgres:16` service 真实兑现。

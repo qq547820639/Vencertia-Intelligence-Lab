@@ -50,6 +50,8 @@ class EventType(str, Enum):
     # v1.2 decision ledger (V-2)
     DECISION_RECORDED = "DECISION_RECORDED"
     DECISION_OUTCOME_RECORDED = "DECISION_OUTCOME_RECORDED"
+    # v1.9.1 review loop: a recommended decision was marked acted by its owner
+    DECISION_ACTED = "DECISION_ACTED"
 
 
 def new_event_id() -> str:

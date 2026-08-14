@@ -248,3 +248,23 @@ button:focus-visible, textarea:focus-visible, select:focus-visible {
   display: flex; flex-direction: column; gap: var(--space-3);
   padding: 0 var(--space-4) var(--space-4);
 }
+
+/* -- v1.9.1: ledger act forms + calibration chart -- */
+.lr-actions { display: flex; gap: var(--space-2); flex: none; align-items: center; }
+.act-form {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  border-top: 1px dashed var(--line); margin-top: var(--space-2);
+  padding-top: var(--space-2); width: 100%;
+}
+.act-input {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+  background: var(--panel); color: var(--ink); margin-top: 0;
+}
+.act-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.act-result {
+  width: auto; padding: 6px 10px; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); font-size: 13px; background: var(--panel); margin-top: 0;
+}
+.act-btns { display: flex; gap: var(--space-2); }
+#calib-chart-box svg { display: block; }
