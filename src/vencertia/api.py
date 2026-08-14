@@ -63,6 +63,24 @@ class DecisionActRequest(VencertiaBaseModel):
     quantitative: dict[str, float] = Field(default_factory=dict)
 
 
+class IdeaAssessRequest(VencertiaBaseModel):
+    """v2.0 入口层: raw idea -> decision structure + assumption register."""
+
+    idea_text: str
+    domain: str = "general"
+    user_id: str | None = None
+
+
+class BpRequest(VencertiaBaseModel):
+    """v2.0 出口层: persisted decision -> business plan."""
+
+    decision_id: str
+    company_name: str | None = None
+    tagline: str | None = None
+    market_note: str | None = None
+    narrative: bool = True  # run V11 narrative skills (validated candidates)
+
+
 class EvidenceRequest(VencertiaBaseModel):
     evidence: Evidence
 
@@ -659,6 +677,112 @@ def create_app(
         updated = candidate.model_copy(update={"validation_status": "VALIDATED"})
         repo.save_candidate_claim(updated, expected_version=candidate.version)
         return ok(updated.model_dump(mode="json"))
+
+    # -- v2.0: idea intake / business plan / skills --------------------------------
+
+    @app.post("/v1/ideas/assess", response_model=ApiResponse)
+    def idea_assess(req: IdeaAssessRequest) -> ApiResponse:
+        """入口层：想法 → 结构化决策问题 + 假设清单 + 最大未知（只读评估，零持久化）。"""
+        from vencertia.presentation import idea_summary
+        from vencertia.runtime.idea_intake import IdeaIntakeService
+
+        service = IdeaIntakeService(
+            repo=repo,
+            engines=runtime.engines,
+            settings=settings,
+            compiler=runtime.compiler,
+            model=runtime.model,
+        )
+        assessment = service.assess(
+            req.idea_text, domain=req.domain, user_id=req.user_id
+        )
+        return ok(idea_summary(assessment))
+
+    @app.post("/v1/bp", response_model=ApiResponse)
+    def business_plan(req: BpRequest) -> ApiResponse:
+        """出口层：已持久化决策 → 商业计划（确定性骨架 + skill 叙事候选）。"""
+        from vencertia.presentation import bp_markdown, bp_view
+        from vencertia.runtime.bp_composer import BusinessPlanComposer
+
+        composer = BusinessPlanComposer(repo=repo, engines=runtime.engines, settings=settings)
+        plan = composer.compose(
+            req.decision_id,
+            company_name=req.company_name,
+            tagline=req.tagline,
+            market_note=req.market_note,
+        )
+        view = bp_view(plan)
+
+        narratives: list[dict] = []
+        traces: list[dict] = []
+        if req.narrative:
+            from vencertia.skills import SkillRouter, build_biz_skill_registry
+
+            decision = repo.get_decision(req.decision_id)
+            project_id = decision.project_id
+            beliefs_ctx = []
+            for b in repo.get_beliefs(project_id):
+                beliefs_ctx.append(
+                    {
+                        "belief_id": b.id,
+                        "claim_id": b.claim_id,
+                        "statement": b.statement,
+                        "scope": (
+                            b.scope.value if hasattr(b.scope, "value") else str(b.scope)
+                        ),
+                        "probability": round(float(b.probability), 4),
+                        "uncertainty": round(float(b.uncertainty), 4),
+                        "evidence_count": len(
+                            [
+                                e
+                                for e in repo.list_evidence(project_id=project_id)
+                                if b.claim_id in e.claim_ids
+                            ]
+                        ),
+                    }
+                )
+            context = {
+                "claim_ids": [c.id for c in repo.list_claims(project_id)],
+                "beliefs": beliefs_ctx,
+                "assumptions": plan.assumption_register,
+                "experiments": [
+                    e.model_dump(mode="json")
+                    for e in repo.list_experiments(project_id)
+                    if (e.status.value if hasattr(e.status, "value") else str(e.status))
+                    not in ("RESOLVED_SUPPORT", "RESOLVED_REFUTE", "RESOLVED_AMBIGUOUS")
+                ],
+                "decision": {
+                    "decision_question": decision.decision_question,
+                    "current_recommendation": decision.current_recommendation,
+                    "status": decision.status,
+                },
+            }
+            router = SkillRouter(build_biz_skill_registry(model=runtime.model))
+            candidates, traces = router.run_stage("bp", context)
+            narratives = [c.model_dump(mode="json") for c in candidates]
+            traces = [t.model_dump(mode="json") for t in traces]
+            if narratives:
+                view["honest_notes"] = list(view["honest_notes"]) + [
+                    f"叙事由 {len(narratives)} 个 V11 skill 生成（候选已过契约与引用校验，"
+                    f"{sum(1 for t in traces if t['status'] == 'OK')} 通过 / "
+                    f"{sum(1 for t in traces if t['status'] == 'REJECTED')} 拒绝）。"
+                ]
+        return ok(
+            {
+                "view": view,
+                "markdown": bp_markdown(view),
+                "narratives": narratives,
+                "skill_traces": traces,
+            }
+        )
+
+    @app.get("/v1/skills", response_model=ApiResponse)
+    def list_skills() -> ApiResponse:
+        """经验资产目录：版本化 skill 清单（谱系指向 legacy V11 源提示词）。"""
+        from vencertia.skills import build_biz_skill_registry
+
+        registry = build_biz_skill_registry(model=runtime.model)
+        return ok([m.model_dump(mode="json") for m in registry.list()])
 
     # -- solve ----------------------------------------------------------------------------
 

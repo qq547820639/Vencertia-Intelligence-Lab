@@ -268,3 +268,13 @@ button:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .act-btns { display: flex; gap: var(--space-2); }
 #calib-chart-box svg { display: block; }
+
+/* -- v2.0: idea intake + BP panel -- */
+.idea-section { border-top: 1px dashed var(--line); margin-top: var(--space-5); padding-top: var(--space-4); }
+.idea-section textarea { margin-bottom: var(--space-3); }
+.idea-to-solve {
+  width: 100%; margin-top: var(--space-3); background: var(--accent);
+  color: var(--on-accent); min-height: 40px;
+}
+.bp-btn { background: var(--ink-2); color: var(--on-accent); }
+#bp-body .verdict { margin-bottom: var(--space-3); }

@@ -55,6 +55,18 @@
         </div>
         <div id="history-list"></div>
       </section>
+
+      <section class="idea-section">
+        <div class="history-head">
+          <h3>从想法开始（v2.0）</h3>
+        </div>
+        <label>写下你的想法
+          <textarea id="idea-text" rows="3" placeholder="例：做一个帮小店主自动对账的工具"></textarea>
+        </label>
+        <button type="button" id="idea-btn">评估想法</button>
+        <div id="idea-error" class="error" hidden></div>
+        <div id="idea-result"></div>
+      </section>
     </aside>
 
     <section class="review-main">
@@ -98,6 +110,14 @@
       <section class="panel">
         <h2>决策台账</h2>
         <div id="ledger-list"></div>
+      </section>
+
+      <section class="panel" id="bp-panel" hidden>
+        <div class="history-head">
+          <h2 id="bp-title">商业计划</h2>
+          <button type="button" id="bp-copy" class="link-btn">复制全文</button>
+        </div>
+        <div id="bp-body"></div>
       </section>
     </section>
   </main>

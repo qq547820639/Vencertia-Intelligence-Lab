@@ -8,6 +8,11 @@ from vencertia.presentation import (
     probability_level,
 )
 from vencertia.runtime.belief_engine import BeliefEngine, BeliefUpdateInput, BeliefUpdateOutput
+from vencertia.runtime.bp_composer import (
+    BusinessPlan,
+    BusinessPlanComposer,
+    BusinessPlanSection,
+)
 from vencertia.runtime.calibration_engine import CalibrationEngine, CalibrationInput
 from vencertia.runtime.claim_binding import (
     ClaimBindingEngine,
@@ -40,6 +45,7 @@ from vencertia.runtime.experiment_optimizer import (
     ExperimentValidationResult,
     validate_experiment,
 )
+from vencertia.runtime.idea_intake import IdeaAssessment, IdeaIntakeService
 from vencertia.runtime.observability import CallRecorder
 from vencertia.runtime.opportunity_cost import OpportunityCostEngine
 from vencertia.runtime.outcome_settlement_service import OutcomeSettlementService
@@ -66,6 +72,9 @@ __all__ = [
     "BeliefEngine",
     "BeliefUpdateInput",
     "BeliefUpdateOutput",
+    "BusinessPlan",
+    "BusinessPlanComposer",
+    "BusinessPlanSection",
     "CalibrationEngine",
     "CalibrationInput",
     "CallRecorder",
@@ -98,6 +107,8 @@ __all__ = [
     "ExperimentProposalInput",
     "ExperimentProposalOutput",
     "ExperimentValidationResult",
+    "IdeaAssessment",
+    "IdeaIntakeService",
     "OpportunityCostEngine",
     "OutcomeRecordedResult",
     "OutcomeSettlementService",

@@ -560,6 +560,234 @@ def review_summary(
     }
 
 
+def _pct(value) -> str:
+    """0-1 float -> '62%' style string; None/absent -> '—'."""
+    if value is None:
+        return "—"
+    try:
+        return f"{max(0.0, min(1.0, float(value))) * 100:.0f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def idea_summary(assessment) -> dict:
+    """v2.0 入口层：IdeaAssessment → 中文假设清单投影（零重算）。
+
+    想法评估面板直接消费本投影；``solve_request`` 原样透传给 /v1/solve。
+    """
+    return {
+        "idea_id": assessment.idea_id,
+        "decision_question": assessment.decision_question,
+        "recommended_mode": assessment.recommended_mode,
+        "recommended_mode_zh": {"EXPLORE": "探索方向", "OPERATE": "经营决策"}.get(
+            assessment.recommended_mode, assessment.recommended_mode
+        ),
+        "options": [
+            {"id": o.id, "label": o.label, "description": o.description}
+            for o in assessment.options
+        ],
+        "assumptions": [
+            {
+                "belief_id": a.get("belief_id"),
+                "statement": a.get("statement"),
+                "scope": a.get("scope"),
+                "prior_probability": a.get("prior_probability"),
+                "prior_phrase": _pct(a.get("prior_probability")),
+                "uncertainty": a.get("uncertainty"),
+                "uncertainty_phrase": _pct(a.get("uncertainty")),
+                "proposed_by_model": a.get("proposed_by_model", False),
+            }
+            for a in assessment.assumptions
+        ],
+        "biggest_unknowns": [
+            {
+                "belief_id": u.get("belief_id"),
+                "statement": u.get("statement"),
+                "uncertainty_phrase": _pct(u.get("uncertainty")),
+                "impact": u.get("impact"),
+            }
+            for u in assessment.biggest_unknowns
+        ],
+        "solve_request": assessment.solve_request,
+        "disclaimer": assessment.disclaimer,
+    }
+
+
+# ---- v2.0 BP projection (出口层) -----------------------------------------------
+
+BP_SECTION_TITLES_ZH = {
+    "executive_summary": "执行摘要",
+    "market_opportunity": "市场机会",
+    "why_us": "为什么是我们",
+    "assumptions": "关键假设与风险",
+    "plan": "计划与里程碑",
+    "kill_triggers": "什么会推翻这个计划",
+    "review": "复盘与校准",
+}
+
+
+def _bp_lines(plan) -> list[dict]:
+    """Assemble per-section Chinese text lines (labels + bullets) for the UI."""
+    out: list[dict] = []
+    for section in plan.sections:
+        data = section.data
+        lines: list[str] = []
+        bullets: list[str] = []
+        if section.key == "executive_summary":
+            lines.append(f"决策问题：{data.get('decision_question', '—')}")
+            rec = data.get("recommendation")
+            lines.append(
+                "当前判断："
+                + (DECISION_TYPE_ZH.get(str(data.get("status")), str(data.get("status")))
+                   if not rec
+                   else f"推荐方案 {rec}")
+            )
+            if data.get("confidence") is not None:
+                lines.append(f"置信度：{_pct(data.get('confidence'))}（未校准不表示真实概率）")
+            lines.append(f"风险档位：{STAKES_CLASS_ZH.get(str(data.get('stakes_class')), '—')}")
+            for score in data.get("option_scores") or []:
+                bullets.append(
+                    f"方案 {score.get('option_id')}：调整后效用 {score.get('adjusted_utility')}"
+                )
+        elif section.key == "market_opportunity":
+            if section.na:
+                lines.append(section.na_reason or "无市场数据")
+            else:
+                note = data.get("note")
+                if note:
+                    lines.append(f"市场备注：{note}")
+                for b in data.get("beliefs") or []:
+                    bullets.append(
+                        f"{b.get('statement')} —— 概率 {_pct(b.get('probability'))}，"
+                        f"不确定性 {_pct(b.get('uncertainty'))}，证据 {b.get('evidence_count', 0)} 条"
+                    )
+        elif section.key == "why_us":
+            rationale = data.get("rationale") or []
+            if rationale:
+                lines.append("引擎结论：" + "；".join(rationale))
+            for c in data.get("contributions") or []:
+                direction_zh = {"SUPPORTS": "支持", "CONTRADICTS": "反对"}.get(
+                    c.get("direction"), c.get("direction")
+                )
+                bullets.append(
+                    f"{c.get('statement') or c.get('belief_id')}（{direction_zh}，"
+                    f"贡献 {round(float(c.get('contribution', 0)), 3)}）"
+                )
+            if data.get("margin") is not None:
+                lines.append(f"决策边际：{data.get('margin'):.4f}")
+        elif section.key == "assumptions":
+            lines.append(f"稳健性：{_robustness_zh(data.get('robustness'))}")
+            lines.append(f"风险档位：{STAKES_CLASS_ZH.get(str(data.get('stakes_class')), '—')}")
+            for a in data.get("register") or []:
+                flips = a.get("flips") or []
+                flip_text = (
+                    "；".join(
+                        f"{f.get('direction')} {f.get('threshold_value'):.2f} → {f.get('would_become')}"
+                        for f in flips
+                    )
+                    if flips
+                    else "无邻近翻转阈值"
+                )
+                bullets.append(
+                    f"{a.get('statement')} —— 概率 {_pct(a.get('probability'))}，"
+                    f"不确定性 {_pct(a.get('uncertainty'))}，证据 {a.get('evidence_count', 0)} 条；"
+                    f"翻转条件：{flip_text}"
+                )
+        elif section.key == "plan":
+            for e in data.get("next_experiments") or []:
+                bullets.append(
+                    f"实验：{e.get('name')}（{e.get('action') or '见详情'}，成本 {e.get('cost')}，"
+                    f"周期 {e.get('time_days')} 天）成功判据 {e.get('success_criteria') or '—'}；"
+                    f"失败判据 {e.get('failure_criteria') or '—'}"
+                )
+            if not (data.get("next_experiments") or []):
+                lines.append("当前无待办实验：判断已收敛，可执行。")
+            resolved = data.get("resolved_experiments") or []
+            if resolved:
+                bullets.append(
+                    "已完成实验：" + "；".join(f"{e.get('name')}（{e.get('status')}）" for e in resolved)
+                )
+        elif section.key == "kill_triggers":
+            changes = data.get("what_could_change_my_mind") or []
+            if changes:
+                for c in changes:
+                    bullets.append(c)
+            else:
+                lines.append("当前无邻近翻转阈值（判断对信念扰动稳健）")
+            lines.append(f"风险档位：{STAKES_CLASS_ZH.get(str(data.get('stakes_class')), '—')}")
+        elif section.key == "review":
+            status = data.get("record_status")
+            lines.append(
+                "台账状态："
+                + DECISION_RECORD_STATUS_ZH.get(str(status), str(status) if status else "—")
+            )
+            lines.append(f"已复盘结果数：{data.get('outcome_count', 0)}")
+            cal = data.get("calibration") or {}
+            lines.append(
+                f"校准样本：{cal.get('n', 0)}；布赖尔分 {cal.get('brier_score')}；"
+                f"ECE {cal.get('expected_calibration_error')}；命中率 {_pct(cal.get('empirical_rate'))}"
+            )
+        out.append(
+            {
+                "key": section.key,
+                "title_zh": BP_SECTION_TITLES_ZH.get(section.key, section.title),
+                "na": section.na,
+                "lines": lines,
+                "bullets": bullets,
+            }
+        )
+    return out
+
+
+def _robustness_zh(robustness) -> str:
+    if robustness is None:
+        return "未计算"
+    return {
+        "ROBUST_DECISION": "稳健",
+        "MODERATE_DECISION": "中等稳健",
+        "FRAGILE_DECISION": "脆弱（微小扰动即可翻转判断）",
+    }.get(str(robustness), str(robustness))
+
+
+def bp_view(plan) -> dict:
+    """v2.0 出口层：BusinessPlan → 中文视图（UI 渲染 + 复制全文共用）。"""
+    return {
+        "plan_id": plan.plan_id,
+        "decision_id": plan.decision_id,
+        "company_name": plan.company_name,
+        "tagline": plan.tagline,
+        "generated_at": plan.generated_at,
+        "sections": _bp_lines(plan),
+        "assumption_register": plan.assumption_register,
+        "honest_notes": list(plan.honest_notes),
+    }
+
+
+def bp_markdown(view: dict) -> str:
+    """v2.0 出口层：BP 视图 → 可复制的 Markdown 全文。"""
+    parts: list[str] = [
+        f"# {view['company_name']} 商业计划",
+    ]
+    if view.get("tagline"):
+        parts.append(f"> {view['tagline']}\n")
+    for section in view["sections"]:
+        parts.append(f"## {section['title_zh']}")
+        if section.get("na"):
+            parts.append(f"> 数据不足：本节约为诚实 N/A（{'; '.join(section['lines']) or '无可用数据'}）\n")
+            continue
+        for line in section["lines"]:
+            parts.append(f"- {line}")
+        for bullet in section["bullets"]:
+            parts.append(f"- {bullet}")
+        parts.append("")
+    notes = view.get("honest_notes") or []
+    if notes:
+        parts.append("## 诚实声明")
+        for note in notes:
+            parts.append(f"- {note}")
+    return "\n".join(parts)
+
+
 __all__ = [
     # 15 mapping / config constants
     "PROBABILITY_BANDS",
@@ -588,4 +816,9 @@ __all__ = [
     "project_advanced_view",
     "critique_summary",
     "review_summary",
+    # v2.0 idea intake + BP projection
+    "idea_summary",
+    "bp_view",
+    "bp_markdown",
+    "BP_SECTION_TITLES_ZH",
 ]

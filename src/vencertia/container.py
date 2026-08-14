@@ -36,6 +36,8 @@ class ApplicationContainer:
         self._engines: EngineBundle | None = None
         self._orchestrator: SolveOrchestrator | None = None
         self._call_recorder = None
+        self._skills = None
+        self._skill_router = None
 
     # -- assembly ---------------------------------------------------------------
 
@@ -135,6 +137,26 @@ class ApplicationContainer:
                 settings=self.settings,
             )
         return self._orchestrator
+
+    # -- v2.0 skill layer --------------------------------------------------------
+
+    @property
+    def skills(self):
+        """V11 迁移 skill 目录（经验资产，版本化）。"""
+        if self._skills is None:
+            from vencertia.skills import build_biz_skill_registry
+
+            self._skills = build_biz_skill_registry(model=self.providers.model)
+        return self._skills
+
+    @property
+    def skill_router(self):
+        """编排路由：按阶段运行 skill + 契约/引用校验门。"""
+        if self._skill_router is None:
+            from vencertia.skills import SkillRouter
+
+            self._skill_router = SkillRouter(self.skills)
+        return self._skill_router
 
     # -- applications -------------------------------------------------------------
 

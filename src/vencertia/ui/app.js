@@ -21,6 +21,14 @@
   const historySection = $("history-section");
   const historyList = $("history-list");
   const historyClear = $("history-clear");
+  const ideaText = $("idea-text");
+  const ideaBtn = $("idea-btn");
+  const ideaError = $("idea-error");
+  const ideaResult = $("idea-result");
+  const bpPanel = $("bp-panel");
+  const bpTitle = $("bp-title");
+  const bpBody = $("bp-body");
+  const bpCopy = $("bp-copy");
 
   const HISTORY_KEY = "vencertia.history.v1";
   const HISTORY_MAX = 10;
@@ -250,13 +258,14 @@
           ? '<div class="lr-abstain">' + esc(r.abstain_reason) + "</div>"
           : "";
         const actions =
-          r.status === "RECOMMENDED" || r.status === "ACTED"
-            ? '<div class="lr-actions" data-row="' + esc(r.decision_record_id) + '">' +
-              (r.status === "RECOMMENDED"
-                ? '<button type="button" class="btn-small act-btn" data-mode="act">标记行动</button>'
-                : '<button type="button" class="btn-small act-btn" data-mode="settle">记录结果</button>') +
-              "</div>"
-            : "";
+          '<div class="lr-actions" data-row="' + esc(r.decision_record_id) + '">' +
+          (r.status === "RECOMMENDED"
+            ? '<button type="button" class="btn-small act-btn" data-mode="act">标记行动</button>'
+            : r.status === "ACTED"
+              ? '<button type="button" class="btn-small act-btn" data-mode="settle">记录结果</button>'
+              : "") +
+          '<button type="button" class="btn-small bp-btn" data-did="' + esc(r.decision_id) + '">生成 BP</button>' +
+          "</div>";
         return (
           '<div class="ledger-row">' +
           '<div class="lr-main">' +
@@ -276,6 +285,9 @@
       btn.addEventListener("click", () =>
         showActForm(btn.closest(".lr-actions"), btn.dataset.mode)
       );
+    });
+    ledgerList.querySelectorAll(".bp-btn").forEach((btn) => {
+      btn.addEventListener("click", () => generateBp(btn.dataset.did));
     });
   }
 
@@ -503,6 +515,180 @@
       solveBtn.textContent = "开始判断";
     }
   }
+
+  // -- v2.0: idea intake (想法评估) ------------------------------------------
+  let lastIdeaAssessment = null;
+  async function assessIdea() {
+    ideaError.hidden = true;
+    const text = ideaText.value.trim();
+    if (!text) {
+      ideaError.textContent = "请先写下想法";
+      ideaError.hidden = false;
+      return;
+    }
+    ideaBtn.disabled = true;
+    ideaBtn.textContent = "评估中…";
+    try {
+      const r = await fetch("/v1/ideas/assess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea_text: text }),
+      });
+      const j = await r.json();
+      if (!r.ok || j.code !== 0) {
+        ideaError.textContent = (j && j.message) || "评估失败";
+        ideaError.hidden = false;
+        return;
+      }
+      lastIdeaAssessment = j.data;
+      renderIdea(j.data);
+    } catch (err) {
+      ideaError.textContent = "网络错误：" + err.message;
+      ideaError.hidden = false;
+    } finally {
+      ideaBtn.disabled = false;
+      ideaBtn.textContent = "评估想法";
+    }
+  }
+  function renderIdea(d) {
+    const html = [];
+    html.push(
+      '<div class="card"><h3>决策问题</h3><p>' + esc(d.decision_question) +
+      '（建议模式：' + esc(d.recommended_mode_zh || d.recommended_mode) + "）</p></div>"
+    );
+    const assumptions = (d.assumptions || []).map(
+      (a) =>
+        "<li>" + esc(a.statement) + " <span class='hint'>先验 " + esc(a.prior_phrase) +
+        " · 不确定性 " + esc(a.uncertainty_phrase) + "</span></li>"
+    );
+    html.push(
+      card("假设清单（模型提议，待确认）", assumptions.length ? "<ul>" + assumptions.join("") + "</ul>" : "<p>无</p>")
+    );
+    const unknowns = (d.biggest_unknowns || []).map(
+      (u) =>
+        "<li>" + esc(u.statement) + " <span class='hint'>不确定性 " + esc(u.uncertainty_phrase) + "</span></li>"
+    );
+    html.push(card("最大未知", unknowns.length ? "<ul>" + unknowns.join("") + "</ul>" : "<p>无</p>", "warn"));
+    html.push('<button type="button" class="idea-to-solve">转入决策判断 →</button>');
+    html.push('<p class="hint">' + esc(d.disclaimer || "") + "</p>");
+    ideaResult.innerHTML = html.join("");
+    ideaResult.querySelector(".idea-to-solve").addEventListener("click", ideaToSolve);
+  }
+  async function ideaToSolve() {
+    if (!lastIdeaAssessment || !lastIdeaAssessment.solve_request) return;
+    solveError.hidden = true;
+    solveBtn.disabled = true;
+    solveBtn.textContent = "判断中…";
+    const started = performance.now();
+    try {
+      const r = await fetch("/v1/solve?view=summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastIdeaAssessment.solve_request),
+      });
+      const elapsed = Math.round(performance.now() - started);
+      const j = await r.json();
+      if (!r.ok || j.code !== 0) {
+        solveError.textContent = (j && j.message) || "请求失败";
+        solveError.hidden = false;
+        return;
+      }
+      problem.value = lastIdeaAssessment.decision_question || "";
+      mode.value = "EXPLORE";
+      renderSummary(j.data, { elapsed_ms: elapsed });
+      saveHistoryItem({
+        problem: problem.value,
+        verdict: (j.data || {}).current_judgment_zh || "",
+        saved_at: new Date().toISOString(),
+        summary: j.data,
+      });
+      loadReview();
+    } catch (err) {
+      solveError.textContent = "网络错误：" + err.message;
+      solveError.hidden = false;
+    } finally {
+      solveBtn.disabled = false;
+      solveBtn.textContent = "开始判断";
+    }
+  }
+
+  // -- v2.0: business plan (决策 → BP) ----------------------------------------
+  let bpMarkdownCache = "";
+  async function generateBp(decisionId) {
+    bpPanel.hidden = false;
+    bpBody.innerHTML = '<div class="empty">生成中…（确定性骨架 + V11 skill 叙事）</div>';
+    try {
+      const r = await fetch("/v1/bp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision_id: decisionId }),
+      });
+      const j = await r.json();
+      if (!r.ok || j.code !== 0) {
+        bpBody.innerHTML = '<div class="empty">' + esc((j && j.message) || "生成失败") + "</div>";
+        return;
+      }
+      bpMarkdownCache = j.data.markdown || "";
+      renderBp(j.data.view, j.data.narratives || [], j.data.skill_traces || []);
+      bpPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (err) {
+      bpBody.innerHTML = '<div class="empty">网络错误：' + esc(err.message) + "</div>";
+    }
+  }
+  function renderBp(view, narratives, traces) {
+    const html = [];
+    html.push(
+      '<div class="verdict"><span class="pill">' + esc(view.company_name) + "</span>" +
+      '<span class="conf">' + esc(view.tagline || "") + "</span></div>"
+    );
+    (view.sections || []).forEach((s) => {
+      const lines = (s.lines || []).map((l) => "<p>" + esc(l) + "</p>").join("");
+      const bullets = (s.bullets || []).map((b) => "<li>" + esc(b) + "</li>").join("");
+      html.push(
+        '<div class="card' + (s.na ? " warn" : "") + '"><h3>' + esc(s.title_zh) +
+        (s.na ? "（数据不足）" : "") + "</h3>" + lines +
+        (bullets ? "<ul>" + bullets + "</ul>" : "") + "</div>"
+      );
+    });
+    if (narratives && narratives.length) {
+      const narrItems = narratives
+        .map(
+          (n) =>
+            "<li>" + esc(n.skill) + "（" + esc(n.contract) + "，" +
+            (n.deterministic ? "确定性模板" : "真实模型") + "）</li>"
+        )
+        .join("");
+      html.push(card("V11 skill 叙事（候选，已过校验）", "<ul>" + narrItems + "</ul>"));
+    }
+    if (traces && traces.some((t) => t.status === "REJECTED")) {
+      html.push(
+        card(
+          "被校验门拒绝的 skill",
+          "<ul>" +
+            traces
+              .filter((t) => t.status === "REJECTED")
+              .map((t) => "<li>" + esc(t.skill) + "：" + esc(t.note || t.status) + "</li>")
+              .join("") +
+            "</ul>",
+          "danger"
+        )
+      );
+    }
+    const notes = (view.honest_notes || []).map((n) => "<li>" + esc(n) + "</li>").join("");
+    if (notes) html.push(card("诚实声明", "<ul>" + notes + "</ul>"));
+    bpBody.innerHTML = html.join("");
+  }
+  bpCopy.addEventListener("click", async () => {
+    if (!bpMarkdownCache) return;
+    try {
+      await navigator.clipboard.writeText(bpMarkdownCache);
+      bpCopy.textContent = "已复制 ✓";
+      setTimeout(() => (bpCopy.textContent = "复制全文"), 1600);
+    } catch (e) {
+      window.prompt("复制失败，请手动复制：", bpMarkdownCache);
+    }
+  });
+  ideaBtn.addEventListener("click", assessIdea);
 
   form.addEventListener("submit", onSubmit);
   renderExamplePlaceholder();

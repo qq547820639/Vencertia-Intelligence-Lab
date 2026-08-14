@@ -581,6 +581,125 @@ def uncertainties(project_id: str, db: str | None = None) -> None:
     _dump([c.model_dump(mode="json") for c in criticals])
 
 
+# -- v2.0: idea intake / business plan / skills ------------------------------------
+
+
+@app.command()
+def idea(idea_text: str, json_out: bool = typer.Option(False, "--json", help="原始 JSON 输出")) -> None:
+    """入口层：想法 → 决策问题 + 假设清单 + 最大未知（只读评估）。"""
+    from vencertia.runtime.idea_intake import IdeaIntakeService
+
+    settings = get_settings()
+    runtime, repo = _default_runtime(settings)
+    service = IdeaIntakeService(
+        repo=repo, engines=runtime.engines, settings=settings,
+        compiler=runtime.compiler, model=runtime.model,
+    )
+    from vencertia.presentation import idea_summary
+
+    summary = idea_summary(service.assess(idea_text))
+    if json_out:
+        _dump(summary, "idea")
+        return
+    table = Table(title=f"想法评估：{summary['decision_question']}")
+    table.add_column("假设")
+    table.add_column("先验")
+    table.add_column("不确定性")
+    for a in summary["assumptions"]:
+        table.add_row(a["statement"], a["prior_phrase"], a["uncertainty_phrase"])
+    console.print(table)
+    if summary["biggest_unknowns"]:
+        console.print("[bold cyan]最大未知[/bold cyan]")
+        for u in summary["biggest_unknowns"]:
+            console.print(f"  - {u['statement']}（不确定性 {u['uncertainty_phrase']}，影响 {u['impact']:.3f}）")
+    console.print(f"[dim]{summary['disclaimer']}[/dim]")
+
+
+@app.command()
+def bp(
+    decision_id: str,
+    db: str | None = None,
+    out: Path | None = typer.Option(None, "--out", help="写入 Markdown 文件"),
+) -> None:
+    """出口层：决策 → 商业计划（确定性骨架 + V11 skill 叙事）。"""
+    from vencertia.runtime.bp_composer import BusinessPlanComposer
+
+    settings = _settings_with_db(db)
+    runtime, repo = _default_runtime(settings)
+    composer = BusinessPlanComposer(repo=repo, engines=runtime.engines, settings=settings)
+    plan = composer.compose(decision_id)
+
+    from vencertia.presentation import bp_markdown, bp_view
+
+    view = bp_view(plan)
+
+    from vencertia.skills import SkillRouter, build_biz_skill_registry
+
+    decision = repo.get_decision(decision_id)
+    beliefs_ctx = [
+        {
+            "belief_id": b.id, "claim_id": b.claim_id, "statement": b.statement,
+            "scope": b.scope.value if hasattr(b.scope, "value") else str(b.scope),
+            "probability": round(float(b.probability), 4),
+            "uncertainty": round(float(b.uncertainty), 4),
+            "evidence_count": len(
+                [e for e in repo.list_evidence(project_id=decision.project_id) if b.claim_id in e.claim_ids]
+            ),
+        }
+        for b in repo.get_beliefs(decision.project_id)
+    ]
+    context = {
+        "claim_ids": [c.id for c in repo.list_claims(decision.project_id)],
+        "beliefs": beliefs_ctx,
+        "assumptions": plan.assumption_register,
+        "experiments": [
+            e.model_dump(mode="json")
+            for e in repo.list_experiments(decision.project_id)
+            if (e.status.value if hasattr(e.status, "value") else str(e.status))
+            not in ("RESOLVED_SUPPORT", "RESOLVED_REFUTE", "RESOLVED_AMBIGUOUS")
+        ],
+        "decision": {
+            "decision_question": decision.decision_question,
+            "current_recommendation": decision.current_recommendation,
+            "status": decision.status,
+        },
+    }
+    router = SkillRouter(build_biz_skill_registry(model=runtime.model))
+    candidates, traces = router.run_stage("bp", context)
+    if candidates:
+        view["honest_notes"] = list(view["honest_notes"]) + [
+            f"叙事由 {len(candidates)} 个 V11 skill 生成（候选已过校验）。"
+        ]
+    markdown = bp_markdown(view)
+    if out is not None:
+        out.write_text(markdown, encoding="utf-8")
+        console.print(f"[green]已写入 {out}[/green]")
+        return
+    console.print(markdown)
+    for trace in traces:
+        style = "green" if trace.status == "OK" else "red"
+        console.print(f"[{style}]skill {trace.skill}: {trace.status}[/{style}]")
+
+
+@app.command()
+def skills() -> None:
+    """经验资产目录：版本化 skill 清单（谱系指向 legacy V11 源提示词）。"""
+    from vencertia.skills import build_biz_skill_registry
+
+    settings = get_settings()
+    runtime, _ = _default_runtime(settings)
+    registry = build_biz_skill_registry(model=runtime.model)
+    table = Table(title="Vencertia 经验资产（V11 迁移 skill）")
+    table.add_column("skill")
+    table.add_column("版本")
+    table.add_column("阶段")
+    table.add_column("契约")
+    table.add_column("V11 源")
+    for m in registry.list():
+        table.add_row(m.name, m.version, m.stage, m.contract, m.v11_source)
+    console.print(table)
+
+
 # -- migration ---------------------------------------------------------------------
 
 @app.command("migrate-v10.2")
