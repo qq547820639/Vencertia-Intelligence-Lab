@@ -1,175 +1,193 @@
-# Vencertia Adaptive Decision System v2.0.0
+# Vencertia 决策复盘器
 
-> 一个"校准优先"的决策运行时：在高度不确定的创业语境中，把"该不该做"变成
-> 有据可依的判断——并在证据不足时诚实地告诉你"现在还下不了结论"（ABSTAIN）。
+> **记录你的判断，追踪结果，用校准证明你的决策质量。**
+> 把"拍脑袋做决定"变成"有据可依、错了能复盘"。
 
-Vencertia 不是 Prompt-driven Multi-Agent 顾问，而是一个 **Decision Runtime**：
-确定性引擎拥有状态变更权，LLM/能力模块只是候选产出者（无写权）。
-三层分离：**REALITY**（canonical truth，Repository 独占写）→
-**DECISION INTELLIGENCE**（可解释、可追溯、可校准的确定性引擎）→
-**CAPABILITY**（外部智能，可替换适配器）。
-
-v1.1（Intelligence Ingestion）把研究证据真正接进判断闭环：Claim Binding 流水线、
-决策相关上下文、Research Planner/Stop、Decision Sensitivity、可观测性与 L0-L2 基准。
+版本：v2.0.0
 
 ---
 
-## 快速开始
+## 产品简介
 
-```bash
-make install          # pip install -e ".[dev]"
-make test             # pytest（621 passed / 9 skipped）—— v2.0.0 最终回归（想法→决策→BP 全路径）
-make demo             # B2B SaaS MVP 6 周决策闭环演示
-make benchmark        # L0 基准（36/36）+ legacy 参考
-make benchmark-binding  # Synthetic Claim Binding Benchmark（GAP-04，独立）
-make benchmark-all    # L0 + Binding
-make lint             # ruff check（0 error）
-make ci               # lint → test → benchmark → API/CLI smoke
-make api              # FastAPI: http://localhost:8000
-make verify           # test + benchmark + import 检查
-make release          # 打包 Vencertia_Intelligence_Lab_v<__version__>.zip（版本号自动派生）
-```
+### 它是什么
 
-> 测试数字为 v2.0.0 最后一次干净回归（9 skipped 均为 PostgreSQL parity，本机无 PG 由 CI 兑现）；历史数字对照见
-> `docs/baseline-v1-0.md`（v1.0 174 / v1.1-pre-RC 283 / v1.1-RC 345 / v1.1.2 417 / v1.2 483 / v1.2.1 506 / v1.3.0 532 / v1.4.0 559 / v1.5.0 559 / v1.6.0 560 / v1.7.0 565 / v1.8.0 569 / v1.9.0 597 / v1.9.1 611 / v2.0.0 621，各状态不混数字）。
+Vencertia 是一个**帮你把决定做扎实的工具**。
 
-CLI 也可直接使用：
+它不替你做决定——你是决策者。它做三件事：
 
-```bash
-PYTHONPATH=src python -m vencertia.cli demo
-PYTHONPATH=src python -m vencertia.cli benchmark run --level L0
-PYTHONPATH=src python -m vencertia.cli benchmark run --level CLAIM_BINDING
-PYTHONPATH=src python -m vencertia.cli research plan <decision_id>
-PYTHONPATH=src python -m vencertia.cli evidence bind <evidence_id>
-PYTHONPATH=src python -m vencertia.cli decision sensitivity <decision_id>
-PYTHONPATH=src python -m vencertia.cli belief history <belief_id>
-```
+1. **帮你把想法理成"决定"**：写下一个想法，它帮你拆出"我到底在做什么决定、我默认相信了哪些事、最大的未知是什么"。
+2. **给每一个判断留下依据**：为什么这么选？依据是什么？证据不足时，它诚实地说"现在还下不了结论"，而不是编一个漂亮答案。
+3. **帮你复盘判断准不准**：你当初的预测，后来成真了吗？它像一块记分牌，持续统计你的命中率，让你看得见自己决策水平的变化。
 
-## Web 决策工作台（v1.8 → v1.9 决策复盘器）
+一句话：**它是你的"决策参谋 + 账房先生"**——参谋出主意，账房记清楚每一笔判断的来龙去脉和最终对错。
 
-`make api` 后浏览器打开 **http://localhost:8000/** 即是零构建链的决策复盘器：
-左侧「发起一个新决策」→ 得到默认 5 段合同（当前判断 / 为什么 / 最大未知 / 下一步 /
-什么会改变判断），右侧「校准仪表盘 + 决策台账」追踪你的判断准不准。
-v1.9 补上复盘闭环：待复盘预测可一键「成真/落空」结算并实时刷新命中率/ECE/布赖尔分；
-最近 10 条判断保存在浏览器本地（localStorage）可回看；判断耗时可见。
-无需安装 Node，前端直接复用后端已计算好的中文投影层。
+### 它解决什么问题
 
-## 文档索引
-
-| 文档 | 内容 |
+| 你现在的痛点 | Vencertia 的做法 |
 |---|---|
-| `docs/architecture.md` | 三层架构 + Mermaid 图 + 权力边界 + 不变式（含 v1.1 节） |
-| `docs/v1.1-design.md` | v1.1 增量架构设计（1086 行，权威） |
-| `docs/architecture-decisions-next.md` | ADR-008~012 |
-| `docs/domain-model.md` | 域对象字段级定义（权威，小写连字符 canonical） |
-| `docs/intelligence-ingestion.md` | 智能摄取总览（v1.1） |
-| `docs/claim-binding.md` | Claim Binding 流水线（v1.1） |
-| `docs/research-runtime.md` | Research Planner/Stop（v1.1） |
-| `docs/evidence-pipeline.md` | dedup / conflict / freshness（v1.1） |
-| `docs/belief-update-trace.md` | BeliefUpdateRecord + 版本化（v1.1） |
-| `docs/decision-sensitivity.md` | DecisionTrace / Sensitivity（v1.1） |
-| `docs/providers.md` | Provider Composition Root + 韧性（v1.1） |
-| `docs/{decision,belief,evidence-policy,experiment-optimizer,calibration}-engine.md` | 引擎算法 |
-| `docs/architecture-decisions.md` | ADR-001~007 |
-| `docs/migration-v10.2-to-decision-runtime.md` | V10.2 映射 |
-| `docs/api.md` / `docs/cli.md` | 接口文档 |
-| `docs/benchmark.md` | 基准分层/指标/防泄漏 |
-| `docs/oss-admission-policy.md` | OSS/模型准入策略 |
-| `docs/iteration-log.md` | v1.0 + v1.1 迭代记录 |
-| `docs/implementation-report-next.md` | v1.1 交付报告 |
-| `docs/v1.2-construction-plan.md` | v1.2 施工图（M0 + V-1~V-5） |
-| `docs/implementation-plan-v12-2026-08-13.md` | v1.2 实施计划（范围/裁决） |
-| `docs/agentv11-v112-mapping-review.md` | AgentV11 → v1.1.2 映射评审（V-6/V-7 落地建议） |
-| `docs/v1.1.2-code-walkthrough-review.md` | v1.1.2 代码走查评审 |
-| `TASK_BREAKDOWN.md` / `TASK_BREAKDOWN_NEXT.md` | 工程师施工图 |
+| 决定靠"感觉"，事后说不清为什么 | 每个判断都有一份**判断合同**：当前判断、为什么、最大未知、下一步、什么会改变我的判断 |
+| AI 顾问什么都敢答，越自信越危险 | **证据不足就明说"暂不决策"**，并告诉你还需要什么证据、可以先做哪个小实验 |
+| 错了就错了，下次还犯同样的错 | 判断、行动、结果全程进**决策台账**；预测到期一键"成真/落空"，**校准仪表盘**告诉你到底准不准 |
+| 写商业计划全靠编数字 | **商业计划由你记录过的证据生成**，每个数字必须挂到假设清单上，没数据的地方如实标"数据不足" |
 
-## v1.1 与 v1.0 差异
+### 一个类比
 
-- **Claim Binding**：研究证据 → Claim → Belief 可追溯；`UNBOUND_EVIDENCE` 显式留痕；
-  Claim Binding Accuracy 有了唯一数据源。
-- **Provider Composition Root**：`MODEL_PROVIDER` 环境变量真实决定运行时 Provider；
-  API/CLI 共用 `build_container()`；Provider 失败结构化 + 重试。
-- **决策相关上下文**：15 类上下文 + 10 维排序（deterministic/lexical 基线）。
-- **Research 有边界**：ResearchPlanner 按 critical impact 排序 + ResearchStopRule
-  8 类信号 → SEARCH_EXHAUSTED / EXPERIMENT_REQUIRED。
-- **决策敏感度**：DecisionTrace + DecisionSensitivity（翻转阈值 + STRONG/FRAGILE）。
-- **可靠性**：Evidence dedup / conflict / freshness；BeliefUpdateRecord + posterior_version。
-- **可评估性**：L0 +10 能力用例（36/36）；L1 +5 指标（N/A 语义）；L2 prospective registry；
-  OSS admission experiment；CallRecorder 可观测性；ruff + CI。
+把 Vencertia 想象成**天气预报系统**：它不阻止下雨，但它预报、记录、并诚实告诉你——预报 80% 下雨的日子，是不是真的 80% 下了。日子久了，你自然知道这套判断靠不靠谱。这就是"校准"。
 
-## 边界与假设
+---
 
-- 默认 `model_provider=mock`：系统离线可跑（不依赖任何外部 API）。
-- PostgreSQL 为可选后端（`VENCERTIA_PG_DSN` 门控）。
-- 真实 Web Search/LLM 未配置时如实声明（"Adapter implemented, live provider
-  unavailable without credentials"）；数据不足标 N/A，不伪造。
+## 核心功能亮点
 
-## v1.2 / v1.2.1 差异
+### 1. 从想法开始（v2.0）
 
-- **v1.2 语义协议（M0 + V-1~V-5）**：M0 止血 5 项；V-1 provenance/calibration
-  （`ModelParameter` 提议≠批准）；V-2 Decision Ledger（`DecisionRecord` →
-  `DecisionOutcomeRecord` 推荐→行动→结果）；V-3 Model Critic（`ModelCritique`
-  结构化审查）；V-4 Stakes 三档自适应 ABSTAIN（`StakesClass`）；V-5 Utility
-  关系类型（`UtilityRelationType`）。
-- **V-6 BeliefEdge 因果图**：9 类 `BeliefRelationType` 声明式信念关系 +
-  `Evidence.shared_signal_group` 跨信念共享信号防 double counting（独立于
-  `dedup_discount`）。
-- **V-7 ActionState + mode**：展示层 `ActionState`（ACT/TEST/HOLD/WAIT/STOP）
-  与引擎 `DecisionType` 双词表并存；`SolveRequest.mode`（EXPLORE/OPERATE）；
-  `/v1/solve` Default（5 段合同）/ Advanced（`?advanced=true` 展开
-  `SolveResultAdvancedView`）两层投影。
-- **critic gate 接线**：solve 主链路按 `ModelCriticGate.should_require` 在
-  decision 评估前跑 ChallengerCapability，`ModelCritique` 附入 SolveResult；
-  失败/None 一律降级放行，永不阻塞决策。
-- **PG CI（Release Gate I）**：`.github/workflows/ci.yml` 起 `postgres:16`
-  service + `VENCERTIA_PG_DSN`，`pip install -e ".[postgres,dev]"`，真跑
-  `test_postgres_parity.py`（本机无 PG 时该测试诚实 skip，由 CI 兑现）。
+写下想法（比如"做一个帮小店主自动对账的工具"），它自动给出：
 
-## v1.9 差异
+- **决策问题**：你到底要做什么决定；
+- **假设清单**：你默认相信了哪些事（每条都标注"模型提议，待你确认"）；
+- **最大未知**：最该先搞清楚的是哪几件事。
 
-- **代码质量批次（5 P0 / 14 P1 全修）**：L2 registry 一行一条 upsert + 跟踪文件清零；
-  L0/L1 无 gold/无 T0 决策诚实失败；`list_bindings` `use_enum_values` 崩溃修复；
-  PG stale-write 事务泄漏 + 三后端 create-version 统一；乐观锁 `+1` 约定回写修复；
-  `make_release` 版本号从 `__version__` 派生（不再漂移）；`openai_compatible` kind-tag
-  误当 JSON Schema 修复 + `complete()` 纯文本回退；工厂重试只重试 transient 错误；
-  EventBus 逐 handler 异常隔离；`api.py` 模块级 `app` 惰性化（import 零副作用）；
-  `call_recorder` 缓存；`VENCERTIA_STAKES_THRESHOLDS`/`VENCERTIA_CRITIC_REQUIRED_STAKES`
-  环境变量 + 解析失败告警；9 处字符串 `__import__` 全部清除。
-- **UX 批次**：`/v1/review` 台账行带决策问题标题；Web 工作台补复盘闭环（预测
-  成真/落空结算 + 会话历史 + 耗时 + 示例占位 + 错误态）；CLI `solve`/`quick-solve`
-  默认输出 rich 中文面板（`--json` 保留机器可读）；设计令牌补全 `--on-accent`。
-- **评审**：`CODE_ARCHITECTURE_REVIEW.md`（§1–§10 全量走读评审 + 历史对比）与
-  `docs/implementation-plan-v19-2026-08-14.md`（本轮施工图，含 Round 2）。
-- **v2.0**：`docs/implementation-plan-v20-2026-08-14.md`（想法→决策→BP 全路径 + Skill 层施工图）。
-- **Round 2 技术债清理**：4 个 EventType 接真实生命周期点（实验执行/上下文失效审计）；
-  L1 运行时 JSON-Schema 校验（schema-invalid 拒绝不执行，jsonschema 缺失优雅跳过）；
-  `claim_binding` 未知 scope fail-loud；仓储 `close()`/上下文管理器；
-  `make_release` 覆盖率产物排除；Web 工作台「展开完整模型」渐进披露
-  （信念依赖中文关系 / 待确认参数 / 实验 VOI / 个性化 / 模型自检）。
+然后一键转入正式判断。
 
-## v1.9.1 差异
+### 2. 五段判断合同
 
-- **复盘闭环补全**：`POST /v1/decisions/{id}/act` —— 台账 RECOMMENDED→ACTED→SETTLED；
-  带 `result` 即走既有 outcome 结算闭环（证据→信念→预测→校准→决策再评估→复盘记录）；
-  `DECISION_ACTED` 事件留痕；Web 台账「标记行动 / 记录结果」内联表单。
-- **校准曲线可视化**：仪表盘零依赖 SVG 可靠性图（置信度桶 vs 实际命中率 + 完美校准对角线），
-  数字卡片之外的第一张图。
-- **PG 行为级 parity 套件**：`tests/test_postgres_parity_behavior.py` 双后端参数化
-  （CRUD/乐观锁/事务原子性/绑定与更新记录热表/事件日志回放），本机无 DSN 诚实 skip，
-  CI `postgres:16` service 真实兑现。
+每次判断都输出一份通俗的"合同"：
 
-## v2.0 差异（想法 → 决策 → 商业计划 全路径）
+1. **当前判断**——建议怎么做（或诚实地说：先别决定）；
+2. **为什么**——依据是什么；
+3. **最大未知**——哪件事最可能让你判断失误；
+4. **下一步**——建议先做什么小实验/行动；
+5. **什么会改变判断**——发生什么情况你就该改主意。
 
-- **入口层**：`POST /v1/ideas/assess` —— 想法 → 决策问题 + 假设清单（模型提议，显式标注
-  待确认）+ 最大未知 + 就绪的 solve 请求；CLI `vencertia idea`；Web「从想法开始」面板
-  一键转入决策判断。
-- **出口层**：`POST /v1/bp` —— 已持久化决策 → 七章商业计划（执行摘要/市场机会/为什么
-  是我们/关键假设与风险/计划与里程碑/什么会推翻/复盘与校准）+ Markdown 全文；市场数据
-  不足的章节诚实 N/A，不伪造；CLI `vencertia bp [--out]`；Web 台账「生成 BP」+「复制全文」。
-- **Skill 层（V11 经验资产迁移）**：`vencertia/skills/` —— 5 个 legacy V11 专家提示词
-  迁移为版本化 skill（market/financial/plan/founder/execution，谱系指向源 docx），
-  输出走 pydantic 契约 + 引用校验门（数字必须有 source_claim_id，禁止无出处数据），
-  编排路由按阶段调度；mock 模式确定性模板回退、真实 LLM 即插即用；
-  `GET /v1/skills` 资产目录 + CLI `vencertia skills`。
-- **定位**：规则拥有状态（脊椎），skill 承载经验（肌肉）——不是回到 prompt 驱动的旧路，
-  也不是停在硬编码程序。详见 `docs/implementation-plan-v20-2026-08-14.md`。
+### 3. 决策台账与复盘闭环
+
+- 每个决定自动进入台账：**推荐 → 行动 → 结果**，一步不落；
+- 关键预测到期后，一键标记"成真 / 落空"；
+- 复盘记录永久留痕：为什么当时这么定，后来怎么样了。
+
+### 4. 校准仪表盘
+
+- **命中率**：你预测对了几次；
+- **校准曲线**：一张图看懂你是"过度自信"还是"信心不足"；
+- **诚实底线**：样本不够时直接显示"样本不足，结论不可用"，不拿小样本糊弄你。
+
+### 5. 商业计划生成（v2.0）
+
+对台账里的任何决定点一下"生成 BP"，得到七章商业计划：
+
+执行摘要 · 市场机会 · 为什么是我们 · 关键假设与风险 · 计划与里程碑 · 什么会推翻这个计划 · 复盘与校准
+
+**每个数字都有出处**（挂在你的假设清单上），市场数据不足的章节如实标注——**这是一份"敢对投资人解释每一句话"的商业计划**。
+
+### 6. 透明可解释
+
+判断的每个参数从哪来、每条证据权重多大、什么阈值会翻转结论——都可以展开查看。没有黑箱。
+
+### 7. 离线可用，数据归你
+
+开箱即用，不需要任何 AI 接口或网络服务；数据存在你自己的电脑里。
+
+---
+
+## 快速上手
+
+### 第一步：安装（一条命令）
+
+```bash
+pip install -e .
+```
+
+> 需要 Python 3.11 或更高版本。安装过程由 pip 自动完成，无需其他配置。
+
+### 第二步：启动
+
+```bash
+make api
+```
+
+然后用浏览器打开 **http://localhost:8000/** —— 工作台就在那里，无需安装任何额外软件。
+
+### 第三步：做你的第一个决定
+
+1. 在左侧输入"你要做什么决定"，点击**开始判断**；
+2. 几秒后得到**五段判断合同**；
+3. 你的决定自动进入右侧**决策台账**。
+
+### 第四步：从想法开始（可选）
+
+在左下角"从想法开始"写下想法 → 点**评估想法** → 看假设清单和最大未知 → 点**转入决策判断**。
+
+### 第五步：复盘与商业计划
+
+- 台账里点**标记行动 / 记录结果**，闭环你的决定；
+- 待复盘预测点**成真 / 落空**，仪表盘实时更新；
+- 点**生成 BP**，一键得到带证据的商业计划，**复制全文**即可粘贴到文档里。
+
+> 更喜欢命令行？`vencertia idea "你的想法"`、`vencertia bp <决定编号> --out 计划.md` 一条命令同样能跑通全流程。
+
+---
+
+## 常见使用场景
+
+| 你是谁 | 怎么用 |
+|---|---|
+| **创业者 / 产品负责人** | 给 go/no-go 决策留痕：为什么做、依据是什么、什么情况下停。向团队和董事会交代时，拿得出完整判断链 |
+| **投资人 / 孵化器 / FA** | 批量评估"该不该投、该不该进"，每个结论都有假设清单和证据支撑，向 LP 交代判断依据 |
+| **需要复盘的人** | 记下关键预测，到期结算，用校准仪表盘看自己到底准不准——把决策当成可练习、可改进的技能 |
+| **写商业计划的人** | 从真实决策记录生成 BP，数字有出处、风险有登记，比空手编一份可信得多 |
+
+---
+
+## 常见问题（FAQ）
+
+### 它会替我做决定吗？
+
+不会。它只负责把依据摆清楚、把风险说透。**做决定的人始终是你**，它保证的是你的决定有迹可循、可复盘。
+
+### 和 ChatGPT 这类 AI 助手有什么区别？
+
+- **诚实**：证据不足时，它会说"现在下不了结论"，而不是硬编一个答案；
+- **留痕**：每个判断的依据、行动、结果都记在台账里；
+- **可校准**：它会统计你预测的准确率，AI 助手不会替你记账。
+
+### 为什么它有时说"暂不决策"？
+
+这是故意的。当证据不足以区分两个选项时，**假装有信心比诚实回避更危险**。它会同时告诉你：还需要什么证据、可以先做哪个最小实验。
+
+### 商业计划里的数字可靠吗？
+
+每个数字都必须**挂在假设清单上**（有出处）。没有数据支撑的地方，它会如实标注"数据不足"，绝不编造。可靠性取决于你喂给它的证据质量——这正是它要逼你去补的功课。
+
+### 需要接入 AI 接口吗？
+
+不需要。开箱即用（内置离线演示模式）。以后接上真实 AI 服务，叙事部分会变得更丰富，但核心判断逻辑不变。
+
+### 我的数据安全吗？
+
+全部数据存储在你自己的电脑上，不联网、不上传。
+
+### 怎么看我的判断准不准？
+
+打开校准仪表盘：命中率、校准曲线一目了然。样本不足时它会诚实地说"还不能下结论"，不会拿小样本糊弄你。
+
+---
+
+## 获取帮助与支持
+
+- **产品与技术文档**：见 [`docs/`](docs/) 目录，其中 [`docs/architecture.md`](docs/architecture.md) 是架构总览，[`docs/api.md`](docs/api.md) / [`docs/cli.md`](docs/cli.md) 是接口说明；
+- **命令行帮助**：`vencertia --help` 或 `vencertia <命令> --help`；
+- **问题与建议**：请在 GitHub 仓库提交 issue；
+- **版本与更新**：见 [`docs/changelog.md`](docs/changelog.md) 与 [`docs/iteration-log.md`](docs/iteration-log.md)（历次迭代的诚实记录，包括踩过的坑）。
+
+---
+
+## 给想深挖的读者：一分钟技术速览
+
+Vencertia 内部像一个"**会计 + 顾问**"的组合：
+
+- **确定性引擎是会计**：管账本（所有状态的唯一入口），判定逻辑公开、可复算、可审计——同样的输入永远得到同样的判断；
+- **AI 是顾问**：负责出主意（想法评估、商业计划叙事等），主意永远只是"建议稿"，必须通过校验（比如"数字必须有出处"）才能进账本；
+- **规则是脊椎，经验是肌肉**：判断规则负责可靠，AI 承载的方法论经验负责聪明。
+
+这一设计保证了：**AI 可以帮你思考，但永远不能偷偷改写事实。**
+
+想了解实现细节，从 [`docs/architecture.md`](docs/architecture.md) 读起；历史版本差异见 README 的提交历史与 [`docs/iteration-log.md`](docs/iteration-log.md)。
