@@ -46,6 +46,14 @@ jobs:
       - name: Benchmark L0
         run: python -m vencertia.cli benchmark run --level L0
       - name: API smoke
+        env:
+          # smoke is test infrastructure: explicit mock opt-in (product default
+          # is the real AI path and fails loud without credentials)
+          VENCERTIA_MODEL_PROVIDER: mock
+          VENCERTIA_SEARCH_PROVIDER: mock
         run: python -c "from vencertia.api import app; print('API import OK')"
       - name: CLI smoke
+        env:
+          VENCERTIA_MODEL_PROVIDER: mock
+          VENCERTIA_SEARCH_PROVIDER: mock
         run: python -c "from vencertia.cli import app; print('CLI import OK')"

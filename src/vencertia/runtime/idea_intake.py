@@ -25,11 +25,10 @@ from vencertia.domain import (
     VencertiaBaseModel,
     utcnow,
 )
-from vencertia.providers.mock import MockProvider
 from vencertia.repositories.base import Repository
 
 IDEA_DISCLAIMER = (
-    "离线确定性评估：假设清单与决策问题由模型提议（LLM_PROPOSED），未经你确认；"
+    "假设清单与决策问题由模型提议（LLM_PROPOSED），未经你确认；"
     "关键未知按确定性引擎排序。进入决策后所有假设会被重新校验。"
 )
 
@@ -81,8 +80,14 @@ class IdeaIntakeService:
         if compiler is None:
             from vencertia.capabilities import DecisionCompiler
 
+            if self.model is None:
+                # v2.0.1 (product ruling): NO silent mock fallback.
+                raise ValueError(
+                    "no model provider wired: configure VENCERTIA_MODEL_PROVIDER "
+                    "(mock is a test/development-only explicit opt-in)"
+                )
             compiler = DecisionCompiler(
-                model=self.model or MockProvider(),
+                model=self.model,
                 settings=self.settings,
                 repo=self.repo,
             )
@@ -92,7 +97,7 @@ class IdeaIntakeService:
                 "project_id": project_id,
                 "user_id": user_id or "u_default",
                 "domain": domain,
-                "model_tag": "mock",
+                "model_tag": "openai_compatible",
             },
             options=options,
         )

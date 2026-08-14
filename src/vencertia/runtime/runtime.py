@@ -1088,10 +1088,15 @@ class SolveOrchestrator:
         compiler = self.compiler
         if compiler is None:
             from vencertia.capabilities import DecisionCompiler as DC
-            from vencertia.providers.mock import MockProvider
 
-            model = self.model or MockProvider()
-            compiler = DC(model=model, settings=self.settings, repo=self.repo)
+            if self.model is None:
+                # v2.0.1 (product ruling): NO silent mock fallback. A runtime
+                # without a wired model provider is a configuration error.
+                raise ValueError(
+                    "no model provider wired: configure VENCERTIA_MODEL_PROVIDER "
+                    "(mock is a test/development-only explicit opt-in)"
+                )
+            compiler = DC(model=self.model, settings=self.settings, repo=self.repo)
             self.compiler = compiler
         return compiler.compile(
             request.problem_text,

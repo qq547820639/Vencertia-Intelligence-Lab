@@ -1,17 +1,19 @@
-"""Quick-solve — one-shot end-to-end decision with an in-memory store.
+"""Quick-solve — one-shot end-to-end decision on an in-memory store.
 
-A single command runs the full loop (compile → research → solve → summary) on an
-:class:`~vencertia.repositories.memory.InMemoryRepository` with mock providers.
+Runs the full loop (compile → research → solve → summary) with the CONFIGURED
+providers (v2.0.1: no hardcoded mock — the product uses the real AI path from
+Settings; tests opt into mock explicitly via ``VENCERTIA_MODEL_PROVIDER=mock``).
 Nothing is written to a persistent Decision Ledger, so the result is marked
-``lightweight=True`` (a "轻量模式" demo of the 5-section contract).
+``lightweight=True``.
 """
 
 from __future__ import annotations
 
+from vencertia.config import get_settings
 from vencertia.domain import DecisionOption, SolveMode
 from vencertia.events.bus import EventBus
 from vencertia.presentation import solve_summary
-from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
+from vencertia.providers.factory import create_provider_bundle
 from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import SolveOrchestrator, SolveRequest, default_engine_bundle
 
@@ -28,21 +30,23 @@ def run_quick_solve(
 ) -> dict:
     """Run a one-shot solve on an in-memory store; return the summary dict.
 
-    ``problem_text``/``options`` override the built-in demo scenario; when
-    omitted, the deterministic ``QUICK_PROBLEM`` / ``QUICK_OPTIONS`` constants
-    are used so the command is reproducible offline.
+    ``problem_text``/``options`` override the built-in scenario when given.
+    Providers come from the configured Settings (real AI path by default).
     """
+    settings = get_settings()
+    providers = create_provider_bundle(settings)
     repo = InMemoryRepository()
     bus = EventBus(sink=repo.append_event)
-    engines = default_engine_bundle(repo, bus=bus)
+    engines = default_engine_bundle(repo, settings, bus)
     orchestrator = SolveOrchestrator(
         repo=repo,
         policy=engines.evidence_policy,
         engines=engines,
         bus=bus,
-        model=MockProvider(),
-        search=MockSearchProvider(),
-        retrieval=MockRetrievalProvider(),
+        model=providers.model,
+        search=providers.search,
+        retrieval=providers.retrieval,
+        settings=settings,
     )
     request = SolveRequest(
         project_id="PRJ_QUICK",

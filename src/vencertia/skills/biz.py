@@ -8,13 +8,14 @@
   execution_strategy      ← Vencertia_Execution_Strategy_V11 / Next_Action_Planner
 
 经验以提示词模板形式承载（prompt 为一等资产，版本号 = 资产谱系 v11.0）；
-输出走契约 + 引用校验。真实 LLM 模式下调用 model.generate_structured；
-mock 模式用确定性模板回退，产出引用真实上下文的诚实内容（deterministic=True），
-全链路离线可验证 —— 与整个运行时的"离线诚实"一致。
+输出走契约 + 引用校验。skill 永远调用配置的 AI 模型（真实路径）；
+模型未配置或调用失败 ⇒ 该 skill 在编排层被标记 REJECTED（诚实降级），
+绝不生成模板叙事冒充 AI 产出（v2.0.1 产品裁决：演示模式仅存在于测试）。
 """
 
 from __future__ import annotations
 
+from vencertia.providers.errors import ProviderUnavailableError
 from vencertia.providers.models import ModelProvider
 from vencertia.skills.base import SkillCandidate, SkillMetadata
 
@@ -57,116 +58,55 @@ EXECUTION_PROMPT = (
 
 
 class _NarrativeSkillBase:
-    """Shared plumbing: mock template + optional real-model path."""
+    """Shared plumbing: every skill calls the CONFIGURED AI model.
+
+    No template fallback: a missing/failed model means the orchestration layer
+    marks this skill REJECTED (honest degradation), it never fabricates.
+    """
 
     contract = ""
 
     def __init__(self, model: ModelProvider | None = None) -> None:
         self.model = model
-        self._use_model = model is not None and getattr(model, "name", "") not in ("mock",)
 
-    def _candidate(self, name: str, version: str, payload: dict, deterministic: bool) -> SkillCandidate:
-        return SkillCandidate(
-            skill=name, version=version, contract=self.contract,
-            payload=payload, deterministic=deterministic,
-        )
-
-    def _via_model(self, prompt: str, context: dict) -> dict | None:
-        """Real LLM path (config-gated); returns None when unavailable."""
-        if not self._use_model:
-            return None
-        try:
-            return self.model.generate_structured(prompt, {"kind": self.contract}, context)
-        except Exception:  # degrade: deterministic template takes over (never blocks)
-            return None
+    def _generate(self, prompt: str, context: dict) -> dict:
+        if self.model is None:
+            raise ProviderUnavailableError(
+                f"skill {self.contract}: 未配置 AI 服务（VENCERTIA_MODEL_PROVIDER）"
+            )
+        return self.model.generate_structured(prompt, {"kind": self.contract}, context)
 
 
 class MarketOpportunitySkill(_NarrativeSkillBase):
     contract = "MarketOpportunityContract"
 
     def run(self, context: dict) -> SkillCandidate:
-        raw = self._via_model(MARKET_PROMPT, context)
-        if raw:
-            return self._candidate("market_opportunity", "v11.0", raw, deterministic=False)
-        beliefs = [
-            b for b in context.get("beliefs", [])
-            if b.get("scope") in ("MARKET", "WORLD") or "market" in (b.get("statement") or "").lower()
-        ]
-        payload = {
-            "thesis": "基于已采信证据的市场机会判断（确定性模板，未接真实 LLM）",
-            "items": [
-                {
-                    "claim_id": b.get("claim_id", ""),
-                    "statement": b.get("statement", ""),
-                    "evidence_summary": f"证据 {b.get('evidence_count', 0)} 条，概率 {b.get('probability')}",
-                    "numbers": [],
-                }
-                for b in beliefs[:5]
-            ],
-        }
-        return self._candidate("market_opportunity", "v11.0", payload, deterministic=True)
+        payload = self._generate(MARKET_PROMPT, context)
+        return SkillCandidate(
+            skill="market_opportunity", version="v11.0", contract=self.contract,
+            payload=payload, deterministic=False,
+        )
 
 
 class FinancialModelSkill(_NarrativeSkillBase):
     contract = "FinancialModelContract"
 
     def run(self, context: dict) -> SkillCandidate:
-        raw = self._via_model(FINANCIAL_PROMPT, context)
-        if raw:
-            return self._candidate("financial_model", "v11.0", raw, deterministic=False)
-        register = context.get("assumptions") or []
-        payload = {
-            "unit_economics": "确定性骨架未含收入假设；单位经济学需由假设登记表中的支付意愿证据推导（待验证）。",
-            "assumptions": [
-                {
-                    "label": a.get("statement", "")[:60],
-                    "value": f"概率 {a.get('probability')}（不确定性 {a.get('uncertainty')}）",
-                    "source_claim_id": a.get("claim_id", ""),
-                    "note": "来自假设登记表；未确认为财务事实",
-                }
-                for a in register[:6]
-            ],
-            "milestones": [
-                f"验证假设「{a.get('statement', '')[:40]}」" for a in register[:3]
-            ],
-        }
-        return self._candidate("financial_model", "v11.0", payload, deterministic=True)
+        payload = self._generate(FINANCIAL_PROMPT, context)
+        return SkillCandidate(
+            skill="financial_model", version="v11.0", contract=self.contract,
+            payload=payload, deterministic=False,
+        )
 
 
 class PlanNarrativeSkill(_NarrativeSkillBase):
     contract = "PlanNarrativeContract"
 
     def run(self, context: dict) -> SkillCandidate:
-        raw = self._via_model(PLAN_PROMPT, context)
-        if raw:
-            return self._candidate("plan_narrative", "v11.0", raw, deterministic=False)
-        decision = context.get("decision") or {}
-        experiments = context.get("experiments") or []
-        first_claim = (context.get("claim_ids") or [None])[0] or ""
-        sections = [
-            {
-                "title": "计划叙事",
-                "body": (
-                    f"决策问题：{decision.get('decision_question', '—')}；"
-                    f"当前判断：{decision.get('current_recommendation') or '暂不决策（ABSTAIN）'}。"
-                    "本叙事由确定性模板生成，未接真实 LLM。"
-                ),
-                "source_claim_id": first_claim,
-            }
-        ]
-        for e in experiments[:2]:
-            sections.append(
-                {
-                    "title": f"里程碑实验：{e.get('name')}",
-                    "body": (
-                        f"成功判据：{e.get('success_criteria') or '—'}；"
-                        f"失败判据：{e.get('failure_criteria') or '—'}"
-                    ),
-                    "source_claim_id": first_claim,
-                }
-            )
-        return self._candidate(
-            "plan_narrative", "v11.0", {"sections": sections}, deterministic=True
+        payload = self._generate(PLAN_PROMPT, context)
+        return SkillCandidate(
+            skill="plan_narrative", version="v11.0", contract=self.contract,
+            payload=payload, deterministic=False,
         )
 
 
@@ -174,44 +114,21 @@ class FounderDiagnosisSkill(_NarrativeSkillBase):
     contract = "FounderDiagnosisContract"
 
     def run(self, context: dict) -> SkillCandidate:
-        raw = self._via_model(FOUNDER_PROMPT, context)
-        if raw:
-            return self._candidate("founder_diagnosis", "v11.0", raw, deterministic=False)
-        payload = {
-            "thesis": "本上下文未包含创始人画像数据；诊断不适用（诚实 N/A，确定性模板）。",
-            "signals": [],
-        }
-        return self._candidate("founder_diagnosis", "v11.0", payload, deterministic=True)
+        payload = self._generate(FOUNDER_PROMPT, context)
+        return SkillCandidate(
+            skill="founder_diagnosis", version="v11.0", contract=self.contract,
+            payload=payload, deterministic=False,
+        )
 
 
 class ExecutionStrategySkill(_NarrativeSkillBase):
     contract = "ExecutionStrategyContract"
 
     def run(self, context: dict) -> SkillCandidate:
-        raw = self._via_model(EXECUTION_PROMPT, context)
-        if raw:
-            return self._candidate("execution_strategy", "v11.0", raw, deterministic=False)
-        experiments = context.get("experiments") or []
-        first_claim = (context.get("claim_ids") or [None])[0] or ""
-        steps = []
-        for e in experiments[:3]:
-            steps.append(
-                {
-                    "step": f"执行实验「{e.get('name')}」（{e.get('action') or '见详情'}）",
-                    "rationale": "由决策引擎按信息价值排序推荐（确定性模板）",
-                    "source_claim_id": first_claim,
-                }
-            )
-        if not steps:
-            steps.append(
-                {
-                    "step": "判断已收敛，进入执行阶段",
-                    "rationale": "引擎未给出待办实验",
-                    "source_claim_id": first_claim,
-                }
-            )
-        return self._candidate(
-            "execution_strategy", "v11.0", {"steps": steps}, deterministic=True
+        payload = self._generate(EXECUTION_PROMPT, context)
+        return SkillCandidate(
+            skill="execution_strategy", version="v11.0", contract=self.contract,
+            payload=payload, deterministic=False,
         )
 
 

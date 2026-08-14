@@ -296,8 +296,13 @@ def register_search_provider(name: str, factory: Callable[[Settings], SearchProv
 
 
 def create_model_provider(settings: Settings) -> ModelProvider:
-    """Create the model provider selected by ``settings.model_provider``."""
-    name = (settings.model_provider or "mock").lower()
+    """Create the model provider selected by ``settings.model_provider``.
+
+    v2.0.1 (product ruling): the default is the real AI path
+    (``openai_compatible``); ``mock`` is a TEST/DEVELOPMENT-ONLY explicit
+    opt-in, never an implicit fallback.
+    """
+    name = (settings.model_provider or "openai_compatible").lower()
     if name == "mock":
         return MockProvider()
     if name == "openai_compatible":
@@ -322,7 +327,7 @@ def create_search_provider(settings: Settings) -> SearchProvider | None:
     factory FAILS LOUD (ProviderUnavailableError) instead of silently falling
     back to the mock provider (which would hide a configuration mistake).
     """
-    name = (settings.search_provider or "mock").lower()
+    name = (settings.search_provider or "http").lower()
     if name == "mock":
         return MockSearchProvider()
     if name == "http":
@@ -346,8 +351,8 @@ def create_search_provider(settings: Settings) -> SearchProvider | None:
 
 def create_retrieval_provider(settings: Settings) -> RetrievalProvider | None:
     """Create the retrieval provider for the configured gateway (may be None)."""
-    name = (settings.model_provider or "mock").lower()
-    if name == "mock":
+    name = (settings.model_provider or "openai_compatible").lower()
+    if name == "mock":  # test/development-only explicit opt-in
         return MockRetrievalProvider()
     return None
 

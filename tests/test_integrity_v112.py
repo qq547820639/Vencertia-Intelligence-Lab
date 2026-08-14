@@ -339,7 +339,7 @@ def test_research_cli_uses_shared_execution_service(tmp_path):
     from vencertia.container import build_container
 
     db_path = tmp_path / "r.db"
-    settings = Settings(db_dsn=f"sqlite:///{db_path}")
+    settings = Settings(db_dsn=f"sqlite:///{db_path}", model_provider="mock", search_provider="mock")
     container = build_container(settings)
     repo = container.repository
     runtime = container.orchestrator
@@ -663,7 +663,7 @@ def test_version_single_source(project_root):
 
     import vencertia
 
-    assert vencertia.__version__ == "2.0.0"
+    assert vencertia.__version__ == "2.0.1"
     assert vencertia.__api_contract_version__ == "1.4"
     assert importlib.metadata.version("vencertia-decision-runtime") == vencertia.__version__
     pyproject = tomllib.loads((project_root / "pyproject.toml").read_text(encoding="utf-8"))
@@ -674,9 +674,9 @@ def test_health_exposes_runtime_and_api_contract_versions():
     """P1-12: /health exposes runtime_version + api_contract_version + legacy."""
     tc, _, _, _ = _solved_client()
     data = tc.get("/health").json()["data"]
-    assert data["runtime_version"] == "2.0.0"
+    assert data["runtime_version"] == "2.0.1"
     assert data["api_contract_version"] == "1.4"
-    assert data["version"] == "2.0.0"
+    assert data["version"] == "2.0.1"
     assert data["api_version"] == "1.4.0"
 
 

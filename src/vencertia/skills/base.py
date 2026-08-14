@@ -22,6 +22,7 @@ from typing import Protocol
 from pydantic import ValidationError
 
 from vencertia.domain import VencertiaBaseModel
+from vencertia.providers.errors import ProviderError
 
 
 class SkillMetadata(VencertiaBaseModel):
@@ -111,7 +112,8 @@ class SkillRouter:
                 self.validation(candidate, context)
                 candidates.append(candidate)
                 traces.append(SkillTrace(skill=metadata.name, version=metadata.version, status="OK"))
-            except (ValidationError, SkillValidationError, ValueError) as exc:
+            except (ValidationError, SkillValidationError, ValueError, ProviderError) as exc:
+                # ProviderError = AI 服务未配置/调用失败：诚实 REJECTED，绝无模板回退。
                 traces.append(
                     SkillTrace(
                         skill=metadata.name,

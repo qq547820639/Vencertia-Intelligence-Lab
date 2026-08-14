@@ -62,7 +62,10 @@
       const j = await r.json();
       const d = j.data || {};
       const provider = d.model_provider || "?";
-      const friendly = provider === "mock" ? "本地离线演示模式" : "provider " + provider;
+      const friendly =
+        provider === "mock"
+          ? "开发/测试模式（mock）"
+          : "AI 服务 " + provider + "（未配置凭据时调用会失败）";
       $("health").textContent = "v" + (d.runtime_version || "?") + " · " + friendly;
     } catch (e) {
       $("health").textContent = "offline";

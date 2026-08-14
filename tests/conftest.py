@@ -8,13 +8,29 @@ import pytest
 from fastapi.testclient import TestClient
 
 from vencertia.api import create_app
-from vencertia.config import Settings
+from vencertia.config import Settings, get_settings
 from vencertia.domain import Belief
 from vencertia.events.bus import EventBus
 from vencertia.providers.mock import MockProvider, MockRetrievalProvider, MockSearchProvider
 from vencertia.repositories.memory import InMemoryRepository
 from vencertia.runtime import SolveOrchestrator, default_engine_bundle
 from vencertia.runtime.evidence_policy import EvidencePolicy
+
+
+@pytest.fixture(autouse=True)
+def _mock_provider_env(monkeypatch):
+    """v2.0.1: tests opt into the mock provider EXPLICITLY.
+
+    The product default is the real AI path (openai_compatible / http search);
+    the test suite runs in an explicitly-mock environment so it never depends
+    on ambient credentials. Tests asserting the product defaults must delenv
+    these variables themselves (see tests/test_v201_provider_defaults.py).
+    """
+    monkeypatch.setenv("VENCERTIA_MODEL_PROVIDER", "mock")
+    monkeypatch.setenv("VENCERTIA_SEARCH_PROVIDER", "mock")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def make_belief(bid: str, p: float, alpha: float, beta: float, weight: float = 1.0,

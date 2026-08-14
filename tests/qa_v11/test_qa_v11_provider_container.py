@@ -41,16 +41,16 @@ def test_qa_bundle_builds_for_both_providers():
     """create_provider_bundle works for mock and openai_compatible (no key).
 
     GAP-02: the search provider is selected independently by
-    ``settings.search_provider`` (default ``mock``), so the bundle always
+    ``settings.search_provider`` (mock via explicit opt-in), so the bundle always
     wires a search adapter (never silently drops it).
     """
-    bundle_mock = create_provider_bundle(Settings(model_provider="mock"))
+    bundle_mock = create_provider_bundle(Settings(model_provider="mock", search_provider="mock"))
     assert isinstance(bundle_mock, ProviderBundle)
     assert bundle_mock.model is not None
     assert bundle_mock.search is not None  # mock search wired
 
     bundle_oai = create_provider_bundle(
-        Settings(model_provider="openai_compatible", openai_api_key=None)
+        Settings(model_provider="openai_compatible", search_provider="mock", openai_api_key=None)
     )
     assert isinstance(bundle_oai, ProviderBundle)
     # Search remains wired (search_provider defaults to mock independently of
@@ -60,7 +60,7 @@ def test_qa_bundle_builds_for_both_providers():
 
 def test_qa_container_provider_follows_settings_and_api_follows_container():
     """Changing Settings changes the provider the API/CLI container wires."""
-    container_mock = build_container(Settings(model_provider="mock", db_dsn="sqlite:///:memory:"))
+    container_mock = build_container(Settings(model_provider="mock", search_provider="mock", db_dsn="sqlite:///:memory:"))
     assert container_mock.settings.model_provider == "mock"
     # The factory wraps providers with resilience; the underlying provider name
     # is preserved so the selection is observable.
@@ -68,7 +68,7 @@ def test_qa_container_provider_follows_settings_and_api_follows_container():
     assert container_mock.providers.search is not None
 
     container_oai = build_container(
-        Settings(model_provider="openai_compatible", openai_api_key=None, db_dsn="sqlite:///:memory:")
+        Settings(model_provider="openai_compatible", search_provider="mock", openai_api_key=None, db_dsn="sqlite:///:memory:")
     )
     assert container_oai.providers.model is not None
     assert container_oai.orchestrator.model is container_oai.providers.model

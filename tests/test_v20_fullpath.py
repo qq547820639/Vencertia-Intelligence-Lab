@@ -102,11 +102,54 @@ def test_bp_generates_sections_and_narratives(client_and_repo):
     market = next(s for s in view["sections"] if s["key"] == "market_opportunity")
     assert market["na"] is True
     assert data["markdown"].startswith("# ")
-    assert any("商业计划" in t["title_zh"] for t in view["sections"]) or True
-    # V11 narrative skills ran and passed validation
-    skills_ok = [t for t in data["skill_traces"] if t["status"] == "OK"]
-    assert len(skills_ok) == 3  # market_opportunity / financial_model / plan_narrative
-    assert any(n["deterministic"] for n in data["narratives"])
+    # v2.0.1: with an explicitly-mock provider there is NO template narrative —
+    # every narrative skill is honestly REJECTED (never fabricates AI output).
+    assert data["narratives"] == []
+    rejected = {t["skill"] for t in data["skill_traces"] if t["status"] == "REJECTED"}
+    assert rejected == {"market_opportunity", "financial_model", "plan_narrative"}
+
+
+def test_skill_router_ok_with_stub_model():
+    """The OK path: skills pass contract+reference gates with a working model."""
+    from vencertia.skills import SkillMetadata
+    from vencertia.skills.base import SkillRegistry
+    from vencertia.skills.biz import (
+        FinancialModelSkill,
+        MarketOpportunitySkill,
+        PlanNarrativeSkill,
+    )
+
+    class _StubModel:
+        name = "stub"
+
+        def generate_structured(self, task, schema, context):
+            kind = schema["kind"]
+            if kind == "MarketOpportunityContract":
+                return {"thesis": "t", "items": []}
+            if kind == "FinancialModelContract":
+                return {"unit_economics": "u", "assumptions": [], "milestones": []}
+            if kind == "PlanNarrativeContract":
+                return {"sections": []}
+            raise ValueError(f"unexpected kind {kind}")
+
+    stub = _StubModel()
+    registry = SkillRegistry()
+    for skill_cls, name, source in (
+        (MarketOpportunitySkill, "market_opportunity", "Vencertia_Market_Opportunity_V11_v0.1.docx"),
+        (FinancialModelSkill, "financial_model", "Vencertia_Financial_and_Business_Model_V11_v0.1.docx"),
+        (PlanNarrativeSkill, "plan_narrative", "Vencertia_Business_Plan_Architect_V11_v0.1.docx"),
+    ):
+        registry.register(
+            skill_cls(model=stub),
+            SkillMetadata(
+                name=name, version="v11.0", v11_source=source, description="d",
+                contract=skill_cls.contract, stage="bp",
+            ),
+        )
+    candidates, traces = SkillRouter(registry).run_stage("bp", {"claim_ids": ["CLM_A"]})
+    assert len(candidates) == 3
+    assert all(not c.deterministic for c in candidates)
+    assert all(t.status == "OK" for t in traces)
 
 
 def test_bp_unknown_decision_404(client_and_repo):

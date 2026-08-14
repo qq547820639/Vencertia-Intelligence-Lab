@@ -21,6 +21,7 @@ from vencertia.container import build_container
 def test_default_container_solve_returns_200_with_real_sqlite(tmp_path) -> None:
     settings = Settings(
         model_provider="mock",
+        search_provider="mock",
         db_dsn=f"sqlite:///{tmp_path / 'smoke.db'}",
     )
     container = build_container(settings)
@@ -46,6 +47,7 @@ def test_default_container_solve_returns_200_with_real_sqlite(tmp_path) -> None:
 def test_default_container_health_reports_provider(tmp_path) -> None:
     settings = Settings(
         model_provider="mock",
+        search_provider="mock",
         db_dsn=f"sqlite:///{tmp_path / 'health.db'}",
     )
     container = build_container(settings)

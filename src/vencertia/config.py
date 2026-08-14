@@ -82,13 +82,16 @@ class Settings:
     postgres_dsn: str | None = None
 
     # Model gateway
-    model_provider: str = "mock"  # mock | openai_compatible
+    # v2.0.1 (product ruling): the DEFAULT is the real AI path. Mock is a
+    # test/development-only opt-in (VENCERTIA_MODEL_PROVIDER=mock) and is
+    # never selected implicitly by the product.
+    model_provider: str = "openai_compatible"  # openai_compatible | mock (tests only)
     openai_base_url: str | None = None
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
 
-    # Search gateway (GAP-02): mock | http
-    search_provider: str = "mock"
+    # Search gateway (GAP-02): http | mock (tests only)
+    search_provider: str = "http"
     search_url: str | None = None
     search_api_key: str | None = None
     search_timeout_seconds: float = 15.0
@@ -194,7 +197,7 @@ class Settings:
                     stacklevel=2,
                 )
                 model_provider = legacy
-        model_provider = model_provider or "mock"
+        model_provider = model_provider or "openai_compatible"
         raw_weights = os.environ.get("VENCERTIA_CONTEXT_RANK_WEIGHTS")
         if raw_weights:
             try:
@@ -234,7 +237,7 @@ class Settings:
             openai_base_url=os.environ.get("VENCERTIA_OPENAI_BASE_URL") or None,
             openai_api_key=os.environ.get("VENCERTIA_OPENAI_API_KEY") or None,
             openai_model=os.environ.get("VENCERTIA_OPENAI_MODEL", "gpt-4o-mini"),
-            search_provider=os.environ.get("VENCERTIA_SEARCH_PROVIDER", "mock"),
+            search_provider=os.environ.get("VENCERTIA_SEARCH_PROVIDER", "http"),
             search_url=os.environ.get("VENCERTIA_SEARCH_URL") or None,
             search_api_key=os.environ.get("VENCERTIA_SEARCH_API_KEY") or None,
             search_timeout_seconds=_env_float("VENCERTIA_SEARCH_TIMEOUT", 15.0),

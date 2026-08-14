@@ -177,7 +177,8 @@ class _AlwaysSchemaMismatchProvider:
 
 
 def test_deterministic_provider_error_is_not_retried(monkeypatch):
-    settings = Settings(provider_max_retries=3, provider_retry_backoff_base=0.5)
+    settings = Settings(provider_max_retries=3, provider_retry_backoff_base=0.5,
+                         model_provider="mock", search_provider="mock")
     inner = _AlwaysSchemaMismatchProvider()
     bundle = create_provider_bundle(settings)
     sleeps: list[float] = []

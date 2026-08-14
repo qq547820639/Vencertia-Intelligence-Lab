@@ -330,7 +330,9 @@ class L0Runner:
 
         params = case.params
         provider = params.get("model_provider", "mock")
-        cfg = Settings(model_provider=provider)
+        # v2.0.1: the benchmark case opts into mock EXPLICITLY (product default
+        # is the real AI path and must not leak into benchmark machinery).
+        cfg = Settings(model_provider=provider, search_provider="mock")
         bundle = create_provider_bundle(cfg)
         ok = getattr(bundle.model, "name", "") == "mock"
         ok = ok and (bundle.search is None or getattr(bundle.search, "name", "") == "mock_search")

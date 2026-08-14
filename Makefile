@@ -30,15 +30,17 @@ lint:
 
 ci: lint test benchmark api-smoke cli-smoke
 
+# smoke targets are test infrastructure: explicit mock opt-in (the product
+# default is the real AI path and fails loud without credentials)
 api-smoke:
-	$(PYTHON) -c "from vencertia.api import app; print('API import OK')"
+	VENCERTIA_MODEL_PROVIDER=mock VENCERTIA_SEARCH_PROVIDER=mock $(PYTHON) -c "from vencertia.api import app; print('API import OK')"
 
 cli-smoke:
-	$(PYTHON) -c "from vencertia.cli import app; print('CLI import OK')"
+	VENCERTIA_MODEL_PROVIDER=mock VENCERTIA_SEARCH_PROVIDER=mock $(PYTHON) -c "from vencertia.cli import app; print('CLI import OK')"
 
 verify: test benchmark
-	$(PYTHON) -c "from vencertia.cli import app; print('CLI import OK')"
-	$(PYTHON) -c "from vencertia.api import app; print('API import OK')"
+	VENCERTIA_MODEL_PROVIDER=mock VENCERTIA_SEARCH_PROVIDER=mock $(PYTHON) -c "from vencertia.cli import app; print('CLI import OK')"
+	VENCERTIA_MODEL_PROVIDER=mock VENCERTIA_SEARCH_PROVIDER=mock $(PYTHON) -c "from vencertia.api import app; print('API import OK')"
 
 release:
 	$(PYTHON) scripts/make_release.py
