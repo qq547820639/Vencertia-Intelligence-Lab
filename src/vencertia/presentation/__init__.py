@@ -462,7 +462,10 @@ def critique_summary(critique) -> dict:
     explicit placeholder instead of being silently omitted.
     """
     if critique is None:
-        return {"available": False, "note": "未触发模型挑战（低/中风险决策默认跳过）"}
+        # v2.0.1: honest placeholder — None means either the gate did not
+        # trigger (低/中风险) or no real critique provider is wired; a template
+        # must never be rendered as model output.
+        return {"available": False, "note": "模型自检不可用（未触发模型挑战或未接入真实模型批判）"}
     risk = _enum_value(critique.model_risk)
     findings_zh = [
         CRITIQUE_FINDING_ZH.get(_enum_value(f), _enum_value(f)) for f in (critique.findings or [])
