@@ -20,7 +20,7 @@ Vencertia 与 AIPD-OS（github.com/qq547820639/AIPD-OS）为同一作者在同�
    - 依赖哲学对立：AIPD 以"仅 jsonschema、其余全标准库"为架构原则（LLM 客户端用 urllib 自实现），Vencertia 域层全量建筑在 pydantic/FastAPI/httpx 上；
    - 存储哲学相反：AIPD 为 21+ 张专用表的富关系模型（多租户、版本化迁移、SHA256 冻结 v1），Vencertia 为泛型 `entities` + `event_log` 实体存储（无版本表幂等重放）——共存将产生 decisions/evidence 双真相源；
    - 测试套件物理冲突：同名 `tests/test_cli.py` 在 AIPD 的 `tests/__init__.py` 包结构下合并即触发 pytest import mismatch；Vencertia conftest 顶层依赖 fastapi，AIPD 零依赖环境无法收集。
-5. **SKILL 形态核查**：AIPD-OS **已经是**规范 SKILL 形态（根 SKILL.md + `check_skill_package.py` 强制单 SKILL.md + references/scripts/templates 配套），无需改造。Vencertia 的 `src/vencertia/skills/` 是"V11 提示词资产迁移层"（Protocol，无写权），与 SKILL.md 规范形态同名不同物；其确定性引擎核（domain + runtime 引擎 + InMemoryRepository，约 7-8k 行）理论可 skill 化，但需剥离 FastAPI（843 行）/ PG / typer / UI，会移除产品的 Web 决策工作台与 API 面。
+5. **SKILL 形态核查**：AIPD-OS 的发布链与 SKILL.md 深度耦合（命令覆盖率审计/CI 门禁），Vencertia 的 `src/vencertia/skills/` 是"V11 提示词资产迁移层"（Protocol，无写权），与 SKILL.md 规范形态同名不同物；其确定性引擎核（domain + runtime 引擎 + InMemoryRepository，约 7-8k 行）理论可 skill 化，但需剥离 FastAPI（843 行）/ PG / typer / UI，会移除产品的 Web 决策工作台与 API 面。
 
 ## 决策矩阵（weighted-scoring，权重 + 评分 1-5）
 
@@ -73,14 +73,12 @@ Vencertia 与 AIPD-OS（github.com/qq547820639/AIPD-OS）为同一作者在同�
 
 ---
 
-## 增补（2026-08-23）：合成层与 SKILL 形态入口
+## 增补（2026-08-23，同日修订）：合成层 IdeaToLaunch
 
-所有者决策：在两仓之上增设**意图路由合成层** `product-decision-router`（模型驱动的 SKILL，零代码），统一入口路由：商业决策 → Vencertia；产品实现 → AIPD-OS；混合意图按"先决策、后执行"两段式接力。
-
-同时本仓新增根 `SKILL.md`（name: vencertia），以 Agent Skill 形态暴露现有 CLI 命令面——**产品形态（FastAPI Web 工作台）不受影响**，二者共用同一 CLI 与内核。
+所有者决策：在两仓之上增设**旗舰合成技能** [IdeaToLaunch](https://github.com/qq547820639/IdeaToLaunch)（模型驱动的 SKILL，零代码），作为**唯一 agent-facing 入口**：它持有"想法 → 决策验证 → 产品落地 → 复盘回流"全链路方法论，本仓与 AIPD-OS 降级为其执行后端。**本仓不维护独立 SKILL.md 入口**——技能形态统一由 IdeaToLaunch 承载，避免多处文档漂移；本仓的产品形态（FastAPI Web 工作台）不受影响。
 
 该合成层与本 ADR 的关系：**兼容而非冲突**——
 
-- 合成层不建代码依赖、不读两仓数据库，仅通过规则 3 允许的文件级契约（router 仓 `schemas/handoff_v1.json`）交互；
-- 编排（意图理解、接力顺序）交给模型；本仓的真相核（BeliefEngine / CalibrationEngine / PredictionLedger / EvidencePolicy）保持确定性，ADR-002 的状态变更纪律不变；
-- 编排层降级路线（challenger 罐头 critique 接真模型或隐藏等）记录在 router 仓 `docs/architecture.md`，逐项独立 PR 执行。
+- 合成层不建代码依赖、不读两仓数据库，仅通过规则 3 允许的文件级契约（IdeaToLaunch 仓 `schemas/handoff_v1.json`）交互；
+- 编排（意图理解、流程组织、接力顺序）交给模型；本仓的真相核（BeliefEngine / CalibrationEngine / PredictionLedger / EvidencePolicy）保持确定性，ADR-002 的状态变更纪律不变；
+- 编排层降级路线（challenger 罐头 critique 接真模型或隐藏等）记录在 IdeaToLaunch 仓 `docs/architecture.md`，逐项独立 PR 执行。
