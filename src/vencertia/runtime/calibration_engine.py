@@ -240,6 +240,14 @@ class CalibrationEngine:
         if not bins:
             return raw
         raw = max(0.0, min(1.0, raw))
+        # Below the lowest populated bucket the interpolation loop cannot
+        # match; clamp to the LOWEST bucket's empirical rate. Falling through
+        # to the final ``bins[-1]`` return here inverted the mapping direction
+        # (a 0.05 raw confidence was "calibrated" to the top bucket's hit
+        # rate). Symmetric with the high end, which holds the last bucket's
+        # rate constant up to 1.0.
+        if raw < bins[0]["mean_confidence"]:
+            return round(bins[0]["empirical_rate"], 6)
         for idx, current in enumerate(bins):
             next_bin = bins[idx + 1] if idx + 1 < len(bins) else None
             lo = current["mean_confidence"]

@@ -81,3 +81,68 @@ def test_empty_report():
     profile = engine.report(CalibrationInput([]))
     assert profile.n == 0
     assert profile.brier_score is None
+
+
+# -- piecewise mapping edge cases (v2.0.1 direction-reversal regression) ------
+
+
+def test_map_piecewise_below_lowest_bucket_clamps_to_lowest_rate():
+    """Bins not covering the low range must NOT map low raw to the TOP rate.
+
+    Regression: raw=0.05 with buckets starting at 0.4 fell through the loop
+    and returned the last bucket's empirical rate (0.05 -> 0.95).
+    """
+    bins = [
+        {"lo": 0.4, "hi": 0.5, "mean_confidence": 0.45, "empirical_rate": 0.30},
+        {"lo": 0.9, "hi": 1.0, "mean_confidence": 0.95, "empirical_rate": 0.95},
+    ]
+    mapped = CalibrationEngine._map_piecewise(0.05, bins)
+    assert mapped == 0.30  # clamped to the LOWEST bucket, never the highest
+
+
+def test_map_piecewise_zero_raw_stays_low():
+    bins = [
+        {"lo": 0.8, "hi": 0.9, "mean_confidence": 0.85, "empirical_rate": 0.90},
+    ]
+    assert CalibrationEngine._map_piecewise(0.0, bins) == 0.90  # only bucket wins
+    assert CalibrationEngine._map_piecewise(1.0, bins) == 0.90  # high end unchanged
+
+
+def test_map_piecewise_high_end_behavior_unchanged():
+    """Above the highest bucket the existing hold-constant behavior stays."""
+    bins = [
+        {"lo": 0.1, "hi": 0.2, "mean_confidence": 0.15, "empirical_rate": 0.10},
+        {"lo": 0.8, "hi": 0.9, "mean_confidence": 0.85, "empirical_rate": 0.90},
+    ]
+    assert CalibrationEngine._map_piecewise(0.99, bins) == 0.90
+    assert CalibrationEngine._map_piecewise(0.85, bins) == 0.90
+
+
+def test_map_piecewise_monotonic_when_buckets_monotonic():
+    """With well-ordered buckets the mapping must be non-decreasing.
+
+    (Inverted adjacent buckets are allowed to be non-monotonic — no isotonic
+    constraint is imposed; only the low-end direction reversal is fixed.)
+    """
+    bins = [
+        {"lo": 0.1, "hi": 0.2, "mean_confidence": 0.15, "empirical_rate": 0.10},
+        {"lo": 0.4, "hi": 0.5, "mean_confidence": 0.45, "empirical_rate": 0.40},
+        {"lo": 0.8, "hi": 0.9, "mean_confidence": 0.85, "empirical_rate": 0.90},
+    ]
+    raws = [0.0, 0.05, 0.15, 0.3, 0.45, 0.65, 0.85, 0.95, 1.0]
+    mapped = [CalibrationEngine._map_piecewise(r, bins) for r in raws]
+    assert mapped == sorted(mapped)
+    assert mapped[0] <= mapped[-1]
+
+
+def test_calibrate_low_raw_not_mapped_to_high_rate():
+    """End-to-end: a 0.05 raw confidence must not come back near 0.95."""
+    engine = CalibrationEngine()
+    rows = [
+        _entry("p1", 0.45, False, "FALSE"),  # low bucket: hit rate 0.0
+        _entry("p2", 0.90, True, "TRUE"),  # high bucket: hit rate 1.0
+    ]
+    result = engine.calibrate(0.05, predictions=rows, min_samples=1)
+    assert result.status == "CALIBRATED"
+    # Clamped to the LOWEST bucket's rate (0.0), not the top bucket's (1.0).
+    assert result.calibrated == 0.0
