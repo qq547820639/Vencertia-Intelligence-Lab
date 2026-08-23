@@ -110,9 +110,7 @@ def test_company_case_with_transferability_becomes_eligible(policy):
 
 def test_company_case_low_transferability_stays_gated(policy):
     evidence = _ev(
-        "COMPANY_CASE_FACT",
-        scope="COMPANY_CASE",
-        transferability=0.3
+        "COMPANY_CASE_FACT", scope="COMPANY_CASE", transferability=0.3
     )
     grade = policy.grade(evidence)
     assert grade.scope_gate == "COMPANY_CASE_PRIOR_ONLY"
