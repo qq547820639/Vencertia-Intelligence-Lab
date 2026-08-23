@@ -170,7 +170,19 @@ ADR-004 transferability gate 约束。
 
 ---
 
-## 附录：ADR 索引（v1.0 + v1.1 + v1.1.2）
+## ADR-015 — 与 AIPD-OS 保持独立项目关系（姐妹系统边界）（v2.0.1）
+
+**Context**：Vencertia 与 AIPD-OS 为同一作者同期创建、共享"诚实性工程"哲学的两个系统，词汇表高度相似（decision/evidence/claim/skill），引发"是否合并 / 是否整体 SKILL 化"的架构问题。
+
+**Decision**：维持独立项目，书面固化姐妹系统边界。Vencertia 拥有决策质量域（贝叶斯证据管线、预测登记结算、校准统计、决策复盘）；AIPD-OS 拥有产品开发执行域（产品定义管线、C0–C7 工程成熟度、CAD/BOM/供应链、签名发布）。禁止跨仓代码依赖；互操作仅允许版本化 JSON 文件级契约且须先修订 ADR；当前有意不建桥（两仓 decision 语义不同构，强行映射属伪造集成）。
+
+**依据与全文**：见 `docs/adr/ADR-015-sister-project-aipd-os.md`（含实证核查结论、硬性合并障碍清单、加权决策矩阵与敏感性分析、词汇消歧表、重新评估触发条件）。
+
+**Consequences**：各自依赖哲学（pydantic/FastAPI vs 零依赖标准库）、版本线、发布体系、pytest 套件互不干扰；4 组功能等价实现（约 500 行）平行存在，接受该代价。
+
+---
+
+## 附录：ADR 索引（v1.0 + v1.1 + v1.1.2 + v2.0.1）
 
 | ADR | 主题 | 版本 |
 |---|---|---|
@@ -188,3 +200,4 @@ ADR-004 transferability gate 约束。
 | 012 | **External intelligence cannot directly mutate canonical state** | v1.1 |
 | 013 | **Research Evidence and Project Outcome Evidence Have Different Authority** | v1.1.1 |
 | 014 | **Evidence Project Ownership and the Shared Boundary** | v1.1.2 |
+| 015 | **与 AIPD-OS 保持独立项目关系（姐妹系统边界）** | v2.0.1 |
