@@ -19,7 +19,7 @@ from uuid import uuid4
 
 from pydantic import Field
 
-from vencertia.capabilities import ChallengerCapability, CompiledDecision, DecisionCompiler
+from vencertia.capabilities import CompiledDecision, DecisionCompiler
 from vencertia.config import Settings, get_settings
 from vencertia.domain import (
     ActionState,
@@ -299,6 +299,7 @@ class SolveOrchestrator:
         bus: EventBus | None = None,
         settings: Settings | None = None,
         compiler: DecisionCompiler | None = None,
+        critic: Any | None = None,
     ) -> None:
         self.settings = settings or get_settings()
         self.repo = repo
@@ -327,6 +328,10 @@ class SolveOrchestrator:
                 search=self.search,
                 retrieval=self.retrieval,
             )
+        # V-3 critic: only an explicitly wired critique provider may run.
+        # The default None means "model self-check unavailable" — v2.0.1
+        # forbids rendering a canned/template critique as AI output.
+        self.critic = critic
         if compiler is not None:
             self.compiler = compiler
         elif model is not None:
@@ -350,10 +355,17 @@ class SolveOrchestrator:
     # -- model critic (V-3 gate wiring) ---------------------------------------
 
     def _run_model_critic(self, decision: Decision, context) -> ModelCritique | None:
-        """Run the challenger model critic only when the gate requires it.
+        """Run the model critic only when the gate requires it AND a real
+        critique provider is wired.
 
-        Failure or a None critique degrades gracefully (warn + PROVIDER_FAILED
-        event) — the solve loop never blocks on the critic.
+        v2.0.1 (product ruling): a canned/template critique must never be
+        rendered as user-visible "模型自检". The legacy ChallengerCapability
+        emits fixed strings, so it is NOT a valid product-path critic; with no
+        injected provider this returns None and the presentation layer marks
+        the section unavailable instead of showing template text.
+
+        Provider failure or a None critique degrades gracefully (warn +
+        PROVIDER_FAILED event) — the solve loop never blocks on the critic.
         """
         stakes_class = (
             decision.stakes_class.value
@@ -362,8 +374,14 @@ class SolveOrchestrator:
         )
         if not ModelCriticGate.should_require(stakes_class, self.settings.critic_required_stakes):
             return None
+        if self.critic is None:
+            logging.getLogger("vencertia").info(
+                "Model self-check unavailable: no critique provider wired; "
+                "skipping (template output must not masquerade as AI output)"
+            )
+            return None
         try:
-            result = ChallengerCapability().run("critique this decision", context)
+            result = self.critic.run("critique this decision", context)
             critique = result.critique if result else None
         except Exception as exc:  # degrade: a real LLM failure must not block solve
             logging.getLogger("vencertia").warning("Model critic unavailable: %s", exc)
