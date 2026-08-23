@@ -32,6 +32,7 @@ from vencertia.events.types import EventType, make_event
 from vencertia.providers.errors import ProviderError
 from vencertia.repositories.base import EntityNotFoundError, Repository, StaleWriteError
 from vencertia.runtime import EvidenceImporter, SolveOrchestrator, SolveRequest
+from vencertia.runtime.evidence_import import apply_evidence_to_beliefs
 
 
 class ApiResponse(BaseModel):
@@ -347,12 +348,28 @@ def create_app(
             raise ValueError(grade.reason)
         graded = runtime.policy.apply_authority(evidence, settings.policy_version)
         repo.add_evidence(graded)
+        # v2.0.1 bugfix: manually entered, claim-bound evidence must actually
+        # move beliefs — same BeliefEngine discipline as the research loop
+        # (incl. belief_update_records); otherwise re-evaluation never sees it.
+        if graded.claim_ids and graded.project_id:
+            apply_evidence_to_beliefs(
+                repo,
+                runtime.engines.belief_engine,
+                runtime.policy,
+                settings,
+                [graded],
+                batch_id=graded.id,
+            )
         return ok(graded.model_dump(mode="json"), message=grade.reason)
 
     @app.post("/v1/evidence/import", response_model=ApiResponse)
     def evidence_import(req: EvidenceImportRequest) -> ApiResponse:
         importer = EvidenceImporter(
-            repo=repo, policy=runtime.policy, dedup=runtime.engines.dedup_engine
+            repo=repo,
+            policy=runtime.policy,
+            dedup=runtime.engines.dedup_engine,
+            belief_engine=runtime.engines.belief_engine,
+            settings=settings,
         )
         report = importer.import_batch(req.items, project_id=req.project_id)
         return ok(report.model_dump(mode="json"))
