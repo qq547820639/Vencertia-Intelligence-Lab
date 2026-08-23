@@ -29,7 +29,9 @@ def _critique(**kw) -> ModelCritique:
 def test_critique_summary_none_placeholder():
     s = critique_summary(None)
     assert s["available"] is False
-    assert "未触发模型挑战" in s["note"]
+    # v2.0.1: honest placeholder (covers both "gate not triggered" and
+    # "no real critique provider wired") — never a canned verdict.
+    assert "模型自检不可用" in s["note"]
 
 
 def test_critique_summary_projection():

@@ -19,8 +19,10 @@ from pathlib import Path
 
 from pydantic import Field
 
+from vencertia.config import Settings, get_settings
 from vencertia.domain import Evidence, Scope, VencertiaBaseModel
 from vencertia.repositories.base import Repository
+from vencertia.runtime.belief_engine import BeliefEngine, BeliefUpdateInput
 from vencertia.runtime.evidence_dedup import EvidenceDedupEngine
 from vencertia.runtime.evidence_policy import EvidencePolicy
 
@@ -43,13 +45,73 @@ def _scope_value(evidence: Evidence) -> str:
     return evidence.scope.value if hasattr(evidence.scope, "value") else str(evidence.scope)
 
 
+def apply_evidence_to_beliefs(
+    repo: Repository,
+    belief_engine: BeliefEngine,
+    policy: EvidencePolicy,
+    settings: Settings,
+    applied: list[Evidence],
+    batch_id: str | None = None,
+) -> list[str]:
+    """Update beliefs for persisted, claim-bound evidence (manual entry path).
+
+    Same discipline as the research loop / outcome settlement: one
+    ``BeliefEngine.update`` per owning project, beliefs written back with the
+    optimistic-lock convention, and every mutation persisted as a
+    ``belief_update_records`` row (beliefs are derived state — an update
+    without a record would be an audit gap). Authority/downgrade semantics
+    stay with ``EvidencePolicy`` (the engine re-grades internally).
+
+    Returns the ids of beliefs that actually changed.
+    """
+    by_project: dict[str, list[Evidence]] = {}
+    for evidence in applied:
+        if not evidence.claim_ids or not evidence.project_id:
+            continue
+        by_project.setdefault(evidence.project_id, []).append(evidence)
+
+    changed: list[str] = []
+    for project_id, items in by_project.items():
+        beliefs = repo.get_beliefs(project_id)
+        if not beliefs:
+            continue
+        updated = belief_engine.update(
+            BeliefUpdateInput(
+                beliefs=beliefs,
+                evidence=items,
+                policy=policy,
+                max_pseudo_observations=settings.max_pseudo_observations,
+                conflict_weight_threshold=settings.conflict_weight_threshold,
+            )
+        )
+        for belief in updated.beliefs:
+            existing = repo.get_belief(belief.id)
+            expected = existing.version if existing is not None else None
+            if batch_id is not None:
+                belief.last_evidence_batch_id = batch_id
+                belief.policy_version = settings.policy_version
+            repo.save_belief(belief, expected_version=expected)
+        for record in updated.update_records:
+            repo.save_belief_update_record(record)
+            changed.append(record.belief_id)
+    return changed
+
+
 @dataclass
 class EvidenceImporter:
-    """Batch evidence importer wired to the policy/dedup/repo pipeline."""
+    """Batch evidence importer wired to the policy/dedup/repo pipeline.
+
+    When ``belief_engine`` is wired, imported evidence that is bound to claims
+    also updates the owning project's beliefs (research-loop discipline,
+    including ``belief_update_records``); without it the importer keeps the
+    legacy grade+persist-only behavior.
+    """
 
     repo: Repository
     policy: EvidencePolicy
     dedup: EvidenceDedupEngine
+    belief_engine: BeliefEngine | None = None
+    settings: Settings | None = None
     _project_id: str | None = field(default=None, init=False)
 
     # -- file loading --------------------------------------------------------
@@ -156,6 +218,7 @@ class EvidenceImporter:
             to_ingest.append(evidence)
 
         # 3) Validation gate (policy.grade) + 4) persistence (policy.apply_authority).
+        applied: list[Evidence] = []
         for evidence in to_ingest:
             candidate = self._ensure_project_id(evidence, project_id)
             grade = self.policy.grade(candidate)
@@ -171,11 +234,24 @@ class EvidenceImporter:
                 continue
             graded = self.policy.apply_authority(candidate, self.policy.version())
             self.repo.add_evidence(graded)
+            applied.append(graded)
             report.imported += 1
             report.imported_ids.append(graded.id)
             if graded.claim_ids:
                 report.bound += 1
             else:
                 report.unbound += 1
+
+        # 5) Belief updates: persisted, claim-bound evidence must actually move
+        # beliefs — a manual entry that only lands in the evidence store but
+        # never reaches the BeliefEngine leaves re-evaluation blind to it.
+        if self.belief_engine is not None and applied:
+            apply_evidence_to_beliefs(
+                self.repo,
+                self.belief_engine,
+                self.policy,
+                self.settings or get_settings(),
+                applied,
+            )
 
         return report

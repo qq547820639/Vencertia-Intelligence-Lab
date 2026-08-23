@@ -299,7 +299,11 @@ def evidence_import(path: Path, project: str | None = None, db: str | None = Non
     settings = _settings_with_db(db)
     runtime, repo = _default_runtime(settings)
     importer = EvidenceImporter(
-        repo=repo, policy=runtime.policy, dedup=runtime.engines.dedup_engine
+        repo=repo,
+        policy=runtime.policy,
+        dedup=runtime.engines.dedup_engine,
+        belief_engine=runtime.engines.belief_engine,
+        settings=settings,
     )
     items, invalid = EvidenceImporter.load_file(path)
     report = importer.import_batch(items, project_id=project)
