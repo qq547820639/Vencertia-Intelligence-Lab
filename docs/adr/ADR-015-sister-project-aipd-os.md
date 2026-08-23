@@ -70,3 +70,17 @@ Vencertia 与 AIPD-OS（github.com/qq547820639/AIPD-OS）为同一作者在同�
 1. 出现第三个同哲学项目，且三者间出现真实的重复维护负担；
 2. AIPD-OS 的 claims 导出与 Vencertia 校准跟踪形成真实使用需求（此时按规则 3 建立文件级契约）；
 3. 任一仓的部署形态发生根本变化（如 Vencertia 放弃 Web 产品面转为纯库）。
+
+---
+
+## 增补（2026-08-23）：合成层与 SKILL 形态入口
+
+所有者决策：在两仓之上增设**意图路由合成层** `product-decision-router`（模型驱动的 SKILL，零代码），统一入口路由：商业决策 → Vencertia；产品实现 → AIPD-OS；混合意图按"先决策、后执行"两段式接力。
+
+同时本仓新增根 `SKILL.md`（name: vencertia），以 Agent Skill 形态暴露现有 CLI 命令面——**产品形态（FastAPI Web 工作台）不受影响**，二者共用同一 CLI 与内核。
+
+该合成层与本 ADR 的关系：**兼容而非冲突**——
+
+- 合成层不建代码依赖、不读两仓数据库，仅通过规则 3 允许的文件级契约（router 仓 `schemas/handoff_v1.json`）交互；
+- 编排（意图理解、接力顺序）交给模型；本仓的真相核（BeliefEngine / CalibrationEngine / PredictionLedger / EvidencePolicy）保持确定性，ADR-002 的状态变更纪律不变；
+- 编排层降级路线（challenger 罐头 critique 接真模型或隐藏等）记录在 router 仓 `docs/architecture.md`，逐项独立 PR 执行。
