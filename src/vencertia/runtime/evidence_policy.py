@@ -229,17 +229,27 @@ class EvidencePolicy:
     # -- internals -----------------------------------------------------------
 
     def _default_authority(self, evidence: Evidence) -> AuthorityLevel:
-        if evidence.authority_level not in (None, AuthorityLevel.MODEL_PRIOR.value):
-            # Explicit authority already set by a capability; keep it but never
-            # above the type's ceiling for unverified LLM output.
-            if evidence.evidence_type in (
-                EvidenceType.LLM_INFERENCE.value,
-                EvidenceType.MODEL_PRIOR.value,
-            ):
-                return AuthorityLevel(evidence.authority_level)
-        return EVIDENCE_TYPE_TO_AUTHORITY.get(
+        type_default = EVIDENCE_TYPE_TO_AUTHORITY.get(
             evidence.evidence_type.value
             if hasattr(evidence.evidence_type, "value")
             else str(evidence.evidence_type),
             AuthorityLevel.MODEL_PRIOR,
         )
+        if evidence.authority_level not in (None, AuthorityLevel.MODEL_PRIOR.value):
+            # Explicit authority already set by a capability. LLM-sourced
+            # evidence may keep a self-report ONLY up to its type ceiling —
+            # model output can never self-declare above LLM_INFERENCE /
+            # MODEL_PRIOR. A self-report below the ceiling is honored.
+            # (Non-LLM types ignore the self-report and fall back to the
+            # type default, unchanged.)
+            if evidence.evidence_type in (
+                EvidenceType.LLM_INFERENCE.value,
+                EvidenceType.MODEL_PRIOR.value,
+            ):
+                declared = AuthorityLevel(evidence.authority_level)
+                if AUTHORITY_TABLE.get(declared.value, 0.10) > AUTHORITY_TABLE.get(
+                    type_default.value, 0.10
+                ):
+                    return type_default
+                return declared
+        return type_default

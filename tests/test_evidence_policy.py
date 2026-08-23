@@ -56,6 +56,40 @@ def test_llm_output_cannot_be_verified(policy):
     assert graded.effective_weight < policy.weight_of(AuthorityLevel.LLM_INFERENCE)
 
 
+# -- LLM self-reported authority clamp (v2.0.1 regression) ---------------------
+
+
+def test_llm_self_declared_authority_clamped_to_type_ceiling(policy):
+    """LLM_INFERENCE self-reporting PROJECT_REALITY must clamp back."""
+    evidence = _ev("LLM_INFERENCE", authority_level="PROJECT_REALITY")
+    assert policy.grade(evidence).authority_level == AuthorityLevel.LLM_INFERENCE
+
+
+def test_model_prior_self_declared_authority_clamped(policy):
+    evidence = _ev("MODEL_PRIOR", authority_level="REVIEWED_EXTERNAL_RESEARCH")
+    assert policy.grade(evidence).authority_level == AuthorityLevel.MODEL_PRIOR
+
+
+def test_llm_self_report_below_ceiling_is_honored(policy):
+    """A self-report LOWER than the ceiling is kept (never upgraded)."""
+    evidence = _ev("LLM_INFERENCE", authority_level="LLM_INFERENCE")
+    assert policy.grade(evidence).authority_level == AuthorityLevel.LLM_INFERENCE
+
+
+def test_non_llm_explicit_authority_still_ignored(policy):
+    """Non-LLM types keep ignoring self-reports (fallback to type default)."""
+    evidence = _ev("REAL_PAYMENT", authority_level="FOUNDER_STATEMENT")
+    assert policy.grade(evidence).authority_level == AuthorityLevel.PROJECT_REALITY
+
+
+def test_llm_clamp_preserves_verified_downgrade(policy):
+    """The VERIFIED -> ESTIMATED downgrade is unaffected by the authority clamp."""
+    evidence = _ev("LLM_INFERENCE", authority_level="PROJECT_REALITY", verification="VERIFIED")
+    graded = policy.grade(evidence)
+    assert graded.authority_level == AuthorityLevel.LLM_INFERENCE
+    assert graded.effective_weight < policy.weight_of(AuthorityLevel.LLM_INFERENCE)
+
+
 def test_company_case_without_transferability_is_gated(policy):
     evidence = _ev("COMPANY_CASE_FACT", scope="COMPANY_CASE", transferability=None)
     grade = policy.grade(evidence)
@@ -76,7 +110,9 @@ def test_company_case_with_transferability_becomes_eligible(policy):
 
 def test_company_case_low_transferability_stays_gated(policy):
     evidence = _ev(
-        "COMPANY_CASE_FACT", scope="COMPANY_CASE", transferability=0.3
+        "COMPANY_CASE_FACT",
+        scope="COMPANY_CASE",
+        transferability=0.3
     )
     grade = policy.grade(evidence)
     assert grade.scope_gate == "COMPANY_CASE_PRIOR_ONLY"
